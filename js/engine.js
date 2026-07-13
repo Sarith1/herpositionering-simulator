@@ -15,7 +15,9 @@ Verantwoordelijk voor:
 - Timers
 ==========================================================
 */
-
+import { 
+    Routing 
+} from "./routing.js";
 import {
     districts,
     vehicles,
@@ -28,14 +30,16 @@ export class Engine {
 
     constructor(ui, map) {
 
-        this.ui = ui;
-        this.map = map;
+    this.ui = ui;
+    this.map = map;
 
-        this.step = 0;
+    this.routing = new Routing();
 
-        this.activeVehicle = null;
+    this.step = 0;
 
-    }
+    this.activeVehicle = null;
+
+}
 
     /*
     ======================================================
@@ -111,10 +115,12 @@ export class Engine {
         // Sprint 1.4:
         // routing-algoritme.
 
-        const seconds =
-            90 + Math.floor(Math.random() * 31);
+        const seconds = this.routing.calculateTravelTime(
+        simulator.activeIncident,
+        simulator.selectedPrison
+);
 
-        simulator.travelTime = seconds;
+simulator.travelTime = seconds;
 
         this.ui.log(
             `Reistijd: ${seconds} seconden`
