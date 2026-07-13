@@ -1,0 +1,26 @@
+{
+  "name": "politie-herpositionering-simulator",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Trainingssimulator voor het herpositioneren van politievoertuigen.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "politie",
+    "simulator",
+    "dispatch",
+    "herpositionering",
+    "training"
+  ],
+  "author": "Sarith Breedijk",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}
