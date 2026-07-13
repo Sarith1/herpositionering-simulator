@@ -1,1 +1,435 @@
 
+/* ===========================================================
+   Politie Herpositionering Simulator
+   Sprint 1.1
+=========================================================== */
+
+:root {
+
+    --background: #08121d;
+    --panel: #112235;
+    --panel-light: #17324b;
+
+    --accent: #2da8ff;
+    --accent-light: #7dd3ff;
+
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+
+    --text: #ffffff;
+    --text-secondary: #b8c6d6;
+
+    --border: rgba(255,255,255,.08);
+
+    --radius: 14px;
+
+    --shadow:
+        0 10px 25px rgba(0,0,0,.35);
+
+    --transition: .25s ease;
+
+    font-family:
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+
+    width: 100%;
+    height: 100%;
+
+    background: var(--background);
+
+    color: var(--text);
+
+}
+
+body {
+
+    overflow: hidden;
+
+}
+
+button {
+
+    cursor: pointer;
+
+    border: none;
+
+    font: inherit;
+
+}
+
+#app {
+
+    width: 100vw;
+    height: 100vh;
+
+}
+
+/* ===========================================================
+   APP
+=========================================================== */
+
+.simulator{
+
+    display:flex;
+    flex-direction:column;
+
+    width:100%;
+    height:100%;
+
+}
+
+/* ===========================================================
+   TOPBAR
+=========================================================== */
+
+.topbar{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:20px;
+
+    background:var(--panel);
+
+    border-bottom:1px solid var(--border);
+
+}
+
+.logo{
+
+    font-size:24px;
+    font-weight:700;
+
+}
+
+.dashboard{
+
+    display:flex;
+    gap:16px;
+
+}
+
+.dashboard-card{
+
+    min-width:120px;
+
+    padding:14px;
+
+    border-radius:var(--radius);
+
+    background:var(--panel-light);
+
+    text-align:center;
+
+    transition:var(--transition);
+
+}
+
+.dashboard-card:hover{
+
+    transform:translateY(-2px);
+
+}
+
+.dashboard-card .value{
+
+    display:block;
+
+    font-size:26px;
+    font-weight:bold;
+
+}
+
+.dashboard-card .label{
+
+    color:var(--text-secondary);
+
+    font-size:13px;
+
+}
+
+/* ===========================================================
+   MIDDEN
+=========================================================== */
+
+.workspace{
+
+    flex:1;
+
+    display:grid;
+
+    grid-template-columns:280px 1fr 260px;
+
+    gap:20px;
+
+    padding:20px;
+
+}
+
+/* ===========================================================
+   PANELEN
+=========================================================== */
+
+.sidebar,
+.status-panel{
+
+    background:var(--panel);
+
+    border-radius:var(--radius);
+
+    padding:20px;
+
+    box-shadow:var(--shadow);
+
+}
+
+.sidebar h2,
+.status-panel h2{
+
+    margin-bottom:20px;
+
+}
+
+.log{
+
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+
+}
+
+.log-item{
+
+    display:flex;
+    flex-direction:column;
+
+    padding:12px;
+
+    border-radius:10px;
+
+    background:#17314a;
+
+}
+
+.time{
+
+    color:var(--accent-light);
+
+    font-size:12px;
+
+    margin-bottom:4px;
+
+}
+
+/* ===========================================================
+   KAART
+=========================================================== */
+
+.map-container{
+
+    background:var(--panel);
+
+    border-radius:var(--radius);
+
+    padding:18px;
+
+    box-shadow:var(--shadow);
+
+}
+
+.map-placeholder{
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    width:100%;
+    height:100%;
+
+    border-radius:12px;
+
+    border:2px dashed rgba(255,255,255,.15);
+
+    text-align:center;
+
+}
+
+.map-placeholder h2{
+
+    margin-bottom:12px;
+
+}
+
+.map-placeholder p{
+
+    color:var(--text-secondary);
+
+    margin-bottom:30px;
+
+}
+
+.district-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:14px;
+
+    width:100%;
+    max-width:500px;
+
+}
+
+.district{
+
+    padding:16px;
+
+    border-radius:12px;
+
+    background:#17314a;
+
+    border:1px solid rgba(45,168,255,.25);
+
+    transition:var(--transition);
+
+}
+
+.district:hover{
+
+    transform:translateY(-3px);
+
+    border-color:var(--accent);
+
+    box-shadow:0 0 15px rgba(45,168,255,.3);
+
+}
+
+/* ===========================================================
+   STATUS
+=========================================================== */
+
+.status-panel ul{
+
+    list-style:none;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:14px;
+
+}
+
+.status-panel li{
+
+    padding:12px;
+
+    border-radius:10px;
+
+    background:#17314a;
+
+}
+
+/* ===========================================================
+   FOOTER
+=========================================================== */
+
+.toolbar{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:20px;
+
+    padding:20px;
+
+    background:var(--panel);
+
+    border-top:1px solid var(--border);
+
+}
+
+.toolbar button{
+
+    padding:16px 28px;
+
+    border-radius:12px;
+
+    background:var(--accent);
+
+    color:white;
+
+    font-weight:600;
+
+    transition:var(--transition);
+
+}
+
+.toolbar button:hover{
+
+    background:#45b5ff;
+
+    transform:translateY(-2px);
+
+}
+
+/* ===========================================================
+   RESPONSIVE
+=========================================================== */
+
+@media (max-width:1200px){
+
+    .workspace{
+
+        grid-template-columns:240px 1fr;
+
+    }
+
+    .status-panel{
+
+        display:none;
+
+    }
+
+}
+
+@media (max-width:900px){
+
+    .workspace{
+
+        display:flex;
+
+        flex-direction:column;
+
+    }
+
+    .dashboard{
+
+        display:none;
+
+    }
+
+    .toolbar{
+
+        flex-wrap:wrap;
+
+    }
+
+}
