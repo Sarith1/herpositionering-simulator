@@ -2,26 +2,103 @@
 <html lang="nl">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
 
     <title>Politie Herpositionering Simulator</title>
 
-    <meta name="description"
-        content="Trainingssimulator voor het visualiseren van de herpositionering van politievoertuigen." />
-
-    <meta name="theme-color" content="#08121d" />
-
-    <link rel="icon" href="/favicon.ico" />
+    <link
+        rel="stylesheet"
+        href="css/main.css">
 
 </head>
 
 <body>
 
-    <!-- Hier bouwt de volledige simulator zichzelf op -->
-    <div id="app"></div>
+<div class="simulator">
 
-    <script type="module" src="/src/main.ts"></script>
+    <header class="topbar">
+
+        <h1>🚔 Politie Herpositionering Simulator</h1>
+
+        <div class="dashboard">
+
+            <div class="card">
+                <div id="availableCount">21</div>
+                <small>Beschikbaar</small>
+            </div>
+
+            <div class="card">
+                <div id="busyCount">0</div>
+                <small>Onderweg</small>
+            </div>
+
+            <div class="card">
+                <div id="incidentCount">0</div>
+                <small>Meldingen</small>
+            </div>
+
+            <div class="card">
+                <div id="coverageCount">100%</div>
+                <small>Dekking</small>
+            </div>
+
+        </div>
+
+    </header>
+
+    <main>
+
+        <aside>
+
+            <h2>Activiteiten</h2>
+
+            <div id="activityLog"></div>
+
+        </aside>
+
+        <section id="map"></section>
+
+        <aside>
+
+            <h2>Status</h2>
+
+            <div id="districtStatus"></div>
+
+        </aside>
+
+    </main>
+
+    <footer>
+
+        <button id="incidentBtn">
+            1. Melding
+        </button>
+
+        <button id="prisonBtn">
+            2. Cel
+        </button>
+
+        <button id="travelBtn">
+            3. Reistijd
+        </button>
+
+        <button id="dispatchBtn">
+            4. Pak melding op
+        </button>
+
+    </footer>
+
+</div>
+
+<script
+type="module"
+src="js/app.js">
+</script>
 
 </body>
 
