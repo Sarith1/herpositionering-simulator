@@ -1,4 +1,21 @@
-import { districts, vehicles, simulator, VEHICLE_STATUS, getCoverage, getAvailableVehiclesInDistrict } from "./data.js";
+/*
+Politie Herpositionering Simulator
+Sprint 1.2
+Bestand: ui.js
+
+Verantwoordelijk voor:
+
+- Dashboard
+- Activiteitenlog
+- Statuspaneel
+- Tellerwaarden
+*/
+
+import {
+    districts,
+    vehicles,
+    simulator
+} from "./data.js";
 
 export class UI {
     constructor() {
@@ -39,15 +56,27 @@ export class UI {
     }
 
     updateDashboard() {
-        const count = status => vehicles.filter(v => v.status === status).length;
-        const underway = vehicles.filter(v => [VEHICLE_STATUS.DISPATCHED, VEHICLE_STATUS.TO_PRISON, VEHICLE_STATUS.RETURNING].includes(v.status)).length;
-        this.setText(this.availableElement, count(VEHICLE_STATUS.AVAILABLE));
-        this.setText(this.underwayElement, underway);
-        this.setText(this.repositioningElement, count(VEHICLE_STATUS.REPOSITIONING));
-        this.setText(this.busyElement, count(VEHICLE_STATUS.BUSY));
-        this.setText(this.openElement, simulator.openIncidents);
-        this.setText(this.handledElement, simulator.incidentsHandled);
-        this.setText(this.coverageElement, `${getCoverage()}%`);
+
+        const available =
+            vehicles.filter(v => v.status === "available").length;
+
+        const busy =
+            vehicles.filter(v => v.status !== "available").length;
+
+        if (this.availableElement)
+            this.availableElement.textContent = available;
+
+        if (this.busyElement)
+            this.busyElement.textContent = busy;
+
+        if (this.incidentElement)
+            this.incidentElement.textContent = simulator.activeIncident ? "1" : "0";
+
+        if (this.coverageElement) {
+            const coverage = Math.round((available / vehicles.length) * 100);
+            this.coverageElement.textContent = `${coverage}%`;
+        }
+
     }
 
     updateStatusPanel() {
@@ -89,6 +118,20 @@ export class UI {
 
     clearLog() { if (this.logContainer) this.logContainer.innerHTML = ""; }
 
-    showGameOver() { if (this.gameOverOverlay) this.gameOverOverlay.classList.add("visible"); }
-    hideGameOver() { if (this.gameOverOverlay) this.gameOverOverlay.classList.remove("visible"); }
+    updateButtons(step, dispatching = false) {
+        const buttons = [
+            document.getElementById("incidentBtn"),
+            document.getElementById("prisonBtn"),
+            document.getElementById("travelBtn"),
+            document.getElementById("dispatchBtn")
+        ];
+
+        buttons.forEach((button, index) => {
+            if (!button) return;
+            const enabled = !dispatching && step === index;
+            button.disabled = !enabled;
+            button.setAttribute("aria-disabled", String(!enabled));
+        });
+    }
+
 }
