@@ -552,3 +552,78 @@ main{
     transform:scale(1.25);
 
 }
+button:disabled{
+    cursor:not-allowed;
+    opacity:.45;
+    transform:none;
+}
+
+.reposition-route{
+    fill:none;
+    stroke:#38bdf8;
+    stroke-width:5;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    stroke-dasharray:10 10;
+    opacity:.75;
+}
+
+.vehicle-hidden{
+    opacity:0;
+    pointer-events:none;
+}
+
+.coverage-green{
+    border-left:5px solid var(--success);
+}
+
+.coverage-orange{
+    border-left:5px solid var(--warning);
+}
+
+.coverage-red{
+    border-left:5px solid var(--danger);
+}
+
+.game-over-overlay{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:#b91c1c;
+    color:white;
+    text-align:center;
+}
+
+.game-over-overlay.visible{
+    display:flex;
+}
+
+.game-over-panel{
+    padding:48px;
+    border:4px solid rgba(255,255,255,.85);
+    border-radius:18px;
+    background:rgba(127,29,29,.55);
+    box-shadow:0 24px 80px rgba(0,0,0,.45);
+}
+
+.game-over-panel h2{
+    margin-bottom:18px;
+    font-size:56px;
+    letter-spacing:.08em;
+}
+
+.game-over-panel p{
+    margin-bottom:28px;
+    font-size:24px;
+}
+
+.game-over-panel button{
+    padding:16px 28px;
+    border-radius:12px;
+    background:white;
+    color:#991b1b;
+    font-weight:800;
+}
