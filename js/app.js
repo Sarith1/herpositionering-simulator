@@ -1,7 +1,6 @@
 import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
-import { Engine } from "./engine.js";
 
 class App {
     constructor() {
