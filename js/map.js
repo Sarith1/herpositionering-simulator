@@ -35,6 +35,7 @@ export class MapView {
         this.svg.classList.add("map-svg");
         this.container.appendChild(this.svg);
         this.routeLayer = this.createLayer("routes");
+        this.linkLayer = this.createLayer("links");
         this.districtLayer = this.createLayer("districts");
         this.incidentLayer = this.createLayer("incidents");
         this.vehicleLayer = this.createLayer("vehicles");

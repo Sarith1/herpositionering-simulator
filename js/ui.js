@@ -134,4 +134,6 @@ export class UI {
         });
     }
 
+    average(total, count) { return count > 0 ? Math.round(total / count) : 0; }
+    formatDuration(seconds) { return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`; }
 }
