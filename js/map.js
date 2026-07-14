@@ -3,11 +3,7 @@ import { districts, vehicles, colors } from "./data.js";
 export class MapView {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
-
-        if (!this.container) {
-            throw new Error(`Container '${containerId}' niet gevonden.`);
-        }
-
+        if (!this.container) throw new Error(`Container '${containerId}' niet gevonden.`);
         this.width = 1100;
         this.height = 800;
         this.svg = null;
@@ -38,7 +34,6 @@ export class MapView {
         this.svg.setAttribute("viewBox", `0 0 ${this.width} ${this.height}`);
         this.svg.classList.add("map-svg");
         this.container.appendChild(this.svg);
-
         this.routeLayer = this.createLayer("routes");
         this.districtLayer = this.createLayer("districts");
         this.incidentLayer = this.createLayer("incidents");

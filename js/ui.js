@@ -1,5 +1,4 @@
 /*
-==========================================================
 Politie Herpositionering Simulator
 Sprint 1.2
 Bestand: ui.js
@@ -10,7 +9,6 @@ Verantwoordelijk voor:
 - Activiteitenlog
 - Statuspaneel
 - Tellerwaarden
-==========================================================
 */
 
 import {
@@ -20,59 +18,41 @@ import {
 } from "./data.js";
 
 export class UI {
-
     constructor() {
-
-        this.logContainer = null;
-        this.statusContainer = null;
-
-        this.availableElement = null;
-        this.busyElement = null;
-        this.incidentElement = null;
-        this.coverageElement = null;
-
+        this.buttons = {};
     }
 
     initialize() {
-
         this.findElements();
-
         this.refresh();
-
         this.log("Simulator gestart");
-
         this.log("21 voertuigen beschikbaar");
-
     }
 
     findElements() {
-
-        this.availableElement =
-            document.getElementById("availableCount");
-
-        this.busyElement =
-            document.getElementById("busyCount");
-
-        this.incidentElement =
-            document.getElementById("incidentCount");
-
-        this.coverageElement =
-            document.getElementById("coverageCount");
-
-        this.logContainer =
-            document.getElementById("activityLog");
-
-        this.statusContainer =
-            document.getElementById("districtStatus");
-
+        this.availableElement = document.getElementById("availableCount");
+        this.underwayElement = document.getElementById("underwayCount");
+        this.repositioningElement = document.getElementById("repositioningCount");
+        this.busyElement = document.getElementById("busyCount");
+        this.openElement = document.getElementById("openIncidentCount");
+        this.handledElement = document.getElementById("handledIncidentCount");
+        this.coverageElement = document.getElementById("coverageCount");
+        this.logContainer = document.getElementById("activityLog");
+        this.statusContainer = document.getElementById("districtStatus");
+        this.gameOverOverlay = document.getElementById("gameOverOverlay");
+        this.buttons = {
+            incident: document.getElementById("incidentBtn"),
+            prison: document.getElementById("prisonBtn"),
+            travel: document.getElementById("travelBtn"),
+            dispatch: document.getElementById("dispatchBtn"),
+            reset: document.getElementById("resetBtn")
+        };
     }
 
-    refresh() {
-
+    refresh(step = 0) {
         this.updateDashboard();
-
         this.updateStatusPanel();
-
+        this.updateButtons(step);
     }
 
     updateDashboard() {
@@ -100,108 +80,43 @@ export class UI {
     }
 
     updateStatusPanel() {
-
         if (!this.statusContainer) return;
-
         this.statusContainer.innerHTML = "";
-
         districts.forEach(district => {
-
-            const available =
-                vehicles.filter(vehicle =>
-                    vehicle.district === district.id &&
-                    vehicle.status === "available"
-                ).length;
-
+            const available = getAvailableVehiclesInDistrict(district.id).length;
             const row = document.createElement("div");
-
-            row.className = "district-status";
-
-            let icon = "🟢";
-
-            if (available === 2)
-                icon = "🟡";
-
-            if (available <= 1)
-                icon = "🟠";
-
-            if (available === 0)
-                icon = "🔴";
-
-            row.innerHTML = `
-                <span>${icon}</span>
-                <span>${district.name}</span>
-                <strong>${available}</strong>
-            `;
-
+            row.className = `district-status ${available >= 2 ? "coverage-green" : available === 1 ? "coverage-orange" : "coverage-red"}`;
+            const icon = available >= 2 ? "🟢" : available === 1 ? "🟠" : "🔴";
+            row.innerHTML = `<span>${icon}</span><span>${district.name}</span><strong>${available}</strong>`;
             this.statusContainer.appendChild(row);
-
         });
-
     }
+
+    updateButtons(step = 0) {
+        if (simulator.gameOver) {
+            [this.buttons.incident, this.buttons.prison, this.buttons.travel, this.buttons.dispatch].forEach(button => { if (button) button.disabled = true; });
+            return;
+        }
+        if (this.buttons.incident) this.buttons.incident.disabled = step !== 0;
+        if (this.buttons.prison) this.buttons.prison.disabled = step !== 1;
+        if (this.buttons.travel) this.buttons.travel.disabled = step !== 2;
+        if (this.buttons.dispatch) this.buttons.dispatch.disabled = step !== 3;
+    }
+
+    setText(element, value) { if (element) element.textContent = value; }
 
     log(message) {
-
-        if (!this.logContainer) return;
-
+        if (!this.logContainer || !message) return;
+        const first = this.logContainer.firstElementChild?.querySelector(".log-message")?.textContent;
+        if (first === message) return;
         const now = new Date();
-
-        const time =
-            now.toLocaleTimeString("nl-NL", {
-                hour: "2-digit",
-                minute: "2-digit"
-            });
-
         const item = document.createElement("div");
-
         item.className = "log-item";
-
-        item.innerHTML = `
-            <div class="log-time">${time}</div>
-            <div class="log-message">${message}</div>
-        `;
-
+        item.innerHTML = `<div class="log-time">${now.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</div><div class="log-message">${message}</div>`;
         this.logContainer.prepend(item);
-
     }
 
-    setCoverage(percent) {
-
-        if (!this.coverageElement) return;
-
-        this.coverageElement.textContent =
-            `${percent}%`;
-
-    }
-
-    setIncidentCount(count) {
-
-        if (!this.incidentElement) return;
-
-        this.incidentElement.textContent =
-            count;
-
-    }
-
-    vehicleDispatched(vehicleId, districtName) {
-
-        this.log(
-            `${vehicleId} uitgereden vanuit ${districtName}`
-        );
-
-        this.refresh();
-
-    }
-
-    vehicleReturned(vehicleId) {
-
-        this.log(
-            `${vehicleId} terug beschikbaar`
-        );
-
-        this.refresh();
-
-    }
+    clearLog() { if (this.logContainer) this.logContainer.innerHTML = ""; }
 
     updateButtons(step, dispatching = false) {
         const buttons = [

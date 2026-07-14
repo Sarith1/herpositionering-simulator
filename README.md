@@ -25,13 +25,7 @@ Deze versie werkt zonder buildstap en gebruikt alleen:
 
 ## Districten
 
-- Rijnmond-Noord
-- Zeehaven
-- Rotterdam-Stad
-- Rijnmond-Oost
-- Rotterdam-Zuid
-- Rijnmond-Zuidwest
-- Zuid-Holland-Zuid
+## Handmatig testen
 
 ## Projectstructuur
 

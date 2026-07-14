@@ -45,7 +45,6 @@ export class Engine {
         const prisons = districts.filter(district => district.prison);
         const prison = prisons[Math.floor(Math.random() * prisons.length)];
         simulator.selectedPrison = prison.id;
-
         this.map.highlightPrison(prison.id);
         this.ui.log(`Gevangenis geselecteerd: ${prison.name}.`);
         this.step = 2;
