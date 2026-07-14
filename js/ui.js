@@ -15,7 +15,8 @@ Verantwoordelijk voor:
 
 import {
     districts,
-    vehicles
+    vehicles,
+    simulator
 } from "./data.js";
 
 export class UI {
@@ -89,10 +90,12 @@ export class UI {
             this.busyElement.textContent = busy;
 
         if (this.incidentElement)
-            this.incidentElement.textContent = "0";
+            this.incidentElement.textContent = simulator.activeIncident ? "1" : "0";
 
-        if (this.coverageElement)
-            this.coverageElement.textContent = "100%";
+        if (this.coverageElement) {
+            const coverage = Math.round((available / vehicles.length) * 100);
+            this.coverageElement.textContent = `${coverage}%`;
+        }
 
     }
 
@@ -198,6 +201,22 @@ export class UI {
 
         this.refresh();
 
+    }
+
+    updateButtons(step, dispatching = false) {
+        const buttons = [
+            document.getElementById("incidentBtn"),
+            document.getElementById("prisonBtn"),
+            document.getElementById("travelBtn"),
+            document.getElementById("dispatchBtn")
+        ];
+
+        buttons.forEach((button, index) => {
+            if (!button) return;
+            const enabled = !dispatching && step === index;
+            button.disabled = !enabled;
+            button.setAttribute("aria-disabled", String(!enabled));
+        });
     }
 
 }

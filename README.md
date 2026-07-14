@@ -1,56 +1,29 @@
 # 🚔 Politie Herpositionering Simulator
 
-Een interactieve trainingssimulator voor het visualiseren van de herpositionering van politievoertuigen tussen districten.
+Interactieve GitHub Pages-simulator voor het oefenen van politiedispatch en herpositionering binnen zeven districten.
 
-> **Status:** In ontwikkeling (v0.1)
+## Sprint 1.3
 
----
+Deze versie werkt zonder buildstap en gebruikt alleen:
 
-# Doel
+- HTML
+- CSS
+- JavaScript ES Modules
+- SVG
+- de bestaande kaartafbeelding `assets/kaart_Eenheid_DEF.png`
 
-Deze simulator ondersteunt trainingen en workshops waarin deelnemers inzicht krijgen in de gevolgen van voertuigverplaatsingen, dekking en capaciteitsverdeling tussen politiedistricten.
+## Functionaliteit
 
----
+- 7 districten met ieder 3 politievoertuigen (21 totaal).
+- Bedieningsknoppen werken uitsluitend in de volgorde 1 → 2 → 3 → 4.
+- Knop 1 plaatst een boef in een willekeurig district.
+- Knop 2 selecteert en markeert willekeurig één van de beschikbare gevangenissen.
+- Knop 3 berekent een reistijd van 90 tot en met 120 seconden op basis van de kortste route naar de geselecteerde gevangenis.
+- Knop 4 kiest het dichtstbijzijnde beschikbare voertuig, animeert dit naar de melding, verwijdert boef en voertuig tijdelijk en laat het voertuig daarna terugkeren.
+- Dashboard, districtstatus en activiteitenlog worden live bijgewerkt.
+- Alle interactieve kaartobjecten worden getekend in een SVG-overlay boven de bestaande kaart.
 
-# Functionaliteiten (Roadmap)
-
-## Sprint 1
-- [x] Projectstructuur
-- [x] Dashboard
-- [x] Activiteitenlog
-- [x] Statuspaneel
-- [x] Kaartcontainer
-- [x] Donkere meldkamerstijl
-
-## Sprint 2
-- [ ] Achtergrondkaart
-- [ ] 7 districten
-- [ ] SVG-overlay
-- [ ] Politievoertuigen
-- [ ] Animatie-engine
-
-## Sprint 3
-- [ ] Melding genereren
-- [ ] Gevangenis selecteren
-- [ ] Reistijd berekenen
-- [ ] Automatische dispatch
-
-## Sprint 4
-- [ ] Slimme herpositionering
-- [ ] Dekkingscontrole
-- [ ] Mission Failed
-
-## Sprint 5
-- [ ] Score
-- [ ] Statistieken
-- [ ] Meerdere meldingen
-- [ ] Moeilijkheidsgraden
-
----
-
-# Districten
-
-De simulator gebruikt de volgende districten:
+## Districten
 
 - Rijnmond-Noord
 - Zeehaven
@@ -60,78 +33,35 @@ De simulator gebruikt de volgende districten:
 - Rijnmond-Zuidwest
 - Zuid-Holland-Zuid
 
----
+## Projectstructuur
 
-# Techniek
-
-Het project wordt gebouwd met:
-
-- TypeScript
-- Vite
-- HTML5
-- CSS3
-- SVG
-- requestAnimationFrame()
-
----
-
-# Projectstructuur
-
-```
-src/
-│
-├── engine/
-├── models/
-├── ui/
-├── services/
-├── styles/
-└── assets/
+```text
+index.html
+css/main.css
+js/app.js
+js/data.js
+js/engine.js
+js/map.js
+js/routing.js
+js/ui.js
+assets/kaart_Eenheid_DEF.png
+README.md
 ```
 
----
+## Lokaal draaien
 
-# Installatie
+Er is geen installatie of bundler nodig. Open `index.html` direct in een browser of start een eenvoudige statische server:
 
 ```bash
-npm install
-npm run dev
+python3 -m http.server 8000
 ```
 
-Open vervolgens:
+Open daarna:
 
+```text
+http://localhost:8000
 ```
-http://localhost:5173
-```
 
----
+## GitHub Pages
 
-# Ontwikkelprincipes
-
-Bij de ontwikkeling gelden de volgende uitgangspunten:
-
-- Simulatielogica en gebruikersinterface zijn volledig gescheiden.
-- De simulator maakt gebruik van een game-loop (`requestAnimationFrame`) voor vloeiende animaties.
-- Alle kaartobjecten worden als SVG boven op de kaart weergegeven.
-- Nieuwe functionaliteit wordt toegevoegd zonder bestaande code te herschrijven.
-- Iedere sprint levert een volledig werkende versie op.
-
----
-
-# Roadmap
-
-| Versie | Omschrijving |
-|---------|--------------|
-| v0.1 | Foundation |
-| v0.2 | Kaart & voertuigen |
-| v0.3 | Meldingen |
-| v0.4 | Routering |
-| v0.5 | Herpositionering |
-| v1.0 | Complete simulator |
-
----
-
-# Auteur
-
-Sarith Breedijk
-
-Ontwikkeld met ondersteuning van ChatGPT.
+Omdat alle paden relatief zijn en er geen buildproces nodig is, kan de repository rechtstreeks via GitHub Pages worden gepubliceerd.
