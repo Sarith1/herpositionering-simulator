@@ -1,23 +1,4 @@
-/*
-==========================================================
-Politie Herpositionering Simulator
-Sprint 1.3
-
-Engine
-
-Verantwoordelijk voor:
-
-- Simulatiestatus
-- Incidenten
-- Gevangenissen
-- Reistijd
-- Voertuigselectie
-- Timers
-==========================================================
-*/
-import { 
-    Routing 
-} from "./routing.js";
+import { Routing } from "./routing.js";
 import {
     districts,
     vehicles,
@@ -27,232 +8,155 @@ import {
 } from "./data.js";
 
 export class Engine {
-
     constructor(ui, map) {
-
-    this.ui = ui;
-    this.map = map;
-
-    this.routing = new Routing();
-
-    this.step = 0;
-
-    this.activeVehicle = null;
-
-}
-
-    /*
-    ======================================================
-    Stap 1
-    ======================================================
-    */
-
-    createIncident() {
-
-        if (this.step !== 0) return;
-
-        const district =
-            districts[
-                Math.floor(Math.random() * districts.length)
-            ];
-
-        simulator.activeIncident = district.id;
-
-        this.map.showIncident(district);
-
-        this.ui.log(
-            `Nieuwe melding: ${district.name}`
-        );
-
-        this.ui.setIncidentCount(1);
-
-        this.step = 1;
-
+        this.ui = ui;
+        this.map = map;
+        this.routing = new Routing();
+        this.step = 0;
+        this.dispatching = false;
     }
 
-    /*
-    ======================================================
-    Stap 2
-    ======================================================
-    */
+    getStep() {
+        return this.step;
+    }
+
+    isDispatching() {
+        return this.dispatching;
+    }
+
+    createIncident() {
+        this.requireStep(0, "Maak eerst de huidige cyclus af.");
+
+        const district = districts[Math.floor(Math.random() * districts.length)];
+        simulator.activeIncident = district.id;
+        simulator.selectedPrison = null;
+        simulator.travelTime = null;
+
+        this.map.clearRoute();
+        this.map.clearPrisonHighlight();
+        this.map.showIncident(district);
+        this.ui.log(`Nieuwe melding in ${district.name}.`);
+        this.step = 1;
+    }
 
     selectPrison() {
+        this.requireStep(1, "Maak eerst een melding aan met knop 1.");
 
-        if (this.step !== 1) return;
-
-        const prisons =
-            districts.filter(d => d.prison);
-
-        const prison =
-            prisons[
-                Math.floor(Math.random() * prisons.length)
-            ];
-
+        const prisons = districts.filter(district => district.prison);
+        const prison = prisons[Math.floor(Math.random() * prisons.length)];
         simulator.selectedPrison = prison.id;
 
         this.map.highlightPrison(prison.id);
-
-        this.ui.log(
-            `Gevangenis geselecteerd: ${prison.name}`
-        );
-
+        this.ui.log(`Gevangenis geselecteerd: ${prison.name}.`);
         this.step = 2;
-
     }
-
-    /*
-    ======================================================
-    Stap 3
-    ======================================================
-    */
 
     calculateTravelTime() {
+        this.requireStep(2, "Selecteer eerst een gevangenis met knop 2.");
 
-        if (this.step !== 2) return;
-
-        // Sprint 1.3:
-        // nog eenvoudige berekening.
-        // Sprint 1.4:
-        // routing-algoritme.
-
-        const seconds = this.routing.calculateTravelTime(
-        simulator.activeIncident,
-        simulator.selectedPrison
-);
-
-simulator.travelTime = seconds;
-
-        this.ui.log(
-            `Reistijd: ${seconds} seconden`
+        const route = this.routing.completeRoute(
+            simulator.activeIncident,
+            simulator.selectedPrison
         );
 
-        this.step = 3;
-
-    }
-
-    /*
-    ======================================================
-    Stap 4
-    ======================================================
-    */
-
-    dispatchVehicle() {
-
-        if (this.step !== 3) return;
-
-        const vehicle =
-            this.findClosestVehicle();
-
-        if (!vehicle) {
-
-            this.ui.log(
-                "Geen voertuig beschikbaar."
-            );
-
-            return;
-
+        if (route.length === 0) {
+            throw new Error("Geen route gevonden tussen melding en gevangenis.");
         }
 
+        simulator.travelTime = this.routing.calculateTravelTime(
+            simulator.activeIncident,
+            simulator.selectedPrison
+        );
+
+        this.map.drawRoute(this.routing.routeCoordinates(route));
+        this.ui.log(`Kortste route: ${route.map(id => getDistrict(id).name).join(" → ")}.`);
+        this.ui.log(`Reistijd berekend: ${simulator.travelTime} seconden.`);
+        this.step = 3;
+    }
+
+    dispatchVehicle() {
+        this.requireStep(3, "Bereken eerst de reistijd met knop 3.");
+
+        if (this.dispatching) {
+            this.ui.log("Dispatch is al bezig; dubbele actie genegeerd.");
+            return;
+        }
+
+        const vehicle = this.findClosestVehicle();
+        const incident = getDistrict(simulator.activeIncident);
+
+        if (!vehicle || !incident) {
+            throw new Error("Geen beschikbaar voertuig of melding gevonden.");
+        }
+
+        this.dispatching = true;
         vehicle.status = "busy";
+        vehicle.district = simulator.activeIncident;
+        vehicle.incident = simulator.activeIncident;
+        vehicle.prison = simulator.selectedPrison;
 
-        this.activeVehicle = vehicle;
+        this.ui.vehicleDispatched(vehicle.id, getDistrict(vehicle.homeDistrict).name);
+        this.map.moveVehicle(vehicle, incident.x, incident.y, 2500);
 
-        const incident =
-            getDistrict(
-                simulator.activeIncident
-            );
-
-        this.map.moveVehicle(
-            vehicle,
-            incident.x,
-            incident.y
-        );
-
-        this.ui.vehicleDispatched(
-            vehicle.id,
-            getDistrict(vehicle.district).name
-        );
-
-        setTimeout(() => {
-
+        window.setTimeout(() => {
             this.map.removeIncident();
-
             this.map.hideVehicle(vehicle.id);
+            this.ui.log(`${vehicle.id} behandelt de melding; voertuig tijdelijk niet beschikbaar.`);
+            this.ui.refresh();
+        }, 2600);
 
-        }, 3000);
+        window.setTimeout(() => {
+            const home = getDistrict(vehicle.homeDistrict);
+            const incident = getDistrict(simulator.activeIncident);
+            vehicle.status = "returning";
+            vehicle.incident = null;
+            vehicle.prison = null;
+            vehicle.district = vehicle.homeDistrict;
+            vehicle.x = incident.x;
+            vehicle.y = incident.y;
 
-        setTimeout(() => {
+            this.map.showVehicleAt(vehicle, incident.x, incident.y);
+            this.map.moveVehicle(vehicle, vehicle.homeX ?? home.x, vehicle.homeY ?? home.y, 1200);
 
-            vehicle.status = "available";
-
-            vehicle.x = getDistrict(vehicle.homeDistrict).x;
-
-            vehicle.y = getDistrict(vehicle.homeDistrict).y;
-
-            this.map.showVehicle(vehicle);
-
-            this.ui.vehicleReturned(vehicle.id);
-
-            simulator.activeIncident = null;
-
-            simulator.selectedPrison = null;
-
-            simulator.travelTime = null;
-
-            this.ui.setIncidentCount(0);
-
-            this.step = 0;
-
+            window.setTimeout(() => {
+                vehicle.status = "available";
+                vehicle.x = vehicle.homeX ?? home.x;
+                vehicle.y = vehicle.homeY ?? home.y;
+                this.ui.vehicleReturned(vehicle.id);
+                this.resetCycle();
+            }, 1300);
+            return;
         }, simulator.travelTime * 1000);
 
+        this.step = 4;
     }
-
-    /*
-    ======================================================
-    Zoek dichtstbijzijnde voertuig
-    ======================================================
-    */
 
     findClosestVehicle() {
+        const incident = getDistrict(simulator.activeIncident);
+        const available = getAvailableVehicles();
 
-        const incident =
-            getDistrict(
-                simulator.activeIncident
-            );
-
-        const available =
-            getAvailableVehicles();
-
-        if (available.length === 0)
-            return null;
-
-        let best = null;
-
-        let distance = Infinity;
-
-        available.forEach(vehicle => {
-
-            const dx =
-                incident.x - vehicle.x;
-
-            const dy =
-                incident.y - vehicle.y;
-
-            const d =
-                Math.sqrt(dx * dx + dy * dy);
-
-            if (d < distance) {
-
-                distance = d;
-
-                best = vehicle;
-
-            }
-
-        });
-
-        return best;
-
+        return available.reduce((best, vehicle) => {
+            const distance = Math.hypot(incident.x - vehicle.x, incident.y - vehicle.y);
+            return !best || distance < best.distance ? { vehicle, distance } : best;
+        }, null)?.vehicle || null;
     }
 
+    resetCycle() {
+        simulator.activeIncident = null;
+        simulator.selectedPrison = null;
+        simulator.travelTime = null;
+        this.dispatching = false;
+        this.step = 0;
+        this.map.clearRoute();
+        this.map.clearPrisonHighlight();
+        this.ui.refresh();
+        this.ui.updateButtons(this.step, this.dispatching);
+    }
+
+    requireStep(expectedStep, message) {
+        if (this.step !== expectedStep || this.dispatching) {
+            this.ui.log(message);
+            throw new Error(message);
+        }
+    }
 }
