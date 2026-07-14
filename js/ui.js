@@ -14,7 +14,8 @@ Verantwoordelijk voor:
 import {
     districts,
     vehicles,
-    simulator
+    simulator,
+    getAvailableVehiclesInDistrict
 } from "./data.js";
 
 export class UI {
