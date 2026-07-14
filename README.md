@@ -1,182 +1,61 @@
 # 🚔 Politie Herpositionering Simulator
 
-Interactieve, GitHub Pages-compatibele trainingssimulator voor het oefenen met politiedekking, dispatch, gevangenisritten en herpositionering tussen districten in de eenheid Rotterdam.
+Interactieve GitHub Pages-simulator voor het oefenen van politiedispatch en herpositionering binnen zeven districten.
 
-> **Status:** Sprint 1.5 afgerond — eerste bruikbare trainingsversie.
+## Sprint 1.3
 
----
+Deze versie werkt zonder buildstap en gebruikt alleen:
 
-## Doel
+- HTML
+- CSS
+- JavaScript ES Modules
+- SVG
+- de bestaande kaartafbeelding `assets/kaart_Eenheid_DEF.png`
 
-De simulator ondersteunt trainingen en workshops waarin deelnemers direct zien wat een melding, voertuigkeuze en herpositionering doen met regionale dekking en responstijden.
+## Functionaliteit
 
----
-
-## Sprint 1.5 functionaliteit
-
-- Live dashboard met beschikbare voertuigen, ritstatussen, open en afgehandelde meldingen, dekking, gemiddelde responstijd, gemiddelde gevangenisrit, herpositioneringen en simulatietijd.
-- Professionelere SVG-kaart met duidelijke routes, districtlabels, dekkingsringen, voertuigschaduw, blauwe zwaailichten en pulserende incidentmarkers.
-- Vloeiende voertuiganimaties met easing en rotatie in rijrichting.
-- Gevangenissen lichten goud op wanneer geselecteerd.
-- Blauwe bewegingslijnen voor herpositioneringen.
-- Mission Failed-scherm met rode fade-in.
-- Reset met schone herinitialisatie van voertuigen, timers, kaart en statistieken.
-- Professioneel activiteitenlog met tijd, categorie en bericht; nieuwste regels staan bovenaan en het log is begrensd op 100 regels.
-- Instellingenpaneel voor voertuigen per district, animaties, activiteitenlog, routeweergave en voertuig-ID's.
-- Apart statistiekenpaneel met sessiestatistieken.
-- Ondersteuning voor meerdere voertuigen die tegelijk rijden of herpositioneren.
-- Extra foutafhandeling tegen dubbele dispatch, dubbele timers, ontbrekende elementen en null-referenties.
-
----
+- 7 districten met ieder 3 politievoertuigen (21 totaal).
+- Bedieningsknoppen werken uitsluitend in de volgorde 1 → 2 → 3 → 4.
+- Knop 1 plaatst een boef in een willekeurig district.
+- Knop 2 selecteert en markeert willekeurig één van de beschikbare gevangenissen.
+- Knop 3 berekent een reistijd van 90 tot en met 120 seconden op basis van de kortste route naar de geselecteerde gevangenis.
+- Knop 4 kiest het dichtstbijzijnde beschikbare voertuig, animeert dit naar de melding, verwijdert boef en voertuig tijdelijk en laat het voertuig daarna terugkeren.
+- Dashboard, districtstatus en activiteitenlog worden live bijgewerkt.
+- Alle interactieve kaartobjecten worden getekend in een SVG-overlay boven de bestaande kaart.
 
 ## Districten
 
-- Rijnmond-Noord
-- Zeehaven
-- Rotterdam-Stad
-- Rijnmond-Oost
-- Rotterdam-Zuid
-- Rijnmond-Zuidwest
-- Zuid-Holland-Zuid
-
-Zeehaven en Rotterdam-Stad zijn gevangenisdistricten.
-
----
-
-## Instellingen
-
-Het instellingenpaneel biedt:
-
-| Instelling | Opties | Effect |
-| --- | --- | --- |
-| Aantal voertuigen per district | 1, 2, 3, 4 | Reset de vloot en plaatst voertuigen opnieuw rond ieder district. |
-| Animaties | Aan/Uit | Schakelt CSS/SVG-animaties en rijduurvisualisatie aan of uit. |
-| Activiteitenlog | Aan/Uit | Nieuwe logregels worden wel of niet toegevoegd. |
-| Routeweergave | Aan/Uit | Toont of verbergt actieve rijroutes. |
-| Toon voertuig-ID's | Aan/Uit | Toont of verbergt labels zoals `RN-01`. |
-| Reset simulator | Knop | Zet sessie, kaart, timers, meldingen, voertuigen en statistieken terug. |
-
----
-
-## Statistieken
-
-Tijdens de sessie worden bijgehouden:
-
-- Totaal aantal meldingen
-- Gemiddelde responstijd
-- Gemiddelde gevangenisrit
-- Aantal herpositioneringen
-- Langste herpositioneringsketen
-- Aantal Mission Failed-situaties
-- Totale simulatietijd
-
----
-
-## Gebruik
-
-1. Klik **1. Melding** om een melding in een willekeurig district te maken.
-2. Klik **2. Cel** om automatisch de dichtstbijzijnde gevangenis te selecteren.
-3. Klik **3. Reistijd** om de gevangenisrit te berekenen.
-4. Klik **4. Pak melding op** om het dichtstbijzijnde beschikbare voertuig te dispatchen.
-5. Na afronding wordt knop 1 automatisch weer bruikbaar voor een nieuwe melding.
-
----
-
-## Techniek
-
-Het project gebruikt bewust een eenvoudige front-endarchitectuur zonder buildstap:
-
-- HTML5
-- CSS3
-- JavaScript ES Modules
-- SVG-overlay
-- `requestAnimationFrame()` voor animatie-updates
-- Geen frameworks
-- Geen bundler
-- Geschikt voor GitHub Pages
-
----
+## Handmatig testen
 
 ## Projectstructuur
 
 ```text
-.
-├── assets/
-│   └── kaart_Eenheid_DEF.png
-├── css/
-│   └── main.css
-├── js/
-│   ├── app.js
-│   ├── data.js
-│   ├── engine.js
-│   ├── map.js
-│   ├── routing.js
-│   └── ui.js
-├── index.html
-└── README.md
+index.html
+css/main.css
+js/app.js
+js/data.js
+js/engine.js
+js/map.js
+js/routing.js
+js/ui.js
+assets/kaart_Eenheid_DEF.png
+README.md
 ```
 
----
+## Lokaal draaien
 
-## Lokaal testen
-
-Er is geen installatie of build nodig. Start een statische server vanuit de repositoryroot:
+Er is geen installatie of bundler nodig. Open `index.html` direct in een browser of start een eenvoudige statische server:
 
 ```bash
-python3 -m http.server 8080
+python3 -m http.server 8000
 ```
 
 Open daarna:
 
 ```text
-http://localhost:8080
+http://localhost:8000
 ```
 
-### Handmatige testscenario's Sprint 1.5
+## GitHub Pages
 
-- Voer 25 opeenvolgende meldingen uit met de knoppen 1 t/m 4.
-- Start nieuwe meldingen na afronding en controleer dat knop 1 opnieuw werkt.
-- Verlaag voertuigen per district naar 1 om herpositionering en Mission Failed sneller te kunnen controleren.
-- Controleer meerdere gelijktijdige voertuigbewegingen door herpositionering tijdens dispatch te laten lopen.
-- Zet animaties uit en aan.
-- Zet routeweergave uit en aan.
-- Zet voertuig-ID's uit en aan.
-- Zet activiteitenlog uit en aan.
-- Voer een volledige reset uit en controleer dat voertuigen, dashboard en statistieken opnieuw beginnen.
-- Controleer in de browserconsole dat er geen errors verschijnen.
-
----
-
-## Screenshots
-
-Plaatsaanduidingen voor projectdocumentatie:
-
-- `docs/screenshots/sprint-1-5-dashboard.png` — live dashboard en instellingenpaneel.
-- `docs/screenshots/sprint-1-5-map.png` — kaart met routes, dekkingsringen en voertuigen.
-- `docs/screenshots/sprint-1-5-mission-failed.png` — Mission Failed-overlay.
-
----
-
-## Bekende beperkingen
-
-- De kaart gebruikt vereenvoudigde districtcoördinaten en geen echte wegdata.
-- Melding-, gevangenis- en reistijdkeuzes zijn simulatiemodellen en geen operationele adviezen.
-- Browserhandelingen blijven nodig voor volledige visuele validatie.
-
----
-
-## Aanbevelingen Sprint 2
-
-- Scenario-editor voor trainingsleiders.
-- Moeilijkheidsgraden en vooraf gedefinieerde oefeningen.
-- Persistente rapportage/export van sessiestatistieken.
-- Uitgebreidere routeweging met verkeersdrukte en prioriteitsritten.
-- Toegankelijkheidscontrole en keyboard-only bediening.
-
----
-
-## Auteur
-
-Sarith Breedijk
-
-Ontwikkeld met ondersteuning van ChatGPT.
+Omdat alle paden relatief zijn en er geen buildproces nodig is, kan de repository rechtstreeks via GitHub Pages worden gepubliceerd.

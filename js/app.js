@@ -1,64 +1,66 @@
+import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
 import { Engine } from "./engine.js";
-import { simulator } from "./data.js";
 
 class App {
+    constructor() {
+        this.map = null;
+        this.ui = null;
+        this.engine = null;
+    }
+
     start() {
-        console.info("Politie Herpositionering Simulator - Sprint 1.5");
-        this.map = new MapView("map");
-        this.map.initialize();
-        this.ui = new UI();
-        this.ui.initialize();
-        this.engine = new Engine(this.ui, this.map);
-        this.registerButtons();
-        this.registerSettings();
-        this.startRenderLoop();
+        console.info("Politie Herpositionering Simulator - Sprint 1.3");
+
+        try {
+            this.map = new MapView("map");
+            this.map.initialize();
+
+            this.ui = new UI();
+            this.ui.initialize();
+
+            this.engine = new Engine(this.ui, this.map);
+            this.registerButtons();
+            this.ui.updateButtons(this.engine.getStep());
+        } catch (error) {
+            console.error(error);
+            document.body.insertAdjacentHTML(
+                "afterbegin",
+                `<div class="error-banner">De simulator kon niet starten: ${error.message}</div>`
+            );
+        }
     }
 
     registerButtons() {
-        this.bind("incidentBtn", () => this.engine.createIncident());
-        this.bind("prisonBtn", () => this.engine.selectPrison());
-        this.bind("travelBtn", () => this.engine.calculateTravelTime());
-        this.bind("dispatchBtn", () => this.engine.dispatchVehicle());
-        this.bind("resetBtn", () => this.engine.reset());
+        this.bindStepButton("incidentBtn", () => this.engine.createIncident());
+        this.bindStepButton("prisonBtn", () => this.engine.selectPrison());
+        this.bindStepButton("travelBtn", () => this.engine.calculateTravelTime());
+        this.bindStepButton("dispatchBtn", () => this.engine.dispatchVehicle());
     }
 
-    registerSettings() {
-        const vehiclesPerDistrict = document.getElementById("vehiclesPerDistrict");
-        vehiclesPerDistrict?.addEventListener("change", event => {
-            simulator.settings.vehiclesPerDistrict = Number(event.target.value);
-            this.engine.reset(simulator.settings.vehiclesPerDistrict);
+    bindStepButton(id, action) {
+        const button = document.getElementById(id);
+
+        if (!button) {
+            this.ui.log(`Knop '${id}' ontbreekt.`);
+            return;
+        }
+
+        button.addEventListener("click", () => {
+            try {
+                action();
+                this.ui.refresh();
+                this.ui.updateButtons(this.engine.getStep(), this.engine.isDispatching());
+            } catch (error) {
+                console.error(error);
+                this.ui.log(`Fout: ${error.message}`);
+                this.ui.updateButtons(this.engine.getStep(), this.engine.isDispatching());
+            }
         });
-        this.toggle("animationsToggle", "animations", () => this.map.container.classList.toggle("animations-off", !simulator.settings.animations));
-        this.toggle("logToggle", "log");
-        this.toggle("routesToggle", "routes", () => this.map.renderRoutes());
-        this.toggle("idsToggle", "showIds", () => this.map.vehicleNodes.forEach((node) => node.classList.toggle("hide-id", !simulator.settings.showIds)));
-    }
-
-    bind(id, handler) {
-        const element = document.getElementById(id);
-        if (!element) return console.warn(`Knop ontbreekt: ${id}`);
-        element.addEventListener("click", handler, { passive: true });
-    }
-
-    toggle(id, setting, afterChange = () => {}) {
-        const element = document.getElementById(id);
-        if (!element) return console.warn(`Instelling ontbreekt: ${id}`);
-        element.addEventListener("change", event => {
-            simulator.settings[setting] = event.target.checked;
-            afterChange();
-            this.ui.refresh(true);
-        });
-    }
-
-    startRenderLoop() {
-        const loop = (time) => {
-            this.engine.update(time);
-            requestAnimationFrame(loop);
-        };
-        requestAnimationFrame(loop);
     }
 }
 
-window.addEventListener("DOMContentLoaded", () => new App().start(), { once: true });
+window.addEventListener("DOMContentLoaded", () => {
+    new App().start();
+});
