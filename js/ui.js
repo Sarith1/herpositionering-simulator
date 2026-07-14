@@ -1,203 +1,86 @@
-/*
-==========================================================
-Politie Herpositionering Simulator
-Sprint 1.2
-Bestand: ui.js
-
-Verantwoordelijk voor:
-
-- Dashboard
-- Activiteitenlog
-- Statuspaneel
-- Tellerwaarden
-==========================================================
-*/
-
-import {
-    districts,
-    vehicles
-} from "./data.js";
+import { districts, vehicles, simulator } from "./data.js";
 
 export class UI {
-
-    constructor() {
-
-        this.logContainer = null;
-        this.statusContainer = null;
-
-        this.availableElement = null;
-        this.busyElement = null;
-        this.incidentElement = null;
-        this.coverageElement = null;
-
-    }
+    constructor() { this.elements = {}; this.lastDashboard = ""; }
 
     initialize() {
-
-        this.findElements();
-
-        this.refresh();
-
-        this.log("Simulator gestart");
-
-        this.log("21 voertuigen beschikbaar");
-
+        ["availableCount","toIncidentCount","toPrisonCount","repositioningCount","offlineCount","openIncidentCount","handledCount","coverageCount","avgResponseCount","avgPrisonCount","repositionsCount","simTimeCount","activityLog","districtStatus","statisticsPanel"].forEach(id => { this.elements[id] = document.getElementById(id); });
+        this.refresh(true);
+        this.log("STATUS", "Simulator gestart");
     }
 
-    findElements() {
+    refresh(force = false) { this.updateDashboard(force); this.updateStatusPanel(); this.updateStatistics(); }
 
-        this.availableElement =
-            document.getElementById("availableCount");
-
-        this.busyElement =
-            document.getElementById("busyCount");
-
-        this.incidentElement =
-            document.getElementById("incidentCount");
-
-        this.coverageElement =
-            document.getElementById("coverageCount");
-
-        this.logContainer =
-            document.getElementById("activityLog");
-
-        this.statusContainer =
-            document.getElementById("districtStatus");
-
+    updateDashboard(force = false) {
+        const stats = this.getDashboardStats();
+        const serialized = JSON.stringify(stats);
+        if (!force && serialized === this.lastDashboard) return;
+        this.lastDashboard = serialized;
+        Object.entries(stats).forEach(([id, value]) => { if (this.elements[id]) this.elements[id].textContent = value; });
     }
 
-    refresh() {
-
-        this.updateDashboard();
-
-        this.updateStatusPanel();
-
-    }
-
-    updateDashboard() {
-
-        const available =
-            vehicles.filter(v => v.status === "available").length;
-
-        const busy =
-            vehicles.filter(v => v.status !== "available").length;
-
-        if (this.availableElement)
-            this.availableElement.textContent = available;
-
-        if (this.busyElement)
-            this.busyElement.textContent = busy;
-
-        if (this.incidentElement)
-            this.incidentElement.textContent = "0";
-
-        if (this.coverageElement)
-            this.coverageElement.textContent = "100%";
-
+    getDashboardStats() {
+        const coverage = this.coveragePercent();
+        const elapsed = Math.floor((performance.now() - simulator.startTime) / 1000);
+        return {
+            availableCount: vehicles.filter(v => v.status === "available").length,
+            toIncidentCount: vehicles.filter(v => v.status === "toIncident").length,
+            toPrisonCount: vehicles.filter(v => v.status === "toPrison").length,
+            repositioningCount: vehicles.filter(v => v.status === "repositioning").length,
+            offlineCount: vehicles.filter(v => v.status === "offline").length,
+            openIncidentCount: simulator.incidents.filter(i => i.status !== "handled").length,
+            handledCount: simulator.stats.handledIncidents,
+            coverageCount: `${coverage}%`,
+            avgResponseCount: `${this.average(simulator.stats.responseTotal, simulator.stats.handledIncidents)}s`,
+            avgPrisonCount: `${this.average(simulator.stats.prisonTravelTotal, simulator.stats.handledIncidents)}s`,
+            repositionsCount: simulator.stats.repositions,
+            simTimeCount: this.formatDuration(elapsed)
+        };
     }
 
     updateStatusPanel() {
-
-        if (!this.statusContainer) return;
-
-        this.statusContainer.innerHTML = "";
-
-        districts.forEach(district => {
-
-            const available =
-                vehicles.filter(vehicle =>
-                    vehicle.district === district.id &&
-                    vehicle.status === "available"
-                ).length;
-
-            const row = document.createElement("div");
-
-            row.className = "district-status";
-
-            let icon = "🟢";
-
-            if (available === 2)
-                icon = "🟡";
-
-            if (available <= 1)
-                icon = "🟠";
-
-            if (available === 0)
-                icon = "🔴";
-
-            row.innerHTML = `
-                <span>${icon}</span>
-                <span>${district.name}</span>
-                <strong>${available}</strong>
-            `;
-
-            this.statusContainer.appendChild(row);
-
-        });
-
+        const container = this.elements.districtStatus;
+        if (!container) return;
+        container.innerHTML = districts.map(district => {
+            const available = vehicles.filter(vehicle => vehicle.district === district.id && vehicle.status === "available").length;
+            const state = available >= 2 ? "groen" : available === 1 ? "oranje" : "rood";
+            return `<div class="district-status ${state}"><span>${district.name}</span><small>${state}</small><strong>${available}</strong></div>`;
+        }).join("");
     }
 
-    log(message) {
+    updateStatistics() {
+        const panel = this.elements.statisticsPanel;
+        if (!panel) return;
+        const elapsed = Math.floor((performance.now() - simulator.startTime) / 1000);
+        const rows = [
+            ["Totaal meldingen", simulator.stats.totalIncidents],
+            ["Gemiddelde responstijd", `${this.average(simulator.stats.responseTotal, simulator.stats.handledIncidents)}s`],
+            ["Gemiddelde gevangenisrit", `${this.average(simulator.stats.prisonTravelTotal, simulator.stats.handledIncidents)}s`],
+            ["Herpositioneringen", simulator.stats.repositions],
+            ["Langste keten", simulator.stats.longestRepositionChain],
+            ["Mission Failed", simulator.stats.missionFailed],
+            ["Totale simulatietijd", this.formatDuration(elapsed)]
+        ];
+        panel.innerHTML = rows.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+    }
 
-        if (!this.logContainer) return;
-
-        const now = new Date();
-
-        const time =
-            now.toLocaleTimeString("nl-NL", {
-                hour: "2-digit",
-                minute: "2-digit"
-            });
-
+    log(category, message) {
+        if (!simulator.settings.log) return;
+        const container = this.elements.activityLog;
+        if (!container) return;
+        const time = new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
         const item = document.createElement("div");
-
         item.className = "log-item";
-
-        item.innerHTML = `
-            <div class="log-time">${time}</div>
-            <div class="log-message">${message}</div>
-        `;
-
-        this.logContainer.prepend(item);
-
+        item.innerHTML = `<time>${time}</time><strong>[${category}]</strong><span>${message}</span>`;
+        container.prepend(item);
+        while (container.children.length > 100) container.lastElementChild.remove();
     }
 
-    setCoverage(percent) {
-
-        if (!this.coverageElement) return;
-
-        this.coverageElement.textContent =
-            `${percent}%`;
-
+    coveragePercent() {
+        const covered = districts.filter(district => vehicles.some(vehicle => vehicle.district === district.id && vehicle.status === "available")).length;
+        return Math.round((covered / districts.length) * 100);
     }
 
-    setIncidentCount(count) {
-
-        if (!this.incidentElement) return;
-
-        this.incidentElement.textContent =
-            count;
-
-    }
-
-    vehicleDispatched(vehicleId, districtName) {
-
-        this.log(
-            `${vehicleId} uitgereden vanuit ${districtName}`
-        );
-
-        this.refresh();
-
-    }
-
-    vehicleReturned(vehicleId) {
-
-        this.log(
-            `${vehicleId} terug beschikbaar`
-        );
-
-        this.refresh();
-
-    }
-
+    average(total, count) { return count > 0 ? Math.round(total / count) : 0; }
+    formatDuration(seconds) { return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`; }
 }

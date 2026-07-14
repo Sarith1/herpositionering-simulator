@@ -1,105 +1,76 @@
 <!DOCTYPE html>
 <html lang="nl">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Politie Herpositionering Simulator</title>
-
-    <link
-        rel="stylesheet"
-        href="css/main.css">
-
+    <link rel="stylesheet" href="css/main.css">
 </head>
-
 <body>
-
-<div class="simulator">
-
+<div class="simulator" id="simulator">
     <header class="topbar">
-
-        <h1>🚔 Politie Herpositionering Simulator</h1>
-
-        <div class="dashboard">
-
-            <div class="card">
-                <div id="availableCount">21</div>
-                <small>Beschikbaar</small>
-            </div>
-
-            <div class="card">
-                <div id="busyCount">0</div>
-                <small>Onderweg</small>
-            </div>
-
-            <div class="card">
-                <div id="incidentCount">0</div>
-                <small>Meldingen</small>
-            </div>
-
-            <div class="card">
-                <div id="coverageCount">100%</div>
-                <small>Dekking</small>
-            </div>
-
+        <div>
+            <h1>🚔 Politie Herpositionering Simulator</h1>
+            <p>Sprint 1.5 trainingsversie</p>
         </div>
-
+        <div class="dashboard" id="dashboard">
+            <div class="card"><div id="availableCount">0</div><small>Beschikbaar</small></div>
+            <div class="card"><div id="toIncidentCount">0</div><small>Naar melding</small></div>
+            <div class="card"><div id="toPrisonCount">0</div><small>Naar gevangenis</small></div>
+            <div class="card"><div id="repositioningCount">0</div><small>Herpositionerend</small></div>
+            <div class="card"><div id="offlineCount">0</div><small>Buiten dienst</small></div>
+            <div class="card"><div id="openIncidentCount">0</div><small>Open meldingen</small></div>
+            <div class="card"><div id="handledCount">0</div><small>Afgehandeld</small></div>
+            <div class="card"><div id="coverageCount">0%</div><small>Dekking</small></div>
+            <div class="card"><div id="avgResponseCount">0s</div><small>Gem. respons</small></div>
+            <div class="card"><div id="avgPrisonCount">0s</div><small>Gem. celrit</small></div>
+            <div class="card"><div id="repositionsCount">0</div><small>Herposities</small></div>
+            <div class="card"><div id="simTimeCount">00:00</div><small>Simulatietijd</small></div>
+        </div>
     </header>
 
     <main>
-
-        <aside>
-
+        <aside class="panel">
             <h2>Activiteiten</h2>
-
-            <div id="activityLog"></div>
-
+            <div id="activityLog" class="activity-log"></div>
         </aside>
 
-        <section id="map"></section>
+        <section id="map" aria-label="Simulatiekaart"></section>
 
-        <aside>
-
-            <h2>Status</h2>
-
-            <div id="districtStatus"></div>
-
+        <aside class="panel side-stack">
+            <section>
+                <h2>Status</h2>
+                <div id="districtStatus"></div>
+            </section>
+            <section class="settings-panel">
+                <h2>Instellingen</h2>
+                <label>Aantal voertuigen per district
+                    <select id="vehiclesPerDistrict">
+                        <option>1</option><option>2</option><option selected>3</option><option>4</option>
+                    </select>
+                </label>
+                <label><input id="animationsToggle" type="checkbox" checked> Animaties</label>
+                <label><input id="logToggle" type="checkbox" checked> Activiteitenlog</label>
+                <label><input id="routesToggle" type="checkbox" checked> Routeweergave</label>
+                <label><input id="idsToggle" type="checkbox" checked> Toon voertuig-ID's</label>
+                <button id="resetBtn" class="danger-btn">Reset simulator</button>
+            </section>
+            <section>
+                <h2>Statistieken</h2>
+                <div id="statisticsPanel" class="statistics-panel"></div>
+            </section>
         </aside>
-
     </main>
 
     <footer>
-
-        <button id="incidentBtn">
-            1. Melding
-        </button>
-
-        <button id="prisonBtn">
-            2. Cel
-        </button>
-
-        <button id="travelBtn">
-            3. Reistijd
-        </button>
-
-        <button id="dispatchBtn">
-            4. Pak melding op
-        </button>
-
+        <button id="incidentBtn">1. Melding</button>
+        <button id="prisonBtn">2. Cel</button>
+        <button id="travelBtn">3. Reistijd</button>
+        <button id="dispatchBtn">4. Pak melding op</button>
     </footer>
 
+    <div id="missionFailed" class="mission-failed" aria-live="assertive">MISSION FAILED</div>
 </div>
-
-<script
-type="module"
-src="js/app.js">
-</script>
-
+<script type="module" src="js/app.js"></script>
 </body>
-
 </html>
