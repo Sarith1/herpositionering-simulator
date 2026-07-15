@@ -1,13 +1,26 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
     <title>Politie Herpositionering Simulator</title>
-    <link rel="stylesheet" href="css/main.css">
+
+    <link
+        rel="stylesheet"
+        href="css/main.css">
+
 </head>
+
 <body>
-<div class="simulator" id="simulator">
+
+<div class="simulator">
+
     <header class="topbar">
 
         <h1>🚔 Politie Herpositionering Simulator</h1>
@@ -20,28 +33,13 @@
             </div>
 
             <div class="card">
-                <div id="underwayCount">0</div>
+                <div id="busyCount">0</div>
                 <small>Onderweg</small>
             </div>
 
             <div class="card">
-                <div id="repositioningCount">0</div>
-                <small>Herpositionerend</small>
-            </div>
-
-            <div class="card">
-                <div id="busyCount">0</div>
-                <small>Tijdelijk bezet</small>
-            </div>
-
-            <div class="card">
-                <div id="openIncidentCount">0</div>
-                <small>Open meldingen</small>
-            </div>
-
-            <div class="card">
-                <div id="handledIncidentCount">0</div>
-                <small>Afgehandeld</small>
+                <div id="incidentCount">0</div>
+                <small>Meldingen</small>
             </div>
 
             <div class="card">
@@ -50,57 +48,58 @@
             </div>
 
         </div>
+
     </header>
 
     <main>
-        <aside class="panel">
+
+        <aside>
+
             <h2>Activiteiten</h2>
-            <div id="activityLog" class="activity-log"></div>
+
+            <div id="activityLog"></div>
+
         </aside>
 
-        <section id="map" aria-label="Simulatiekaart"></section>
+        <section id="map"></section>
 
-        <aside class="panel side-stack">
-            <section>
-                <h2>Status</h2>
-                <div id="districtStatus"></div>
-            </section>
-            <section class="settings-panel">
-                <h2>Instellingen</h2>
-                <label>Aantal voertuigen per district
-                    <select id="vehiclesPerDistrict">
-                        <option>1</option><option>2</option><option selected>3</option><option>4</option>
-                    </select>
-                </label>
-                <label><input id="animationsToggle" type="checkbox" checked> Animaties</label>
-                <label><input id="logToggle" type="checkbox" checked> Activiteitenlog</label>
-                <label><input id="routesToggle" type="checkbox" checked> Routeweergave</label>
-                <label><input id="idsToggle" type="checkbox" checked> Toon voertuig-ID's</label>
-                <button id="resetBtn" class="danger-btn">Reset simulator</button>
-            </section>
-            <section>
-                <h2>Statistieken</h2>
-                <div id="statisticsPanel" class="statistics-panel"></div>
-            </section>
+        <aside>
+
+            <h2>Status</h2>
+
+            <div id="districtStatus"></div>
+
         </aside>
+
     </main>
 
     <footer>
-        <button id="incidentBtn">1. Melding</button>
-        <button id="prisonBtn">2. Cel</button>
-        <button id="travelBtn">3. Reistijd</button>
-        <button id="dispatchBtn">4. Pak melding op</button>
+
+        <button id="incidentBtn">
+            1. Melding
+        </button>
+
+        <button id="prisonBtn">
+            2. Cel
+        </button>
+
+        <button id="travelBtn">
+            3. Reistijd
+        </button>
+
+        <button id="dispatchBtn">
+            4. Pak melding op
+        </button>
+
     </footer>
 
-    <div id="gameOverOverlay" class="game-over-overlay">
-        <div class="game-over-panel">
-            <h2>MISSION FAILED</h2>
-            <p>Niet alle districten zijn meer gedekt.</p>
-            <button id="resetBtn">Opnieuw beginnen</button>
-        </div>
-    </div>
-
 </div>
-<script type="module" src="js/app.js"></script>
+
+<script
+type="module"
+src="js/app.js">
+</script>
+
 </body>
+
 </html>
