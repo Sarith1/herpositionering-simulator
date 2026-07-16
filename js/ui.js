@@ -207,21 +207,45 @@ export class UI {
 
     updateButtons(buttonState) {
 
-        const mapping = {
-            incidentBtn: buttonState.incident,
-            prisonBtn: buttonState.prison,
-            travelBtn: buttonState.travelTime,
-            dispatchBtn: buttonState.dispatch,
-            resetBtn: buttonState.reset
-        };
-
-        Object.entries(mapping).forEach(([id, enabled]) => {
-            const button = document.getElementById(id);
-            if (!button) return;
-            button.disabled = !enabled;
-        });
+        this.updateControlState(buttonState);
 
         this.updateStepHint(buttonState);
+
+    }
+
+    updateControlState(buttonState) {
+
+        const controls = [
+            { id: "incidentBtn", enabled: buttonState.incident, step: "incident" },
+            { id: "prisonBtn", enabled: buttonState.prison, step: "prison" },
+            { id: "travelBtn", enabled: buttonState.travelTime, step: "travelTime" },
+            { id: "dispatchBtn", enabled: buttonState.dispatch, step: "dispatch" }
+        ];
+
+        controls.forEach(control => {
+            const button = document.getElementById(control.id);
+
+            if (!button) {
+                console.warn(`Bedieningsknop ontbreekt: ${control.id}`);
+                return;
+            }
+
+            const disabled = !control.enabled;
+            button.disabled = disabled;
+            button.setAttribute("aria-disabled", String(disabled));
+            button.classList.toggle(
+                "active-step",
+                buttonState.currentStep === control.step && control.enabled
+            );
+        });
+
+        const resetButton = document.getElementById("resetBtn");
+
+        if (resetButton) {
+            const resetDisabled = !buttonState.reset;
+            resetButton.disabled = resetDisabled;
+            resetButton.setAttribute("aria-disabled", String(resetDisabled));
+        }
 
     }
 

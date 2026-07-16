@@ -717,3 +717,184 @@ footer button.secondary:hover {
 .vehicle.repositioning {
     filter:drop-shadow(0 0 8px #22c55e);
 }
+
+
+/* ===========================================================
+   STABLE APP SHELL / CONTROL BAR REGRESSION FIX
+=========================================================== */
+
+.simulator,
+.app-shell {
+    min-height: 100vh;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, auto) auto;
+    width: 100%;
+    overflow: hidden;
+}
+
+.topbar {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 20;
+}
+
+main,
+.main-content {
+    min-height: 0;
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(220px, 280px);
+    overflow: hidden;
+}
+
+aside,
+.activity-panel,
+.dashboard-panel {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#activityLog,
+.activity-log,
+#districtStatus,
+#incidentHistory {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+#activityLog,
+.activity-log {
+    flex: 1 1 auto;
+    max-height: 100%;
+}
+
+#districtStatus {
+    flex: 1 1 auto;
+}
+
+#incidentHistory {
+    flex: 0 1 35%;
+}
+
+#map,
+.map-container,
+.map-panel {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+footer,
+.control-bar {
+    position: relative;
+    z-index: 100;
+    flex-shrink: 0;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 14px 18px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.25);
+    overflow: visible;
+}
+
+.control-bar button,
+footer button {
+    min-height: 44px;
+}
+
+.control-bar button.active-step {
+    outline: 3px solid var(--accent-light);
+    outline-offset: 2px;
+}
+
+.control-bar button[disabled] {
+    cursor: not-allowed;
+    opacity: .45;
+    filter: grayscale(1);
+}
+
+@media (max-width: 1200px) {
+    main,
+    .main-content {
+        grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(190px, 240px);
+    }
+}
+
+@media (max-width: 900px) {
+    .simulator,
+    .app-shell {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .topbar {
+        padding: 14px;
+    }
+
+    main,
+    .main-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(96px, auto) minmax(120px, auto);
+    }
+
+    .activity-panel {
+        order: 2;
+        max-height: 18vh;
+    }
+
+    #map,
+    .map-panel {
+        order: 1;
+    }
+
+    .dashboard-panel {
+        order: 3;
+        max-height: 22vh;
+    }
+
+    footer,
+    .control-bar {
+        gap: 10px;
+        padding: 10px;
+    }
+
+    footer button,
+    .control-bar button {
+        flex: 1 1 145px;
+        padding: 12px 14px;
+    }
+}
+
+@media (max-width: 520px) {
+    .topbar h1 {
+        font-size: 18px;
+    }
+
+    main,
+    .main-content {
+        grid-template-rows: minmax(0, 1fr) minmax(80px, auto) minmax(100px, auto);
+    }
+
+    aside,
+    .activity-panel,
+    .dashboard-panel {
+        padding: 10px;
+    }
+
+    footer button,
+    .control-bar button {
+        flex-basis: calc(50% - 10px);
+        font-size: 14px;
+    }
+}
