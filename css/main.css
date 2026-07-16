@@ -628,9 +628,45 @@ footer button:disabled {
     font-size:32px;
 }
 
+.incident-position {
+    pointer-events:none;
+}
+
+.incident-visual {
+    filter:drop-shadow(0 0 10px rgba(239,68,68,.9));
+    transform-box:fill-box;
+    transform-origin:center;
+}
+
 .incident {
     font-size:34px;
-    animation:pulse 1s infinite alternate;
+}
+
+.incident-ring {
+    fill:rgba(239,68,68,.18);
+    stroke:#ef4444;
+    stroke-width:3px;
+    opacity:.85;
+    transform-box:fill-box;
+    transform-origin:center;
+}
+
+.incident-marker--intro {
+    animation:incidentIntroPulse 1.8s ease-in-out;
+}
+
+.incident-marker--intro .incident-ring {
+    animation:incidentIntroRing 1.8s ease-in-out;
+}
+
+.incident-marker--active {
+    animation:incidentIdlePulse 1.5s ease-in-out infinite;
+    filter:drop-shadow(0 0 6px rgba(239,68,68,.75));
+}
+
+.incident-marker--active .incident-ring {
+    animation:incidentIdleRing 1.5s ease-in-out infinite;
+    opacity:.55;
 }
 
 .vehicle.busy {
@@ -638,9 +674,48 @@ footer button:disabled {
     filter:drop-shadow(0 0 8px #facc15);
 }
 
-@keyframes pulse {
-    from { transform:scale(1); }
-    to { transform:scale(1.15); }
+@keyframes incidentIntroPulse {
+    0% { transform:scale(.85); }
+    18% { transform:scale(1.25); }
+    36% { transform:scale(.95); }
+    54% { transform:scale(1.2); }
+    72% { transform:scale(.98); }
+    88% { transform:scale(1.12); }
+    100% { transform:scale(1); }
+}
+
+@keyframes incidentIdlePulse {
+    0%, 100% { transform:scale(1); }
+    50% { transform:scale(1.08); }
+}
+
+@keyframes incidentIntroRing {
+    0% { opacity:.9; transform:scale(.75); }
+    45% { opacity:.65; transform:scale(1.35); }
+    100% { opacity:.5; transform:scale(1.1); }
+}
+
+@keyframes incidentIdleRing {
+    0%, 100% { opacity:.48; transform:scale(1); }
+    50% { opacity:.68; transform:scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .incident-marker--intro,
+    .incident-marker--active,
+    .incident-marker--intro .incident-ring,
+    .incident-marker--active .incident-ring {
+        animation:none;
+    }
+
+    .incident-visual {
+        filter:drop-shadow(0 0 10px rgba(239,68,68,.95));
+    }
+
+    .incident-ring {
+        opacity:.9;
+        stroke-width:4px;
+    }
 }
 
 
