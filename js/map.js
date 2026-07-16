@@ -12,6 +12,11 @@ meldingen, gevangenissen en routes.
 import { colors, districts, simulator, vehicles } from "./data.js";
 import { getDistrictById } from "./routing.js";
 
+const VEHICLE_SCALE = 1.15;
+const BASE_VEHICLE_FONT_SIZE = 24;
+const VEHICLE_SLOT_RADIUS = 54;
+const VEHICLE_SLOT_STEP = 18;
+
 export class MapView {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -33,6 +38,7 @@ export class MapView {
         this.container.innerHTML = "";
         this.createBackground();
         this.createSVG();
+        this.createLegend();
         this.render();
     }
 
@@ -42,6 +48,20 @@ export class MapView {
         image.className = "map-background";
         image.alt = "Kaart van de politie-eenheid";
         this.container.appendChild(image);
+    }
+
+    createLegend() {
+        const legend = document.createElement("div");
+        legend.className = "map-legend";
+        legend.setAttribute("aria-label", "Legenda");
+        legend.innerHTML = `
+            <strong>Legenda</strong>
+            <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
+            <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
+            <span><span class="legend-icon incident-icon">●</span> melding</span>
+            <span><span class="legend-icon prison-icon">🏛️</span> geselecteerde cel</span>
+        `;
+        this.container.appendChild(legend);
     }
 
     createSVG() {
@@ -183,10 +203,12 @@ export class MapView {
         if (!district) return null;
 
         const index = districtIndexes.get(vehicle.district) || 0;
-        const angle = (Math.PI * 2 / 3) * index;
-        const radius = 45;
-        const x = district.x + Math.cos(angle) * radius;
-        const y = district.y + Math.sin(angle) * radius;
+        const ringIndex = Math.floor(index / 3);
+        const slotIndex = index % 3;
+        const angle = (Math.PI * 2 / 3) * slotIndex - (Math.PI / 2) + (ringIndex * Math.PI / 6);
+        const radius = VEHICLE_SLOT_RADIUS + (ringIndex * VEHICLE_SLOT_STEP);
+        const x = this.clamp(district.x + Math.cos(angle) * radius, 28, this.width - 28);
+        const y = this.clamp(district.y + Math.sin(angle) * radius, 28, this.height - 28);
 
         vehicle.x = x;
         vehicle.y = y;
@@ -204,6 +226,7 @@ export class MapView {
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("text-anchor", "middle");
         text.dataset.vehicleId = vehicle.id;
+        text.setAttribute("dominant-baseline", "central");
         text.textContent = "🚔";
         this.vehicleLayer.appendChild(text);
 
@@ -214,6 +237,11 @@ export class MapView {
         element.setAttribute("transform", `translate(${x} ${y}) rotate(${vehicle.angle || 0})`);
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
+        element.style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
         element.setAttribute("class", vehicle.status === "AVAILABLE" ? "vehicle" : `vehicle busy ${String(vehicle.status).toLowerCase()}`);
+    }
+
+    clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

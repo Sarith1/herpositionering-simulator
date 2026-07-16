@@ -938,3 +938,130 @@ footer button {
         flex: 1 1 100%;
     }
 }
+
+/* ===========================================================
+   SPRINT 2.1 SESSIECONFIGURATIE, LEGENDA EN HERPOSITIONERING
+=========================================================== */
+.session-config {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:18px;
+    padding:14px;
+    border:1px solid rgba(125,211,255,.22);
+    border-radius:12px;
+    background:#0f2438;
+}
+
+.session-config h2 {
+    margin:0;
+}
+
+.config-help,
+.config-summary {
+    color:var(--text-secondary);
+    font-size:13px;
+    line-height:1.35;
+}
+
+.vehicle-config {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.vehicle-config-row {
+    display:grid;
+    grid-template-columns:1fr 58px;
+    align-items:center;
+    gap:10px;
+    color:var(--text-secondary);
+    font-size:13px;
+}
+
+.vehicle-config-row input {
+    width:58px;
+    padding:7px 6px;
+    border:1px solid rgba(125,211,255,.35);
+    border-radius:8px;
+    background:#07111c;
+    color:var(--text);
+    font-weight:800;
+    text-align:center;
+}
+
+.secondary-button {
+    padding:10px 12px;
+    border:1px solid rgba(125,211,255,.35);
+    border-radius:10px;
+    background:rgba(125,211,255,.12);
+    color:var(--text);
+    font-weight:700;
+}
+
+.map-legend {
+    position:absolute;
+    right:14px;
+    bottom:14px;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-width:230px;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:12px;
+    background:rgba(7,17,28,.84);
+    color:var(--text-secondary);
+    font-size:12px;
+    line-height:1.25;
+    backdrop-filter:blur(4px);
+}
+
+.map-legend strong {
+    color:var(--text);
+}
+
+.legend-icon {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    margin-right:6px;
+}
+
+.incident-icon {
+    color:#ef4444;
+    font-size:20px;
+    line-height:1;
+}
+
+.prison-icon,
+.vehicle-icon {
+    font-size:18px;
+}
+
+.vehicle:hover {
+    filter:drop-shadow(0 0 8px rgba(125,211,255,.75));
+}
+
+.vehicle.repositioning,
+.vehicle-repositioning-sample {
+    animation:repositionPulse 1s ease-in-out infinite;
+}
+
+.vehicle.repositioning {
+    filter:drop-shadow(0 0 4px rgba(59,130,246,.65));
+}
+
+@keyframes repositionPulse {
+    0%, 100% {
+        opacity:1;
+        filter:drop-shadow(0 0 2px rgba(59,130,246,.5));
+    }
+
+    50% {
+        opacity:.65;
+        filter:drop-shadow(0 0 8px rgba(59,130,246,.95));
+    }
+}

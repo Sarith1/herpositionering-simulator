@@ -15,6 +15,8 @@ Verantwoordelijk voor:
 
 import {
     districts,
+    DEFAULT_VEHICLES_PER_DISTRICT,
+    sessionConfig,
     simulator,
     vehicles
 } from "./data.js";
@@ -34,6 +36,8 @@ export class UI {
         this.averageTimeElement = null;
         this.stepHintElement = null;
         this.historyElement = null;
+        this.configContainer = null;
+        this.configTotalElement = null;
         this.gameOverLogged = false;
 
     }
@@ -82,6 +86,14 @@ export class UI {
         this.historyElement =
             document.getElementById("incidentHistory");
 
+        this.configContainer =
+            document.getElementById("vehicleConfig");
+
+        this.configTotalElement =
+            document.getElementById("vehicleConfigTotal");
+
+        this.renderSessionConfig();
+
     }
 
     refresh(buttonState = null) {
@@ -93,6 +105,64 @@ export class UI {
         this.updateEvaluationPanel();
 
         if (buttonState) this.updateButtons(buttonState);
+
+    }
+
+    renderSessionConfig() {
+
+        if (!this.configContainer) return;
+
+        this.configContainer.innerHTML = "";
+
+        districts.forEach(district => {
+            const label = document.createElement("label");
+            label.className = "vehicle-config-row";
+            label.innerHTML = `
+                <span>${district.name}</span>
+                <input type="number" min="0" max="9" step="1" value="${sessionConfig.vehiclesPerDistrict[district.id] ?? DEFAULT_VEHICLES_PER_DISTRICT}" data-district-id="${district.id}">
+            `;
+            this.configContainer.appendChild(label);
+        });
+
+        this.updateConfigTotal();
+
+        this.configContainer.addEventListener("input", () => this.updateConfigTotal());
+
+    }
+
+    getConfiguredVehiclesPerDistrict() {
+
+        if (!this.configContainer) return { ...sessionConfig.vehiclesPerDistrict };
+
+        return Object.fromEntries(
+            [...this.configContainer.querySelectorAll("input[data-district-id]")].map(input => [
+                input.dataset.districtId,
+                Math.max(0, Number.parseInt(input.value, 10) || 0)
+            ])
+        );
+
+    }
+
+    setConfigValues(vehiclesPerDistrict) {
+
+        if (!this.configContainer) return;
+
+        this.configContainer.querySelectorAll("input[data-district-id]").forEach(input => {
+            input.value = vehiclesPerDistrict[input.dataset.districtId] ?? DEFAULT_VEHICLES_PER_DISTRICT;
+        });
+
+        this.updateConfigTotal();
+
+    }
+
+    updateConfigTotal() {
+
+        if (!this.configTotalElement || !this.configContainer) return;
+
+        const total = Object.values(this.getConfiguredVehiclesPerDistrict())
+            .reduce((sum, count) => sum + count, 0);
+
+        this.configTotalElement.textContent = total;
 
     }
 
