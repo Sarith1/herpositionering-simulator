@@ -18,8 +18,8 @@ export const districts = [
         id: "RN",
         name: "Rijnmond-Noord",
 
-        x: 455,
-        y: 105,
+        x: 498,
+        y: 189,
 
         prison: false,
 
@@ -34,8 +34,8 @@ export const districts = [
         id: "ZH",
         name: "Zeehaven",
 
-        x: 235,
-        y: 250,
+        x: 309,
+        y: 225,
 
         prison: true,
 
@@ -50,8 +50,8 @@ export const districts = [
         id: "RS",
         name: "Rotterdam-Stad",
 
-        x: 505,
-        y: 245,
+        x: 571,
+        y: 284,
 
         prison: true,
 
@@ -67,8 +67,8 @@ export const districts = [
         id: "RO",
         name: "Rijnmond-Oost",
 
-        x: 760,
-        y: 250,
+        x: 721,
+        y: 354,
 
         prison: false,
 
@@ -83,8 +83,8 @@ export const districts = [
         id: "RZW",
         name: "Rijnmond-Zuidwest",
 
-        x: 270,
-        y: 470,
+        x: 344,
+        y: 380,
 
         prison: false,
 
@@ -99,8 +99,8 @@ export const districts = [
         id: "RZ",
         name: "Rotterdam-Zuid",
 
-        x: 560,
-        y: 430,
+        x: 301,
+        y: 361,
 
         prison: false,
 
@@ -116,8 +116,8 @@ export const districts = [
         id: "ZHZ",
         name: "Zuid-Holland-Zuid",
 
-        x: 600,
-        y: 650,
+        x: 609,
+        y: 223,
 
         prison: false,
 
