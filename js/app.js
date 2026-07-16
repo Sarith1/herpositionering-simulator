@@ -76,6 +76,10 @@ class App {
                 this.ui.log(`${event.vehicle.id} heeft de melding opgepakt.`);
             }
 
+            if (event?.type === "prisonReached") {
+                this.ui.log(`${event.vehicle.id} heeft de arrestant afgeleverd bij de cel.`);
+            }
+
             if (event?.type === "vehicleReturned") {
                 this.ui.vehicleReturned(event.vehicle.id);
             }

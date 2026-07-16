@@ -67,12 +67,11 @@ export class MapView {
         this.clearLayer(this.routeLayer);
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.incidentLayer);
-        this.clearLayer(this.vehicleLayer);
 
         this.drawRoute();
         this.drawDistricts();
         this.drawIncident();
-        this.drawVehicles();
+        this.syncVehicles();
     }
 
     clearLayer(layer) {
@@ -149,37 +148,67 @@ export class MapView {
         this.incidentLayer.appendChild(text);
     }
 
-    drawVehicles() {
+    syncVehicles() {
+        const visibleVehicleIds = new Set();
         const districtIndexes = new Map();
 
         vehicles.forEach(vehicle => {
-            if (vehicle.status === "busy" && !vehicle.incident) return;
+            const position = this.getVehicleRenderPosition(vehicle, districtIndexes);
+            if (!position) return;
 
-            let x = vehicle.x;
-            let y = vehicle.y;
-
-            if (vehicle.status === "available") {
-                const district = getDistrictById(vehicle.district);
-                const index = districtIndexes.get(vehicle.district) || 0;
-                const angle = (Math.PI * 2 / 3) * index;
-                const radius = 45;
-
-                x = district.x + Math.cos(angle) * radius;
-                y = district.y + Math.sin(angle) * radius;
-                vehicle.x = x;
-                vehicle.y = y;
-
-                districtIndexes.set(vehicle.district, index + 1);
-            }
-
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.setAttribute("x", x);
-            text.setAttribute("y", y);
-            text.setAttribute("text-anchor", "middle");
-            text.setAttribute("class", vehicle.status === "available" ? "vehicle" : "vehicle busy");
-            text.dataset.vehicleId = vehicle.id;
-            text.textContent = "🚔";
-            this.vehicleLayer.appendChild(text);
+            visibleVehicleIds.add(vehicle.id);
+            const element = this.getOrCreateVehicleElement(vehicle);
+            this.updateVehicleElement(element, vehicle, position.x, position.y);
         });
+
+        this.vehicleLayer
+            .querySelectorAll("[data-vehicle-id]")
+            .forEach(element => {
+                if (!visibleVehicleIds.has(element.dataset.vehicleId)) {
+                    element.remove();
+                }
+            });
+    }
+
+    getVehicleRenderPosition(vehicle, districtIndexes) {
+        if (vehicle.status === "busy") {
+            return { x: vehicle.x, y: vehicle.y };
+        }
+
+        const district = getDistrictById(vehicle.district);
+        if (!district) return null;
+
+        const index = districtIndexes.get(vehicle.district) || 0;
+        const angle = (Math.PI * 2 / 3) * index;
+        const radius = 45;
+        const x = district.x + Math.cos(angle) * radius;
+        const y = district.y + Math.sin(angle) * radius;
+
+        vehicle.x = x;
+        vehicle.y = y;
+        districtIndexes.set(vehicle.district, index + 1);
+
+        return { x, y };
+    }
+
+    getOrCreateVehicleElement(vehicle) {
+        const selector = `[data-vehicle-id="${CSS.escape(vehicle.id)}"]`;
+        const existingElement = this.vehicleLayer.querySelector(selector);
+
+        if (existingElement) return existingElement;
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("text-anchor", "middle");
+        text.dataset.vehicleId = vehicle.id;
+        text.textContent = "🚔";
+        this.vehicleLayer.appendChild(text);
+
+        return text;
+    }
+
+    updateVehicleElement(element, vehicle, x, y) {
+        element.setAttribute("x", x);
+        element.setAttribute("y", y);
+        element.setAttribute("class", vehicle.status === "available" ? "vehicle" : "vehicle busy");
     }
 }

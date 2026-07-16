@@ -543,13 +543,11 @@ main{
 
     cursor:pointer;
 
-    transition:.25s;
-
 }
 
 .vehicle:hover{
 
-    transform:scale(1.25);
+    font-size:30px;
 
 }
 
