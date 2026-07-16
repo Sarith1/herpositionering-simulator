@@ -314,10 +314,6 @@ export class UI {
 
     }
 
-    vehicleDispatched() {
-        this.refresh();
-    }
-
     logGameOver() {
 
         this.gameOverLogged = true;

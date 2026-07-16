@@ -59,7 +59,7 @@ class App {
                 (result.events || []).forEach(event => this.handleEngineEvent(event));
 
                 if (result.success && result.vehicle && result.district) {
-                    this.ui.vehicleDispatched(result.vehicle.id, result.district.name);
+                    this.ui.log(`[UITRUK] ${result.vehicle.id} is gekoppeld aan ${result.district.name}.`);
                 }
 
                 this.sync();
