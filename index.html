@@ -19,7 +19,7 @@
 
 <body>
 
-<div class="simulator">
+<div class="simulator app-shell">
 
     <header class="topbar">
 
@@ -66,19 +66,19 @@
 
     </header>
 
-    <main>
+    <main class="main-content">
 
-        <aside>
+        <aside class="activity-panel">
 
             <h2>Activiteiten</h2>
 
-            <div id="activityLog"></div>
+            <div id="activityLog" class="activity-log"></div>
 
         </aside>
 
-        <section id="map"></section>
+        <section id="map" class="map-panel map-container"></section>
 
-        <aside>
+        <aside class="dashboard-panel">
 
             <h2>Status</h2>
 
@@ -98,7 +98,7 @@
 
     </main>
 
-    <footer>
+    <footer class="control-bar" aria-label="Simulator bediening">
 
         <button id="incidentBtn">
             1. Melding
