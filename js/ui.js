@@ -17,6 +17,7 @@ import {
     districts,
     DEFAULT_VEHICLES_PER_DISTRICT,
     sessionConfig,
+    repositioningFailureConfig,
     simulator,
     vehicles
 } from "./data.js";
@@ -38,6 +39,8 @@ export class UI {
         this.historyElement = null;
         this.configContainer = null;
         this.configTotalElement = null;
+        this.prisonConfigContainer = null;
+        this.failureOverlay = null;
         this.gameOverLogged = false;
 
     }
@@ -92,6 +95,12 @@ export class UI {
         this.configTotalElement =
             document.getElementById("vehicleConfigTotal");
 
+        this.prisonConfigContainer =
+            document.getElementById("prisonConfig");
+
+        this.failureOverlay =
+            document.getElementById("repositioningFailureOverlay");
+
         this.renderSessionConfig();
 
     }
@@ -124,9 +133,51 @@ export class UI {
             this.configContainer.appendChild(label);
         });
 
+        this.renderPrisonConfig();
+
         this.updateConfigTotal();
 
         this.configContainer.addEventListener("input", () => this.updateConfigTotal());
+
+    }
+
+
+    renderPrisonConfig() {
+
+        if (!this.prisonConfigContainer) return;
+
+        this.prisonConfigContainer.innerHTML = "";
+
+        districts.filter(district => district.prison).forEach(district => {
+            const label = document.createElement("label");
+            label.className = "prison-config-row";
+            const checked = sessionConfig.availablePrisons.includes(district.id) ? "checked" : "";
+            label.innerHTML = `
+                <input type="checkbox" value="${district.id}" data-prison-id="${district.id}" ${checked}>
+                <span>${district.name} (${district.id})</span>
+            `;
+            this.prisonConfigContainer.appendChild(label);
+        });
+
+    }
+
+    getConfiguredAvailablePrisons() {
+
+        if (!this.prisonConfigContainer) return [...sessionConfig.availablePrisons];
+
+        return [...this.prisonConfigContainer.querySelectorAll("input[data-prison-id]:checked")]
+            .map(input => input.dataset.prisonId);
+
+    }
+
+    setPrisonConfigValues(prisonIds) {
+
+        if (!this.prisonConfigContainer) return;
+
+        const selected = new Set(prisonIds);
+        this.prisonConfigContainer.querySelectorAll("input[data-prison-id]").forEach(input => {
+            input.checked = selected.has(input.dataset.prisonId);
+        });
 
     }
 
@@ -305,7 +356,7 @@ export class UI {
         if (!this.stepHintElement) return;
 
         if (buttonState.gameOver) {
-            this.stepHintElement.textContent = "Oefening afgerond. Druk op reset voor een nieuwe sessie.";
+            this.stepHintElement.textContent = repositioningFailureConfig.title;
             return;
         }
 
@@ -389,11 +440,30 @@ export class UI {
 
     }
 
-    logGameOver() {
+    showRepositioningFailure(failure) {
+
+        if (!this.failureOverlay || !failure || this.gameOverLogged) return;
 
         this.gameOverLogged = true;
+        this.log(`[DEKKING] ${failure.districtName} heeft geen beschikbaar voertuig meer.`);
+        this.log(`[HERPOSITIONERING] Er is geen veilig donor-district beschikbaar voor ${failure.districtName}.`);
+        this.log(`[EINDE SESSIE] ${repositioningFailureConfig.title}.`);
 
-        this.log("Oefening afgerond. Druk op reset voor een nieuwe sessie.");
+        this.failureOverlay.querySelector("[data-failure-title]").textContent = repositioningFailureConfig.title;
+        this.failureOverlay.querySelector("[data-failure-explanation]").textContent = repositioningFailureConfig.explanation;
+        this.failureOverlay.querySelector("[data-failure-district]").textContent = failure.districtName;
+        this.failureOverlay.querySelector("[data-failure-coverage]").textContent = `${failure.coveragePercentage}%`;
+        this.failureOverlay.querySelector("[data-failure-available]").textContent = failure.availableVehicles;
+        document.querySelector(".simulator")?.classList.add("failure-active");
+        this.failureOverlay.hidden = false;
+
+    }
+
+    hideRepositioningFailure() {
+
+        if (this.failureOverlay) this.failureOverlay.hidden = true;
+        document.querySelector(".simulator")?.classList.remove("failure-active");
+        this.gameOverLogged = false;
 
     }
 

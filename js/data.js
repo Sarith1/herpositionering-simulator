@@ -37,7 +37,7 @@ export const districts = [
         x: 255,
         y: 225,
 
-        prison: true,
+        prison: false,
 
         neighbours: [
             "RN",
@@ -119,7 +119,7 @@ export const districts = [
         x: 670,
         y: 500,
 
-        prison: false,
+        prison: true,
 
         neighbours: [
             "RZW",
@@ -142,10 +142,13 @@ export const sessionConfig = {
 
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
 
-    availablePrisons: districts
-        .filter(district => district.prison)
-        .map(district => district.id)
+    availablePrisons: getDefaultPrisonDistrictIds()
 
+};
+
+export const repositioningFailureConfig = {
+    title: "Herpositioneren is niet meer mogelijk",
+    explanation: "Er is geen aangrenzend district dat veilig een voertuig kan afstaan. De gebiedsdekking kan niet meer worden hersteld."
 };
 
 export const vehicles = [];
@@ -158,12 +161,31 @@ export function createDefaultVehiclesPerDistrict() {
 
 }
 
+export function getDefaultPrisonDistrictIds() {
+
+    return districts
+        .filter(district => district.prison)
+        .map(district => district.id);
+
+}
+
+export function setAvailablePrisons(prisonIds) {
+
+    const validPrisonIds = new Set(getDefaultPrisonDistrictIds());
+    const selected = [...new Set(prisonIds)].filter(id => validPrisonIds.has(id));
+
+    if (!selected.length) {
+        throw new Error("Selecteer minimaal één cellencomplex.");
+    }
+
+    sessionConfig.availablePrisons = selected;
+
+}
+
 export function resetSessionConfigDefaults() {
 
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
-    sessionConfig.availablePrisons = districts
-        .filter(district => district.prison)
-        .map(district => district.id);
+    sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
 
     initializeVehicles();
 
@@ -251,7 +273,9 @@ export const simulator = {
 
     activeRoutes: [],
 
-    incidentHistory: []
+    incidentHistory: [],
+
+    repositioningFailure: null
 
 };
 

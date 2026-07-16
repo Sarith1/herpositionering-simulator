@@ -9,7 +9,7 @@ meldingen, gevangenissen en routes.
 ==========================================================
 */
 
-import { colors, districts, simulator, vehicles } from "./data.js";
+import { colors, districts, sessionConfig, simulator, vehicles } from "./data.js";
 import { getDistrictById } from "./routing.js";
 
 const VEHICLE_SCALE = 1.15;
@@ -146,7 +146,7 @@ export class MapView {
 
             group.append(circle, code, label);
 
-            if (district.prison) {
+            if (district.prison && sessionConfig.availablePrisons.includes(district.id)) {
                 const prison = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 prison.setAttribute("x", district.x);
                 prison.setAttribute("y", district.y - 45);

@@ -1065,3 +1065,109 @@ footer button {
         filter:drop-shadow(0 0 8px rgba(59,130,246,.95));
     }
 }
+
+/* ===========================================================
+   SPRINT 2.1 OPERATIONELE EINDSITUATIE
+=========================================================== */
+
+.prison-config {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin:8px 0 12px;
+}
+
+.prison-config-row {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-radius:8px;
+    background:#10263b;
+    color:var(--text-secondary);
+}
+
+.failure-active .main-content,
+.failure-active .topbar,
+.failure-active .control-bar {
+    filter:brightness(.58) saturate(.85);
+}
+
+.failure-overlay {
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:rgba(20,5,8,.46);
+}
+
+.failure-overlay[hidden] {
+    display:none;
+}
+
+.failure-dialog {
+    width:min(620px, 100%);
+    padding:30px;
+    border:1px solid rgba(248,113,113,.55);
+    border-radius:18px;
+    background:linear-gradient(145deg, rgba(69,10,10,.96), rgba(17,24,39,.98));
+    box-shadow:0 24px 80px rgba(0,0,0,.55);
+    color:#fff;
+}
+
+.failure-icon {
+    width:54px;
+    height:54px;
+    display:grid;
+    place-items:center;
+    margin-bottom:14px;
+    border-radius:50%;
+    background:rgba(248,113,113,.18);
+    font-size:30px;
+}
+
+.failure-dialog h2 {
+    margin:0 0 10px;
+    color:#fecaca;
+    font-size:28px;
+}
+
+.failure-dialog p {
+    margin:0 0 18px;
+    color:#fee2e2;
+    line-height:1.5;
+}
+
+.failure-metrics {
+    display:grid;
+    gap:10px;
+    margin:0 0 22px;
+}
+
+.failure-metrics div {
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    padding:12px;
+    border-radius:10px;
+    background:rgba(255,255,255,.08);
+}
+
+.failure-metrics dt {
+    color:#fecaca;
+    font-weight:700;
+}
+
+.failure-metrics dd {
+    margin:0;
+    font-weight:800;
+}
+
+.failure-actions {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
