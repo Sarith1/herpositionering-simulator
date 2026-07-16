@@ -29,6 +29,7 @@ export class Engine {
         this.step = STEPS.INCIDENT;
         this.activeDispatch = null;
         this.dispatchDuration = 2400;
+        this.prisonDuration = 2200;
         this.returnDuration = 1800;
     }
 
@@ -110,9 +111,9 @@ export class Engine {
 
         const vehicle = nearest.vehicle;
         const homeDistrict = getDistrictById(vehicle.homeDistrict);
+        const prisonDistrict = getDistrictById(simulator.selectedPrison);
 
         vehicle.status = "busy";
-        vehicle.district = incidentDistrict.id;
         vehicle.targetX = incidentDistrict.x;
         vehicle.targetY = incidentDistrict.y;
         vehicle.incident = simulator.activeIncident.id;
@@ -126,13 +127,17 @@ export class Engine {
             fromY: vehicle.y,
             toX: incidentDistrict.x,
             toY: incidentDistrict.y,
+            prisonX: prisonDistrict.x,
+            prisonY: prisonDistrict.y,
             homeX: homeDistrict.x,
             homeY: homeDistrict.y,
             homeDistrictId: homeDistrict.id,
             incidentDistrictId: incidentDistrict.id,
             prisonDistrictId: simulator.selectedPrison,
             travelTime: simulator.travelTime,
-            route: [...simulator.activeRoute]
+            route: [...nearest.route],
+            prisonRoute: [...simulator.activeRoute],
+            returnRoute: getShortestRoute(simulator.selectedPrison, homeDistrict.id)
         };
 
         this.step = STEPS.INCIDENT;
@@ -148,11 +153,10 @@ export class Engine {
         if (!this.activeDispatch) return null;
 
         const dispatch = this.activeDispatch;
-        const duration = dispatch.phase === "toIncident" ? this.dispatchDuration : this.returnDuration;
+        const duration = this.getPhaseDuration(dispatch.phase);
         const progress = Math.min(1, (now - dispatch.startedAt) / duration);
 
-        dispatch.vehicle.x = this.lerp(dispatch.fromX, dispatch.toX, progress);
-        dispatch.vehicle.y = this.lerp(dispatch.fromY, dispatch.toY, progress);
+        this.moveVehicle(dispatch, progress);
 
         if (progress < 1) return null;
 
@@ -172,11 +176,24 @@ export class Engine {
                 prisonDistrict: dispatch.prisonDistrictId,
                 vehicleId: dispatch.vehicle.id,
                 travelTime: dispatch.travelTime,
-                route: [...dispatch.route],
+                route: [...dispatch.prisonRoute],
                 score: scoreBreakdown.total
             });
             simulator.gameOver = simulator.incidentsHandled >= simulator.maxIncidents;
 
+            dispatch.vehicle.district = dispatch.incidentDistrictId;
+            dispatch.phase = "toPrison";
+            dispatch.startedAt = now;
+            dispatch.fromX = dispatch.vehicle.x;
+            dispatch.fromY = dispatch.vehicle.y;
+            dispatch.toX = dispatch.prisonX;
+            dispatch.toY = dispatch.prisonY;
+
+            return { type: "incidentCleared", vehicle: dispatch.vehicle };
+        }
+
+        if (dispatch.phase === "toPrison") {
+            dispatch.vehicle.district = dispatch.prisonDistrictId;
             dispatch.phase = "returning";
             dispatch.startedAt = now;
             dispatch.fromX = dispatch.vehicle.x;
@@ -184,7 +201,7 @@ export class Engine {
             dispatch.toX = dispatch.homeX;
             dispatch.toY = dispatch.homeY;
 
-            return { type: "incidentCleared", vehicle: dispatch.vehicle };
+            return { type: "prisonReached", vehicle: dispatch.vehicle };
         }
 
         dispatch.vehicle.status = "available";
@@ -262,6 +279,53 @@ export class Engine {
 
     getRandomItem(items) {
         return items[Math.floor(Math.random() * items.length)];
+    }
+
+    getPhaseDuration(phase) {
+        if (phase === "toIncident") return this.dispatchDuration;
+        if (phase === "toPrison") return this.prisonDuration;
+        return this.returnDuration;
+    }
+
+    moveVehicle(dispatch, progress) {
+        const phaseRoute = this.getPhaseRoute(dispatch);
+        const routePosition = this.getRoutePosition(phaseRoute, progress, dispatch);
+
+        dispatch.vehicle.x = routePosition?.x ?? this.lerp(dispatch.fromX, dispatch.toX, progress);
+        dispatch.vehicle.y = routePosition?.y ?? this.lerp(dispatch.fromY, dispatch.toY, progress);
+        dispatch.vehicle.targetX = dispatch.toX;
+        dispatch.vehicle.targetY = dispatch.toY;
+    }
+
+    getPhaseRoute(dispatch) {
+        if (dispatch.phase === "toIncident") return dispatch.route;
+        if (dispatch.phase === "toPrison") return dispatch.prisonRoute;
+        return dispatch.returnRoute;
+    }
+
+    getRoutePosition(route, progress, dispatch) {
+        if (!route || route.length < 2) return null;
+
+        const segments = route
+            .map(getDistrictById)
+            .filter(Boolean)
+            .map(district => ({ x: district.x, y: district.y }));
+
+        if (segments.length < 2) return null;
+
+        segments[0] = { x: dispatch.fromX, y: dispatch.fromY };
+        segments[segments.length - 1] = { x: dispatch.toX, y: dispatch.toY };
+
+        const scaledProgress = progress * (segments.length - 1);
+        const segmentIndex = Math.min(Math.floor(scaledProgress), segments.length - 2);
+        const segmentProgress = scaledProgress - segmentIndex;
+        const from = segments[segmentIndex];
+        const to = segments[segmentIndex + 1];
+
+        return {
+            x: this.lerp(from.x, to.x, segmentProgress),
+            y: this.lerp(from.y, to.y, segmentProgress)
+        };
     }
 
     lerp(start, end, progress) {
