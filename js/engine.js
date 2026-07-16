@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.4
+Sprint 1.5
 Bestand: engine.js
 
 Spelregels en simulatiestatus voor de vierstappen-flow.
@@ -56,6 +56,7 @@ export class Engine {
         simulator.selectedPrison = null;
         simulator.travelTime = null;
         simulator.activeRoute = [];
+        simulator.lastScoreBreakdown = null;
 
         this.step = STEPS.PRISON;
 
@@ -127,7 +128,11 @@ export class Engine {
             toY: incidentDistrict.y,
             homeX: homeDistrict.x,
             homeY: homeDistrict.y,
-            homeDistrictId: homeDistrict.id
+            homeDistrictId: homeDistrict.id,
+            incidentDistrictId: incidentDistrict.id,
+            prisonDistrictId: simulator.selectedPrison,
+            travelTime: simulator.travelTime,
+            route: [...simulator.activeRoute]
         };
 
         this.step = STEPS.INCIDENT;
@@ -152,12 +157,24 @@ export class Engine {
         if (progress < 1) return null;
 
         if (dispatch.phase === "toIncident") {
+            const scoreBreakdown = this.calculateScoreBreakdown();
+
             simulator.activeIncident = null;
             simulator.selectedPrison = null;
             simulator.travelTime = null;
             simulator.activeRoute = [];
             simulator.incidentsHandled += 1;
-            simulator.score += this.calculateScore();
+            simulator.score += scoreBreakdown.total;
+            simulator.lastScoreBreakdown = scoreBreakdown;
+            simulator.incidentHistory.push({
+                round: simulator.incidentsHandled,
+                incidentDistrict: dispatch.incidentDistrictId,
+                prisonDistrict: dispatch.prisonDistrictId,
+                vehicleId: dispatch.vehicle.id,
+                travelTime: dispatch.travelTime,
+                route: [...dispatch.route],
+                score: scoreBreakdown.total
+            });
             simulator.gameOver = simulator.incidentsHandled >= simulator.maxIncidents;
 
             dispatch.phase = "returning";
@@ -205,6 +222,8 @@ export class Engine {
         simulator.incidentsHandled = 0;
         simulator.gameOver = false;
         simulator.activeRoute = [];
+        simulator.incidentHistory = [];
+        simulator.lastScoreBreakdown = null;
 
         vehicles.forEach(vehicle => {
             vehicle.district = vehicle.homeDistrict;
@@ -220,13 +239,25 @@ export class Engine {
         this.activeDispatch = null;
         this.step = STEPS.INCIDENT;
 
-        return this.result(true, "Nieuwe Sprint 1.4-oefening gestart.");
+        return this.result(true, "Nieuwe Sprint 1.5-oefening gestart.");
+    }
+
+    calculateScoreBreakdown() {
+        const travelTime = simulator.travelTime || 120;
+        const base = 50;
+        const timeBonus = Math.max(0, 130 - travelTime);
+        const coverageBonus = vehicles.filter(vehicle => vehicle.status === "available").length;
+
+        return {
+            base,
+            timeBonus,
+            coverageBonus,
+            total: base + timeBonus + coverageBonus
+        };
     }
 
     calculateScore() {
-        const timeBonus = Math.max(0, 130 - (simulator.travelTime || 120));
-        const coverageBonus = vehicles.filter(vehicle => vehicle.status === "available").length;
-        return 50 + timeBonus + coverageBonus;
+        return this.calculateScoreBreakdown().total;
     }
 
     getRandomItem(items) {

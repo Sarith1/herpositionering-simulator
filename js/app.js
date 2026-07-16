@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.4
+Sprint 1.5
 Bestand: app.js
 
 Hoofdcontroller van de applicatie.
@@ -21,7 +21,7 @@ class App {
 
     start() {
         console.clear();
-        console.log("Politie Herpositionering Simulator - Sprint 1.4");
+        console.log("Politie Herpositionering Simulator - Sprint 1.5");
 
         this.initializeMap();
         this.initializeUI();

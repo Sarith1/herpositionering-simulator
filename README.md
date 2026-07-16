@@ -2,7 +2,7 @@
 
 Interactieve GitHub Pages-simulator voor het oefenen van politiedispatch en herpositionering binnen zeven districten.
 
-## Sprint 1.4
+## Sprint 1.5
 
 Deze versie werkt zonder buildstap en gebruikt alleen:
 
@@ -21,8 +21,9 @@ Deze versie werkt zonder buildstap en gebruikt alleen:
 - Knop 3 berekent een reistijd van 90 tot en met 120 seconden op basis van de kortste route naar de geselecteerde gevangenis.
 - Knop 4 kiest het dichtstbijzijnde beschikbare voertuig, animeert dit naar de melding, verwijdert boef en voertuig tijdelijk en laat het voertuig daarna terugkeren.
 - Dashboard, districtstatus, score, rondeteller en activiteitenlog worden live bijgewerkt.
-- Sprint 1.4 bevat een oefensessie van 5 meldingen met puntentelling en een resetknop.
+- Sprint 1.5 bevat een oefensessie van 5 meldingen met puntentelling en een resetknop.
 - Tijdens het terugkeren van een voertuig blijft de volgende melding geblokkeerd, zodat de dispatchstatus niet kan worden overschreven.
+- Sprint 1.5 voegt een evaluatiepaneel toe met de score-opbouw van de laatste melding, een rondehistorie en de gemiddelde reistijd.
 - Alle interactieve kaartobjecten worden getekend in een SVG-overlay boven de bestaande kaart.
 
 ## Districten

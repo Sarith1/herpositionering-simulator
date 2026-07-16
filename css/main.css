@@ -1,7 +1,7 @@
 
 /* ===========================================================
    Politie Herpositionering Simulator
-   Sprint 1.1
+   Sprint 1.5
 =========================================================== */
 
 :root {
@@ -554,7 +554,7 @@ main{
 }
 
 /* ===========================================================
-   SPRINT 1.4 INTERACTIEVE OBJECTEN
+   SPRINT 1.5 INTERACTIEVE OBJECTEN
 =========================================================== */
 
 aside {
@@ -647,7 +647,7 @@ footer button:disabled {
 
 
 /* ===========================================================
-   SPRINT 1.4 OEFENRONDES EN SCORE
+   SPRINT 1.5 OEFENRONDES EN SCORE
 =========================================================== */
 
 .step-hint {
@@ -666,4 +666,43 @@ footer button.secondary {
 
 footer button.secondary:hover {
     background:#475569;
+}
+
+/* ===========================================================
+   SPRINT 1.5 EVALUATIEPANEEL
+=========================================================== */
+
+.score-breakdown,
+.incident-history p {
+    margin-top:12px;
+    padding:12px;
+    border-radius:10px;
+    background:#0f2438;
+    color:var(--text-secondary);
+    line-height:1.45;
+}
+
+.incident-history {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:12px;
+}
+
+.history-item {
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:12px;
+    border-radius:10px;
+    background:#17314a;
+    border-left:4px solid var(--accent);
+}
+
+.history-item span {
+    color:var(--text-secondary);
+}
+
+.history-item small {
+    color:var(--accent-light);
 }
