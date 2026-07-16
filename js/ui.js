@@ -30,11 +30,9 @@ export class UI {
         this.busyElement = null;
         this.incidentElement = null;
         this.coverageElement = null;
-        this.scoreElement = null;
         this.roundElement = null;
         this.averageTimeElement = null;
         this.stepHintElement = null;
-        this.scoreBreakdownElement = null;
         this.historyElement = null;
         this.gameOverLogged = false;
 
@@ -66,9 +64,6 @@ export class UI {
         this.coverageElement =
             document.getElementById("coverageCount");
 
-        this.scoreElement =
-            document.getElementById("scoreCount");
-
         this.roundElement =
             document.getElementById("roundCount");
 
@@ -83,9 +78,6 @@ export class UI {
 
         this.statusContainer =
             document.getElementById("districtStatus");
-
-        this.scoreBreakdownElement =
-            document.getElementById("scoreBreakdown");
 
         this.historyElement =
             document.getElementById("incidentHistory");
@@ -123,9 +115,6 @@ export class UI {
 
         if (this.coverageElement)
             this.coverageElement.textContent = `${this.calculateCoverage()}%`;
-
-        if (this.scoreElement)
-            this.scoreElement.textContent = simulator.score;
 
         if (this.roundElement)
             this.roundElement.textContent = `${simulator.incidentsHandled}`;
@@ -178,14 +167,6 @@ export class UI {
 
     updateEvaluationPanel() {
 
-        if (this.scoreBreakdownElement) {
-            const breakdown = simulator.lastScoreBreakdown;
-
-            this.scoreBreakdownElement.textContent = breakdown
-                ? `Laatste score: ${breakdown.total} punten (${breakdown.base} basis + ${breakdown.timeBonus} tijd + ${breakdown.coverageBonus} dekking).`
-                : "Nog geen afgehandelde melding.";
-        }
-
         if (!this.historyElement) return;
 
         if (!simulator.incidentHistory.length) {
@@ -198,7 +179,7 @@ export class UI {
                 <div class="history-item">
                     <strong>Ronde ${item.round}</strong>
                     <span>${item.vehicleId}: ${item.incidentDistrict} → ${item.prisonDistrict}</span>
-                    <small>${item.travelTime}s · ${item.score} punten</small>
+                    <small>${item.travelTime}s</small>
                 </div>
             `)
             .join("");
@@ -254,7 +235,7 @@ export class UI {
         if (!this.stepHintElement) return;
 
         if (buttonState.gameOver) {
-            this.stepHintElement.textContent = "Oefening afgerond. Bekijk je score of druk op reset.";
+            this.stepHintElement.textContent = "Oefening afgerond. Druk op reset voor een nieuwe sessie.";
             return;
         }
 
@@ -342,7 +323,7 @@ export class UI {
 
         this.gameOverLogged = true;
 
-        this.log(`Oefening afgerond met ${simulator.score} punten.`);
+        this.log("Oefening afgerond. Druk op reset voor een nieuwe sessie.");
 
     }
 

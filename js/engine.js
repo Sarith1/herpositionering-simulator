@@ -33,7 +33,6 @@ export class Engine {
         simulator.selectedPrison = null;
         simulator.travelTime = null;
         simulator.activeRoute = [];
-        simulator.lastScoreBreakdown = null;
         this.step = STEPS.PRISON;
         return this.result(true, `[MELDING] Nieuwe melding in ${district.name}.`, { district });
     }
@@ -82,7 +81,7 @@ export class Engine {
             originDistrictId: vehicle.district, incidentDistrictId: incidentDistrict.id, prisonDistrictId: prisonDistrict.id,
             routeToIncident: [...nearest.route], routeToPrison: [...simulator.activeRoute], returnRoute,
             startTime: performance.now(), phaseStartTime: performance.now(), busySeconds: simulator.travelTime || MIN_BUSY_SECONDS,
-            fromX: vehicle.x, fromY: vehicle.y, toX: incidentDistrict.x, toY: incidentDistrict.y, scoreBreakdown: null
+            fromX: vehicle.x, fromY: vehicle.y, toX: incidentDistrict.x, toY: incidentDistrict.y
         };
         this.activeDispatches.set(dispatchId, dispatch);
         simulator.activeRoutes.push({ id: dispatchId, route: dispatch.routeToIncident, type: "dispatch" });
@@ -119,10 +118,8 @@ export class Engine {
         this.moveVehicle(vehicle, this.getPhaseRoute(dispatch), progress, dispatch);
         if (progress < 1) return [];
         if (dispatch.phase === STATUS.TO_INCIDENT) {
-            dispatch.scoreBreakdown = this.calculateScoreBreakdown(dispatch.busySeconds);
-            simulator.incidentsHandled += 1; simulator.score += dispatch.scoreBreakdown.total;
-            simulator.incidentHistory.push({ round: simulator.incidentsHandled, incidentDistrict: dispatch.incidentDistrictId, prisonDistrict: dispatch.prisonDistrictId, vehicleId: vehicle.id, travelTime: dispatch.busySeconds, route: [...dispatch.routeToPrison], score: dispatch.scoreBreakdown.total });
-            simulator.lastScoreBreakdown = dispatch.scoreBreakdown;
+            simulator.incidentsHandled += 1;
+            simulator.incidentHistory.push({ round: simulator.incidentsHandled, incidentDistrict: dispatch.incidentDistrictId, prisonDistrict: dispatch.prisonDistrictId, vehicleId: vehicle.id, travelTime: dispatch.busySeconds, route: [...dispatch.routeToPrison] });
             vehicle.district = dispatch.incidentDistrictId; vehicle.status = STATUS.TO_PRISON;
             this.removeRoute(dispatch.id);
             this.startPhase(dispatch, STATUS.TO_PRISON, now, dispatch.routeToPrison, getDistrictById(dispatch.prisonDistrictId).x, getDistrictById(dispatch.prisonDistrictId).y);
@@ -183,7 +180,7 @@ export class Engine {
     getButtonState() { return { incident: this.step === STEPS.INCIDENT && !simulator.gameOver && vehicles.some(v => v.status === STATUS.AVAILABLE), prison: this.step === STEPS.PRISON && !simulator.gameOver, travelTime: this.step === STEPS.TRAVEL_TIME && !simulator.gameOver, dispatch: this.step === STEPS.DISPATCH && !simulator.gameOver, reset: true, currentStep: this.step, waitingForReturn: this.activeDispatches.size > 0 || this.activeRepositions.size > 0, gameOver: simulator.gameOver }; }
 
     reset() {
-        Object.assign(simulator, { activeIncident: null, selectedPrison: null, travelTime: null, score: 0, incidentsHandled: 0, gameOver: false, activeRoute: [], activeRoutes: [], incidentHistory: [], lastScoreBreakdown: null });
+        Object.assign(simulator, { activeIncident: null, selectedPrison: null, travelTime: null, incidentsHandled: 0, gameOver: false, activeRoute: [], activeRoutes: [], incidentHistory: [] });
         vehicles.forEach(vehicle => { vehicle.district = vehicle.homeDistrict; vehicle.status = STATUS.AVAILABLE; this.placeAtDistrict(vehicle, vehicle.homeDistrict); vehicle.targetX = vehicle.x; vehicle.targetY = vehicle.y; vehicle.incident = null; vehicle.prison = null; vehicle.angle = 0; });
         this.activeDispatches.clear(); this.activeRepositions.clear(); this.step = STEPS.INCIDENT;
         return this.result(true, "[RESET] Nieuwe oefening gestart.");
@@ -199,7 +196,6 @@ export class Engine {
     availableCount(id) { return vehicles.filter(v => v.district === id && v.status === STATUS.AVAILABLE).length; }
     hasIncomingReposition(id) { return [...this.activeRepositions.values()].some(r => r.targetDistrictId === id); }
     isVehicleReserved(id) { return [...this.activeDispatches.values()].some(d => d.vehicleId === id) || [...this.activeRepositions.values()].some(r => r.vehicleId === id); }
-    calculateScoreBreakdown(travelTime = 120) { const base = 50; const timeBonus = Math.max(0, 130 - travelTime); const coverageBonus = vehicles.filter(v => v.status === STATUS.AVAILABLE).length; return { base, timeBonus, coverageBonus, total: base + timeBonus + coverageBonus }; }
     getRandomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
     lerp(start, end, progress) { return start + (end - start) * progress; }
     result(success, message, data = {}) { return { success, message, ...data }; }

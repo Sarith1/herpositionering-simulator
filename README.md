@@ -37,7 +37,7 @@ Zodra een inzet of andere statuswijziging een district zonder beschikbare voertu
 - worden alleen buurrelaties uit `data.js` gebruikt;
 - mag een donor alleen afstaan wanneer er minimaal één beschikbaar voertuig overblijft;
 - krijgt het district met de meeste beschikbare voertuigen voorrang;
-- breken routeafstand en district-ID gelijke scores;
+- breken routeafstand en district-ID gelijke afwegingen;
 - rijdt het gekozen voertuig zichtbaar als `REPOSITIONING` naar het doeldistrict;
 - blijft `homeDistrict` ongewijzigd, maar verandert `district` bij aankomst naar het nieuwe dekkingsdistrict.
 
