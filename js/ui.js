@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.4
+Sprint 1.5
 Bestand: ui.js
 
 Verantwoordelijk voor:
@@ -32,7 +32,10 @@ export class UI {
         this.coverageElement = null;
         this.scoreElement = null;
         this.roundElement = null;
+        this.averageTimeElement = null;
         this.stepHintElement = null;
+        this.scoreBreakdownElement = null;
+        this.historyElement = null;
         this.gameOverLogged = false;
 
     }
@@ -69,6 +72,9 @@ export class UI {
         this.roundElement =
             document.getElementById("roundCount");
 
+        this.averageTimeElement =
+            document.getElementById("averageTimeCount");
+
         this.stepHintElement =
             document.getElementById("stepHint");
 
@@ -78,6 +84,12 @@ export class UI {
         this.statusContainer =
             document.getElementById("districtStatus");
 
+        this.scoreBreakdownElement =
+            document.getElementById("scoreBreakdown");
+
+        this.historyElement =
+            document.getElementById("incidentHistory");
+
     }
 
     refresh(buttonState = null) {
@@ -85,6 +97,8 @@ export class UI {
         this.updateDashboard();
 
         this.updateStatusPanel();
+
+        this.updateEvaluationPanel();
 
         if (buttonState) this.updateButtons(buttonState);
 
@@ -115,6 +129,9 @@ export class UI {
 
         if (this.roundElement)
             this.roundElement.textContent = `${simulator.incidentsHandled}/${simulator.maxIncidents}`;
+
+        if (this.averageTimeElement)
+            this.averageTimeElement.textContent = this.getAverageTravelTimeLabel();
 
     }
 
@@ -156,6 +173,35 @@ export class UI {
             this.statusContainer.appendChild(row);
 
         });
+
+    }
+
+    updateEvaluationPanel() {
+
+        if (this.scoreBreakdownElement) {
+            const breakdown = simulator.lastScoreBreakdown;
+
+            this.scoreBreakdownElement.textContent = breakdown
+                ? `Laatste score: ${breakdown.total} punten (${breakdown.base} basis + ${breakdown.timeBonus} tijd + ${breakdown.coverageBonus} dekking).`
+                : "Nog geen afgehandelde melding.";
+        }
+
+        if (!this.historyElement) return;
+
+        if (!simulator.incidentHistory.length) {
+            this.historyElement.innerHTML = "<p>De evaluatie verschijnt na de eerste melding.</p>";
+            return;
+        }
+
+        this.historyElement.innerHTML = simulator.incidentHistory
+            .map(item => `
+                <div class="history-item">
+                    <strong>Ronde ${item.round}</strong>
+                    <span>${item.vehicleId}: ${item.incidentDistrict} → ${item.prisonDistrict}</span>
+                    <small>${item.travelTime}s · ${item.score} punten</small>
+                </div>
+            `)
+            .join("");
 
     }
 
@@ -217,11 +263,22 @@ export class UI {
 
     }
 
+    getAverageTravelTimeLabel() {
+
+        if (!simulator.incidentHistory.length) return "-";
+
+        const total = simulator.incidentHistory
+            .reduce((sum, item) => sum + item.travelTime, 0);
+
+        return `${Math.round(total / simulator.incidentHistory.length)}s`;
+
+    }
+
     log(message) {
 
         if (!this.logContainer) return;
 
-        if (message.includes("Nieuwe Sprint 1.4")) this.gameOverLogged = false;
+        if (message.includes("Nieuwe Sprint 1.5")) this.gameOverLogged = false;
 
         const now = new Date();
 
