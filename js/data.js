@@ -150,7 +150,7 @@ districts.forEach(district => {
 
             homeDistrict: district.id,
 
-            status: "available",
+            status: "AVAILABLE",
 
             x: district.x,
 
@@ -191,11 +191,13 @@ export const simulator = {
 
     incidentsHandled: 0,
 
-    maxIncidents: 5,
+    maxIncidents: null,
 
     gameOver: false,
 
     activeRoute: [],
+
+    activeRoutes: [],
 
     incidentHistory: [],
 

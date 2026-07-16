@@ -107,10 +107,10 @@ export class UI {
     updateDashboard() {
 
         const available =
-            vehicles.filter(v => v.status === "available").length;
+            vehicles.filter(v => v.status === "AVAILABLE").length;
 
         const busy =
-            vehicles.filter(v => v.status !== "available").length;
+            vehicles.filter(v => v.status !== "AVAILABLE").length;
 
         if (this.availableElement)
             this.availableElement.textContent = available;
@@ -119,7 +119,7 @@ export class UI {
             this.busyElement.textContent = busy;
 
         if (this.incidentElement)
-            this.incidentElement.textContent = simulator.activeIncident ? "1" : "0";
+            this.incidentElement.textContent = String((simulator.activeIncident ? 1 : 0) + vehicles.filter(v => v.incident && v.status !== "AVAILABLE").length);
 
         if (this.coverageElement)
             this.coverageElement.textContent = `${this.calculateCoverage()}%`;
@@ -128,7 +128,7 @@ export class UI {
             this.scoreElement.textContent = simulator.score;
 
         if (this.roundElement)
-            this.roundElement.textContent = `${simulator.incidentsHandled}/${simulator.maxIncidents}`;
+            this.roundElement.textContent = `${simulator.incidentsHandled}`;
 
         if (this.averageTimeElement)
             this.averageTimeElement.textContent = this.getAverageTravelTimeLabel();
@@ -146,7 +146,7 @@ export class UI {
             const available =
                 vehicles.filter(vehicle =>
                     vehicle.district === district.id &&
-                    vehicle.status === "available"
+                    vehicle.status === "AVAILABLE"
                 ).length;
 
             const row = document.createElement("div");
@@ -234,11 +234,6 @@ export class UI {
             return;
         }
 
-        if (buttonState.waitingForReturn) {
-            this.stepHintElement.textContent = "Voertuig keert terug naar het eigen district.";
-            return;
-        }
-
         const labels = {
             incident: "1. Plaats een nieuwe melding.",
             prison: "2. Selecteer een cel voor de arrestant.",
@@ -255,7 +250,7 @@ export class UI {
         const coveredDistricts = districts.filter(district =>
             vehicles.some(vehicle =>
                 vehicle.district === district.id &&
-                vehicle.status === "available"
+                vehicle.status === "AVAILABLE"
             )
         ).length;
 
@@ -319,14 +314,8 @@ export class UI {
 
     }
 
-    vehicleDispatched(vehicleId, districtName) {
-
-        this.log(
-            `${vehicleId} uitgereden vanuit ${districtName}`
-        );
-
+    vehicleDispatched() {
         this.refresh();
-
     }
 
     logGameOver() {
@@ -340,7 +329,7 @@ export class UI {
     vehicleReturned(vehicleId) {
 
         this.log(
-            `${vehicleId} terug beschikbaar`
+            `[BESCHIKBAAR] ${vehicleId} is weer beschikbaar.`
         );
 
         this.refresh();

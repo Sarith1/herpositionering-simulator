@@ -68,7 +68,7 @@ export class MapView {
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.incidentLayer);
 
-        this.drawRoute();
+        this.drawRoutes();
         this.drawDistricts();
         this.drawIncident();
         this.syncVehicles();
@@ -78,19 +78,23 @@ export class MapView {
         if (layer) layer.innerHTML = "";
     }
 
-    drawRoute() {
-        if (!simulator.activeRoute || simulator.activeRoute.length < 2) return;
+    drawRoutes() {
+        const routes = [...(simulator.activeRoutes || [])];
+        if (simulator.activeRoute?.length > 1) routes.push({ id: "preview", route: simulator.activeRoute, type: "preview" });
 
-        const points = simulator.activeRoute
-            .map(getDistrictById)
-            .filter(Boolean)
-            .map(district => `${district.x},${district.y}`)
-            .join(" ");
-
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-        line.setAttribute("points", points);
-        line.setAttribute("class", "route-line");
-        this.routeLayer.appendChild(line);
+        routes.forEach(routeInfo => {
+            if (!routeInfo.route || routeInfo.route.length < 2) return;
+            const points = routeInfo.route
+                .map(getDistrictById)
+                .filter(Boolean)
+                .map(district => `${district.x},${district.y}`)
+                .join(" ");
+            if (!points) return;
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            line.setAttribute("points", points);
+            line.setAttribute("class", `route-line ${routeInfo.type || "dispatch"}`);
+            this.routeLayer.appendChild(line);
+        });
     }
 
     drawDistricts() {
@@ -171,7 +175,7 @@ export class MapView {
     }
 
     getVehicleRenderPosition(vehicle, districtIndexes) {
-        if (vehicle.status === "busy") {
+        if (vehicle.status !== "AVAILABLE") {
             return { x: vehicle.x, y: vehicle.y };
         }
 
@@ -207,8 +211,9 @@ export class MapView {
     }
 
     updateVehicleElement(element, vehicle, x, y) {
-        element.setAttribute("x", x);
-        element.setAttribute("y", y);
-        element.setAttribute("class", vehicle.status === "available" ? "vehicle" : "vehicle busy");
+        element.setAttribute("transform", `translate(${x} ${y}) rotate(${vehicle.angle || 0})`);
+        element.setAttribute("x", 0);
+        element.setAttribute("y", 0);
+        element.setAttribute("class", vehicle.status === "AVAILABLE" ? "vehicle" : `vehicle busy ${String(vehicle.status).toLowerCase()}`);
     }
 }

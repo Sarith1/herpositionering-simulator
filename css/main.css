@@ -704,3 +704,16 @@ footer button.secondary:hover {
 .history-item small {
     color:var(--accent-light);
 }
+
+.route-line.reposition {
+    stroke:#22c55e;
+}
+
+.route-line.return {
+    stroke:#7dd3ff;
+    opacity:.75;
+}
+
+.vehicle.repositioning {
+    filter:drop-shadow(0 0 8px #22c55e);
+}
