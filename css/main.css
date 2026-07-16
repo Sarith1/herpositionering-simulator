@@ -449,7 +449,9 @@ main{
 
     overflow:hidden;
 
-    background:#0e1d2d;
+    background:#17314a;
+
+    isolation:isolate;
 
 }
 
@@ -464,6 +466,10 @@ main{
     height:100%;
 
     object-fit:contain;
+
+    background:#17314a;
+
+    mix-blend-mode:multiply;
 
 }
 
