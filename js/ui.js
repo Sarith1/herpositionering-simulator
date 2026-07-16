@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.2
+Sprint 1.3
 Bestand: ui.js
 
 Verantwoordelijk voor:
@@ -15,6 +15,7 @@ Verantwoordelijk voor:
 
 import {
     districts,
+    simulator,
     vehicles
 } from "./data.js";
 
@@ -66,11 +67,13 @@ export class UI {
 
     }
 
-    refresh() {
+    refresh(buttonState = null) {
 
         this.updateDashboard();
 
         this.updateStatusPanel();
+
+        if (buttonState) this.updateButtons(buttonState);
 
     }
 
@@ -89,10 +92,10 @@ export class UI {
             this.busyElement.textContent = busy;
 
         if (this.incidentElement)
-            this.incidentElement.textContent = "0";
+            this.incidentElement.textContent = simulator.activeIncident ? "1" : "0";
 
         if (this.coverageElement)
-            this.coverageElement.textContent = "100%";
+            this.coverageElement.textContent = `${this.calculateCoverage()}%`;
 
     }
 
@@ -134,6 +137,36 @@ export class UI {
             this.statusContainer.appendChild(row);
 
         });
+
+    }
+
+    updateButtons(buttonState) {
+
+        const mapping = {
+            incidentBtn: buttonState.incident,
+            prisonBtn: buttonState.prison,
+            travelBtn: buttonState.travelTime,
+            dispatchBtn: buttonState.dispatch
+        };
+
+        Object.entries(mapping).forEach(([id, enabled]) => {
+            const button = document.getElementById(id);
+            if (!button) return;
+            button.disabled = !enabled;
+        });
+
+    }
+
+    calculateCoverage() {
+
+        const coveredDistricts = districts.filter(district =>
+            vehicles.some(vehicle =>
+                vehicle.district === district.id &&
+                vehicle.status === "available"
+            )
+        ).length;
+
+        return Math.round((coveredDistricts / districts.length) * 100);
 
     }
 

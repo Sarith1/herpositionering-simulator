@@ -1,136 +1,93 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.2
+Sprint 1.3
 Bestand: app.js
 
 Hoofdcontroller van de applicatie.
 ==========================================================
 */
 
+import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
 
 class App {
-
     constructor() {
-
+        this.engine = new Engine();
         this.map = null;
         this.ui = null;
-
     }
 
     start() {
-
         console.clear();
-
-        console.log("====================================");
-        console.log("Politie Herpositionering Simulator");
-        console.log("Sprint 1.2");
-        console.log("====================================");
+        console.log("Politie Herpositionering Simulator - Sprint 1.3");
 
         this.initializeMap();
-
         this.initializeUI();
-
         this.registerButtons();
-
+        this.sync();
         this.startRenderLoop();
-
     }
 
     initializeMap() {
-
         this.map = new MapView("map");
-
         this.map.initialize();
-
     }
 
     initializeUI() {
-
         this.ui = new UI();
-
         this.ui.initialize();
-
     }
 
     registerButtons() {
+        this.bindButton("incidentBtn", () => this.engine.createIncident());
+        this.bindButton("prisonBtn", () => this.engine.selectPrison());
+        this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
+        this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
+    }
 
-        const incidentButton =
-            document.getElementById("incidentBtn");
+    bindButton(id, action) {
+        const button = document.getElementById(id);
 
-        const prisonButton =
-            document.getElementById("prisonBtn");
+        button?.addEventListener("click", () => {
+            const result = action();
+            this.ui.log(result.message);
 
-        const travelButton =
-            document.getElementById("travelBtn");
-
-        const dispatchButton =
-            document.getElementById("dispatchBtn");
-
-        incidentButton?.addEventListener(
-            "click",
-            () => {
-
-                this.ui.log("Melding aangemaakt.");
-
+            if (result.success && result.vehicle && result.district) {
+                this.ui.vehicleDispatched(result.vehicle.id, result.district.name);
             }
-        );
 
-        prisonButton?.addEventListener(
-            "click",
-            () => {
+            this.sync();
+        });
+    }
 
-                this.ui.log("Gevangenis geselecteerd.");
-
-            }
-        );
-
-        travelButton?.addEventListener(
-            "click",
-            () => {
-
-                this.ui.log("Reistijd berekend.");
-
-            }
-        );
-
-        dispatchButton?.addEventListener(
-            "click",
-            () => {
-
-                this.ui.log("Voertuig uitgezonden.");
-
-            }
-        );
-
+    sync() {
+        this.map.render();
+        this.ui.refresh(this.engine.getButtonState());
     }
 
     startRenderLoop() {
+        const loop = now => {
+            const event = this.engine.update(now);
 
-        const loop = () => {
+            if (event?.type === "incidentCleared") {
+                this.ui.log(`${event.vehicle.id} heeft de melding opgepakt.`);
+            }
 
-            // Vanaf Sprint 1.3 komt hier:
-            //
-            // engine.update();
-            // map.render();
-            // ui.refresh();
+            if (event?.type === "vehicleReturned") {
+                this.ui.vehicleReturned(event.vehicle.id);
+            }
 
+            this.sync();
             requestAnimationFrame(loop);
-
         };
 
         requestAnimationFrame(loop);
-
     }
-
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-
     const app = new App();
-
     app.start();
-
 });
