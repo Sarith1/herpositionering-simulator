@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.3
+Sprint 1.4
 Bestand: app.js
 
 Hoofdcontroller van de applicatie.
@@ -21,7 +21,7 @@ class App {
 
     start() {
         console.clear();
-        console.log("Politie Herpositionering Simulator - Sprint 1.3");
+        console.log("Politie Herpositionering Simulator - Sprint 1.4");
 
         this.initializeMap();
         this.initializeUI();
@@ -45,6 +45,7 @@ class App {
         this.bindButton("prisonBtn", () => this.engine.selectPrison());
         this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
         this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
+        this.bindButton("resetBtn", () => this.engine.reset());
     }
 
     bindButton(id, action) {
@@ -77,6 +78,10 @@ class App {
 
             if (event?.type === "vehicleReturned") {
                 this.ui.vehicleReturned(event.vehicle.id);
+            }
+
+            if (this.engine.getButtonState().gameOver && !this.ui.gameOverLogged) {
+                this.ui.logGameOver();
             }
 
             this.sync();

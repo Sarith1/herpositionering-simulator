@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.3
+Sprint 1.4
 Bestand: engine.js
 
 Spelregels en simulatiestatus voor de vierstappen-flow.
@@ -33,6 +33,14 @@ export class Engine {
     }
 
     createIncident() {
+        if (simulator.gameOver) {
+            return this.result(false, "De oefening is afgerond. Druk op reset voor een nieuwe sprint.");
+        }
+
+        if (this.activeDispatch) {
+            return this.result(false, "Wacht tot het voertuig weer beschikbaar is.");
+        }
+
         if (this.step !== STEPS.INCIDENT) {
             return this.result(false, "Maak eerst de huidige cyclus af.");
         }
@@ -122,7 +130,6 @@ export class Engine {
             homeDistrictId: homeDistrict.id
         };
 
-        simulator.incidentsHandled += 1;
         this.step = STEPS.INCIDENT;
 
         return this.result(
@@ -149,6 +156,9 @@ export class Engine {
             simulator.selectedPrison = null;
             simulator.travelTime = null;
             simulator.activeRoute = [];
+            simulator.incidentsHandled += 1;
+            simulator.score += this.calculateScore();
+            simulator.gameOver = simulator.incidentsHandled >= simulator.maxIncidents;
 
             dispatch.phase = "returning";
             dispatch.startedAt = now;
@@ -176,11 +186,47 @@ export class Engine {
 
     getButtonState() {
         return {
-            incident: this.step === STEPS.INCIDENT,
-            prison: this.step === STEPS.PRISON,
-            travelTime: this.step === STEPS.TRAVEL_TIME,
-            dispatch: this.step === STEPS.DISPATCH
+            incident: this.step === STEPS.INCIDENT && !this.activeDispatch && !simulator.gameOver,
+            prison: this.step === STEPS.PRISON && !simulator.gameOver,
+            travelTime: this.step === STEPS.TRAVEL_TIME && !simulator.gameOver,
+            dispatch: this.step === STEPS.DISPATCH && !simulator.gameOver,
+            reset: true,
+            currentStep: this.step,
+            waitingForReturn: Boolean(this.activeDispatch),
+            gameOver: simulator.gameOver
         };
+    }
+
+    reset() {
+        simulator.activeIncident = null;
+        simulator.selectedPrison = null;
+        simulator.travelTime = null;
+        simulator.score = 0;
+        simulator.incidentsHandled = 0;
+        simulator.gameOver = false;
+        simulator.activeRoute = [];
+
+        vehicles.forEach(vehicle => {
+            vehicle.district = vehicle.homeDistrict;
+            vehicle.status = "available";
+            vehicle.x = getDistrictById(vehicle.homeDistrict).x;
+            vehicle.y = getDistrictById(vehicle.homeDistrict).y;
+            vehicle.targetX = vehicle.x;
+            vehicle.targetY = vehicle.y;
+            vehicle.incident = null;
+            vehicle.prison = null;
+        });
+
+        this.activeDispatch = null;
+        this.step = STEPS.INCIDENT;
+
+        return this.result(true, "Nieuwe Sprint 1.4-oefening gestart.");
+    }
+
+    calculateScore() {
+        const timeBonus = Math.max(0, 130 - (simulator.travelTime || 120));
+        const coverageBonus = vehicles.filter(vehicle => vehicle.status === "available").length;
+        return 50 + timeBonus + coverageBonus;
     }
 
     getRandomItem(items) {
