@@ -32,6 +32,7 @@ export class MapView {
         this.districtLayer = null;
         this.vehicleLayer = null;
         this.incidentLayer = null;
+        this.incidentAnimationCleanup = null;
     }
 
     initialize() {
@@ -86,11 +87,10 @@ export class MapView {
     render() {
         this.clearLayer(this.routeLayer);
         this.clearLayer(this.districtLayer);
-        this.clearLayer(this.incidentLayer);
+        this.syncIncident();
 
         this.drawRoutes();
         this.drawDistricts();
-        this.drawIncident();
         this.syncVehicles();
     }
 
@@ -160,16 +160,74 @@ export class MapView {
         });
     }
 
-    drawIncident() {
-        if (!simulator.activeIncident) return;
+    syncIncident() {
+        if (!simulator.activeIncident) {
+            this.removeIncidentElement();
+            return;
+        }
+
+        const incident = simulator.activeIncident;
+        const existingElement = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`);
+        const element = existingElement || this.createIncidentElement(incident);
+        element.setAttribute("transform", `translate(${incident.x} ${incident.y - 72})`);
+
+        this.incidentLayer
+            .querySelectorAll("[data-incident-id]")
+            .forEach(marker => {
+                if (marker !== element) marker.remove();
+            });
+    }
+
+    createIncidentElement(incident) {
+        this.removeIncidentAnimationListener();
+
+        const positionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        positionGroup.dataset.incidentId = incident.id;
+        positionGroup.setAttribute("class", "incident-position");
+
+        const visualGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        visualGroup.setAttribute("class", "incident-visual incident-marker--intro");
+
+        const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        ring.setAttribute("class", "incident-ring");
+        ring.setAttribute("cx", 0);
+        ring.setAttribute("cy", 0);
+        ring.setAttribute("r", 27);
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("x", simulator.activeIncident.x);
-        text.setAttribute("y", simulator.activeIncident.y - 72);
+        text.setAttribute("x", 0);
+        text.setAttribute("y", 0);
         text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "central");
         text.setAttribute("class", "incident");
         text.textContent = "🦹";
-        this.incidentLayer.appendChild(text);
+
+        visualGroup.append(ring, text);
+        positionGroup.appendChild(visualGroup);
+
+        const handleIntroEnd = event => {
+            if (event.animationName !== "incidentIntroPulse") return;
+            visualGroup.classList.remove("incident-marker--intro");
+            visualGroup.classList.add("incident-marker--active");
+            this.removeIncidentAnimationListener();
+        };
+
+        visualGroup.addEventListener("animationend", handleIntroEnd);
+        this.incidentAnimationCleanup = () => visualGroup.removeEventListener("animationend", handleIntroEnd);
+
+        this.incidentLayer.appendChild(positionGroup);
+        return positionGroup;
+    }
+
+    removeIncidentElement() {
+        this.removeIncidentAnimationListener();
+        this.clearLayer(this.incidentLayer);
+    }
+
+    removeIncidentAnimationListener() {
+        if (!this.incidentAnimationCleanup) return;
+        this.incidentAnimationCleanup();
+        this.incidentAnimationCleanup = null;
     }
 
     syncVehicles() {
