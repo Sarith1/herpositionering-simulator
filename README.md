@@ -1,4 +1,4 @@
-# Politie Herpositionering Simulator
+#Herpositionering Simulator
 
 Browsergebaseerde ES Modules-simulator voor politievoertuigen, meldingen, celritten en automatische herpositionering. De applicatie gebruikt alleen statische HTML, CSS en JavaScript en blijft daardoor rechtstreeks geschikt voor GitHub Pages.
 
