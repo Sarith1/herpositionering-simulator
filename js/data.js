@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.2
+Sprint 1.3
 Bestand: data.js
 
 Bevat:
@@ -191,7 +191,9 @@ export const simulator = {
 
     incidentsHandled: 0,
 
-    gameOver: false
+    gameOver: false,
+
+    activeRoute: []
 
 };
 
