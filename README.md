@@ -1,64 +1,72 @@
-# 🚔 Politie Herpositionering Simulator
+# Politie Herpositionering Simulator
 
-Interactieve GitHub Pages-simulator voor het oefenen van politiedispatch en herpositionering binnen zeven districten.
+Browsergebaseerde ES Modules-simulator voor politievoertuigen, meldingen, celritten en automatische herpositionering. De applicatie gebruikt alleen statische HTML, CSS en JavaScript en blijft daardoor rechtstreeks geschikt voor GitHub Pages.
 
-## Sprint 1.5
+## Oorzaak van de oorspronkelijke knop-4-fout
 
-Deze versie werkt zonder buildstap en gebruikt alleen:
+De oude engine hield exact één `activeDispatch` bij en gebruikte daarnaast `simulator.maxIncidents = 5` als vaste sprintlimiet. Knop 4 zette het voertuig direct op één algemene `busy`-status en de UI blokkeerde vervolgens nieuwe meldingen zolang `activeDispatch` bestond. Daardoor raakten invoercyclus, melding, route en voertuigstatus snel uit sync: er was geen aparte fase voor rijden naar melding, rijden naar cel, tijdelijke celbezetting en terugkeer. Als een verwachte waarde ontbrak, kreeg de gebruiker alleen een algemene fout of blokkade in het activiteitenlog.
 
-- HTML
-- CSS
-- JavaScript ES Modules
-- SVG
-- de bestaande kaartafbeelding `assets/kaart_Eenheid_DEF.png`
+## Nieuwe multi-dispatcharchitectuur
 
-## Functionaliteit
+De engine gebruikt nu twee beheerde verzamelingen:
 
-- 7 districten met ieder 3 politievoertuigen (21 totaal).
-- Bedieningsknoppen werken uitsluitend in de volgorde 1 → 2 → 3 → 4.
-- Knop 1 plaatst een boef in een willekeurig district.
-- Knop 2 selecteert en markeert willekeurig één van de beschikbare gevangenissen.
-- Knop 3 berekent een reistijd van 90 tot en met 120 seconden op basis van de kortste route naar de geselecteerde gevangenis.
-- Knop 4 kiest het dichtstbijzijnde beschikbare voertuig, animeert dit naar de melding, verwijdert boef en voertuig tijdelijk en laat het voertuig daarna terugkeren.
-- Dashboard, districtstatus, score, rondeteller en activiteitenlog worden live bijgewerkt.
-- Sprint 1.5 bevat een oefensessie van 5 meldingen met puntentelling en een resetknop.
-- Tijdens het terugkeren van een voertuig blijft de volgende melding geblokkeerd, zodat de dispatchstatus niet kan worden overschreven.
-- Sprint 1.5 voegt een evaluatiepaneel toe met de score-opbouw van de laatste melding, een rondehistorie en de gemiddelde reistijd.
-- Alle interactieve kaartobjecten worden getekend in een SVG-overlay boven de bestaande kaart.
+- `activeDispatches: Map` voor alle lopende meldingsopdrachten.
+- `activeRepositions: Map` voor alle automatische herpositioneringen.
 
-## Districten
+Iedere dispatch bevat een uniek ID, voertuig-ID, melding-ID, fase, oorsprong, meldingsdistrict, gevangenisdistrict, routes, starttijden, berekende bezettijd en actuele routecoördinaten. De centrale `requestAnimationFrame`-loop werkt alle dispatches en herpositioneringen afzonderlijk bij. Hetzelfde voertuig kan niet tegelijk in meerdere opdrachten worden geplaatst.
 
-## Handmatig testen
+Na een succesvolle klik op **4. Pak melding op** wordt de invoercyclus direct teruggezet naar stap 1. Het ingezette voertuig blijft zelfstandig doorrijden, terwijl de gebruiker meteen een nieuwe cyclus 1 → 2 → 3 → 4 kan starten.
 
-## Projectstructuur
+## Voertuigfasen
 
-```text
-index.html
-css/main.css
-js/app.js
-js/data.js
-js/engine.js
-js/map.js
-js/routing.js
-js/ui.js
-assets/kaart_Eenheid_DEF.png
-README.md
-```
+Een melding doorloopt de volgende zichtbare voertuigflow:
 
-## Lokaal draaien
+1. `AVAILABLE` — voertuig staat op een vaste slotpositie rond het district.
+2. `TO_INCIDENT` — dichtstbijzijnde beschikbare voertuig rijdt via het routenetwerk naar de melding.
+3. `TO_PRISON` — na aankomst verdwijnt de melding en rijdt het voertuig door naar de geselecteerde cel.
+4. `BUSY` — voertuig is 90–120 seconden tijdelijk niet beschikbaar bij de cel.
+5. `RETURNING` — voertuig rijdt zichtbaar terug naar zijn actuele toegewezen standplaats.
+6. `AVAILABLE` — voertuig telt weer mee voor districtdekking.
 
-Er is geen installatie of bundler nodig. Open `index.html` direct in een browser of start een eenvoudige statische server:
+Voertuigen worden tijdens iedere frame-update op hun actuele SVG-viewBox-coördinaten getekend en draaien mee met de rijrichting.
+
+## Automatische herpositionering
+
+Zodra een inzet of andere statuswijziging een district zonder beschikbare voertuigen achterlaat, controleert de engine de dekking. Als aanvulling nodig is:
+
+- worden alleen buurrelaties uit `data.js` gebruikt;
+- mag een donor alleen afstaan wanneer er minimaal één beschikbaar voertuig overblijft;
+- krijgt het district met de meeste beschikbare voertuigen voorrang;
+- breken routeafstand en district-ID gelijke scores;
+- rijdt het gekozen voertuig zichtbaar als `REPOSITIONING` naar het doeldistrict;
+- blijft `homeDistrict` ongewijzigd, maar verandert `district` bij aankomst naar het nieuwe dekkingsdistrict.
+
+Als geen veilig donor-district beschikbaar is, toont de simulator **MISSION FAILED** en worden nieuwe invoercycli geblokkeerd tot reset.
+
+## Kaart en layout
+
+De achtergrondkaart (`assets/kaart_Eenheid_DEF.png`) heeft een natuurlijke resolutie van 4872 × 3530 pixels. De interactieve SVG-laag gebruikt één consistent coördinatensysteem met `viewBox="0 0 1100 800"`. Districtmarkeringen, labels, gevangenissen, meldingen en voertuigslots liggen binnen deze viewBox en schalen responsief mee met de kaartcontainer.
+
+## Handmatige testinstructies
+
+Open `index.html` rechtstreeks in een browser of serveer de map statisch, bijvoorbeeld met:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Open daarna:
+Voer daarna minimaal deze scenario's uit:
 
-```text
-http://localhost:8000
-```
+1. **Volledige enkele cyclus** — klik 1 → 2 → 3 → 4 en controleer melding, celrit, bezettijd en terugkeer.
+2. **Parallelle meldingen** — start minimaal vijf cycli kort na elkaar en controleer dat vijf verschillende voertuigen tegelijk bezig zijn.
+3. **Geen dubbel voertuig** — controleer in kaart en dashboard dat geen voertuig aan twee opdrachten gekoppeld raakt.
+4. **Herpositionering** — maak herhaaldelijk meldingen in of rond hetzelfde district en controleer automatische aanvulling.
+5. **Kaartgrenzen** — test desktopbreedte en een smaller venster; alle objecten moeten zichtbaar blijven.
+6. **Reset onder belasting** — start meerdere dispatches en herpositioneringen, klik reset en controleer dat alle processen verdwijnen.
+7. **Langdurige sessie** — handel minimaal 25 meldingen af; er is geen vaste limiet van vijf meldingen meer.
 
-## GitHub Pages
+## Ontwikkelnotities
 
-Omdat alle paden relatief zijn en er geen buildproces nodig is, kan de repository rechtstreeks via GitHub Pages worden gepubliceerd.
+- Geen frameworks, npm, buildstap, Vite of TypeScript.
+- Alle animaties lopen via één `requestAnimationFrame`-loop.
+- Reset wist alle actieve dispatches, herpositioneringen, routes, timers, incidenten en UI-status.

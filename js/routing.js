@@ -64,7 +64,7 @@ export function calculateTravelTime(route) {
 }
 
 export function findNearestAvailableVehicle(vehicles, targetDistrictId) {
-    const availableVehicles = vehicles.filter(vehicle => vehicle.status === "available");
+    const availableVehicles = vehicles.filter(vehicle => vehicle.status === "AVAILABLE");
 
     let nearestVehicle = null;
     let nearestRoute = [];
@@ -76,7 +76,8 @@ export function findNearestAvailableVehicle(vehicles, targetDistrictId) {
 
         if (
             !nearestVehicle ||
-            getRouteDistance(route) < getRouteDistance(nearestRoute)
+            getRouteDistance(route) < getRouteDistance(nearestRoute) ||
+            (getRouteDistance(route) === getRouteDistance(nearestRoute) && vehicle.id.localeCompare(nearestVehicle.id) < 0)
         ) {
             nearestVehicle = vehicle;
             nearestRoute = route;
