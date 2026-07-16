@@ -8,14 +8,14 @@ Kortste-route helpers voor districten, voertuigen en reistijd.
 ==========================================================
 */
 
-import { districts } from "./data.js";
+import { districts, sessionConfig } from "./data.js";
 
 export function getDistrictById(districtId) {
     return districts.find(district => district.id === districtId) || null;
 }
 
 export function getPrisonDistricts() {
-    return districts.filter(district => district.prison);
+    return districts.filter(district => district.prison && sessionConfig.availablePrisons.includes(district.id));
 }
 
 export function getShortestRoute(startDistrictId, endDistrictId) {

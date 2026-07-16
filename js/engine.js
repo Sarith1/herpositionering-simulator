@@ -5,7 +5,7 @@ Stabilisatie: parallelle dispatches, voertuigfasen en herpositionering.
 ==========================================================
 */
 
-import { districts, initializeVehicles, resetSessionConfigDefaults, setVehiclesPerDistrict, simulator, vehicles } from "./data.js";
+import { districts, initializeVehicles, resetSessionConfigDefaults, repositioningFailureConfig, sessionConfig, setAvailablePrisons, setVehiclesPerDistrict, simulator, vehicles } from "./data.js";
 import { calculateTravelTime, findNearestAvailableVehicle, getDistrictById, getShortestRoute, getRouteDistance } from "./routing.js";
 
 const STEPS = { INCIDENT: "incident", PRISON: "prison", TRAVEL_TIME: "travelTime", DISPATCH: "dispatch" };
@@ -151,9 +151,16 @@ export class Engine {
         if (simulator.gameOver) return [];
         const events = [];
         for (const district of districts) {
-            if (this.availableCount(district.id) > 0 || this.hasIncomingReposition(district.id)) continue;
+            if (this.availableCount(district.id) > 0 || this.hasIncomingCoverage(district.id)) continue;
             const donor = this.findDonor(district.id);
-            if (!donor) { simulator.gameOver = true; events.push({ type: "missionFailed", message: `[FOUT] MISSION FAILED: ${district.name} heeft geen beschikbaar voertuig en geen veilig buurdistrict kan aanvullen.` }); continue; }
+            if (!donor) {
+                events.push(this.triggerRepositioningFailure({
+                    districtId: district.id,
+                    reason: "NO_SAFE_DONOR",
+                    coveragePercentage: this.calculateCoveragePercentage()
+                }));
+                continue;
+            }
             events.push(this.startReposition(donor, district));
         }
         return events;
@@ -161,6 +168,7 @@ export class Engine {
 
     findDonor(targetId) {
         const target = getDistrictById(targetId);
+        if (!target) return null;
         return target.neighbours.map(id => getDistrictById(id)).filter(Boolean)
             .filter(d => this.availableCount(d.id) > 1)
             .map(d => ({ district: d, route: getShortestRoute(d.id, targetId), count: this.availableCount(d.id) }))
@@ -179,8 +187,11 @@ export class Engine {
 
     getButtonState() { return { incident: this.step === STEPS.INCIDENT && !simulator.gameOver && vehicles.some(v => v.status === STATUS.AVAILABLE), prison: this.step === STEPS.PRISON && !simulator.gameOver, travelTime: this.step === STEPS.TRAVEL_TIME && !simulator.gameOver, dispatch: this.step === STEPS.DISPATCH && !simulator.gameOver, reset: true, currentStep: this.step, waitingForReturn: this.activeDispatches.size > 0 || this.activeRepositions.size > 0, gameOver: simulator.gameOver }; }
 
+    getRepositioningFailure() { return simulator.repositioningFailure; }
+
     reset(options = {}) {
-        Object.assign(simulator, { activeIncident: null, selectedPrison: null, travelTime: null, incidentsHandled: 0, gameOver: false, activeRoute: [], activeRoutes: [], incidentHistory: [] });
+        Object.assign(simulator, { activeIncident: null, selectedPrison: null, travelTime: null, incidentsHandled: 0, gameOver: false, activeRoute: [], activeRoutes: [], incidentHistory: [], repositioningFailure: null });
+        if (options.availablePrisons) setAvailablePrisons(options.availablePrisons);
         if (options.vehiclesPerDistrict) {
             setVehiclesPerDistrict(options.vehiclesPerDistrict);
         } else if (options.restoreDefaults) {
@@ -193,6 +204,30 @@ export class Engine {
         return this.result(true, "[RESET] Nieuwe oefening gestart.");
     }
 
+
+    triggerRepositioningFailure({ districtId, reason, coveragePercentage }) {
+        if (simulator.gameOver) return null;
+        const district = getDistrictById(districtId);
+        const availableVehicles = vehicles.filter(v => v.status === STATUS.AVAILABLE).length;
+        simulator.gameOver = true;
+        simulator.repositioningFailure = {
+            districtId,
+            districtName: district?.name || districtId,
+            reason,
+            coveragePercentage,
+            availableVehicles,
+            title: repositioningFailureConfig.title,
+            explanation: repositioningFailureConfig.explanation
+        };
+        this.step = STEPS.INCIDENT;
+        return { type: "repositioningFailure", failure: simulator.repositioningFailure };
+    }
+
+    calculateCoveragePercentage() {
+        const covered = districts.filter(district => this.availableCount(district.id) > 0 || this.hasIncomingCoverage(district.id)).length;
+        return Math.round((covered / districts.length) * 100);
+    }
+
     startPhase(dispatch, phase, now, route, toX, toY) { dispatch.phase = phase; dispatch.phaseStartTime = now; dispatch.fromX = vehicles.find(v => v.id === dispatch.vehicleId).x; dispatch.fromY = vehicles.find(v => v.id === dispatch.vehicleId).y; dispatch.toX = toX; dispatch.toY = toY; if (phase === STATUS.RETURNING) dispatch.returnRoute = route; }
     getPhaseRoute(d) { return d.phase === STATUS.TO_INCIDENT ? d.routeToIncident : d.phase === STATUS.TO_PRISON ? d.routeToPrison : d.returnRoute; }
     getDriveDuration(route) { return Math.max(900, getRouteDistance(route) * DRIVE_MS_PER_EDGE); }
@@ -202,6 +237,12 @@ export class Engine {
     removeRoute(id) { simulator.activeRoutes = (simulator.activeRoutes || []).filter(route => route.id !== id); }
     availableCount(id) { return vehicles.filter(v => v.district === id && v.status === STATUS.AVAILABLE).length; }
     hasIncomingReposition(id) { return [...this.activeRepositions.values()].some(r => r.targetDistrictId === id); }
+    hasIncomingCoverage(id) {
+        return this.hasIncomingReposition(id) || [...this.activeDispatches.values()].some(dispatch => {
+            const vehicle = vehicles.find(v => v.id === dispatch.vehicleId);
+            return dispatch.phase === STATUS.RETURNING && (vehicle?.homeDistrict === id || dispatch.originDistrictId === id);
+        });
+    }
     isVehicleReserved(id) { return [...this.activeDispatches.values()].some(d => d.vehicleId === id) || [...this.activeRepositions.values()].some(r => r.vehicleId === id); }
     getRandomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
     lerp(start, end, progress) { return start + (end - start) * progress; }
@@ -210,7 +251,8 @@ export class Engine {
 }
 
 function getPrisonDistrictsSafe() {
-    const prisons = districts.filter(d => d.prison);
+    const available = new Set(sessionConfig.availablePrisons);
+    const prisons = districts.filter(d => d.prison && available.has(d.id));
     if (!prisons.length) throw new Error("Geen gevangenisdistricten geconfigureerd.");
     return prisons;
 }

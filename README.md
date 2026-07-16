@@ -41,11 +41,11 @@ Zodra een inzet of andere statuswijziging een district zonder beschikbare voertu
 - rijdt het gekozen voertuig zichtbaar als `REPOSITIONING` naar het doeldistrict;
 - blijft `homeDistrict` ongewijzigd, maar verandert `district` bij aankomst naar het nieuwe dekkingsdistrict.
 
-Als geen veilig donor-district beschikbaar is, toont de simulator **MISSION FAILED** en worden nieuwe invoercycli geblokkeerd tot reset.
+Als geen veilig donor-district beschikbaar is en er geen lopende herpositionering of terugkerend voertuig onderweg is om de dekking te herstellen, activeert de simulator de operationele eindsituatie **Herpositioneren is niet meer mogelijk**. De centrale game-overstatus pauzeert nieuwe meldingen, dispatches en automatische herpositioneringen, toont een professionele overlay boven de bestaande kaart en logt de dekking-, herpositionering- en einde-sessieregels éénmalig.
 
 ## Kaart en layout
 
-De achtergrondkaart (`assets/kaart_Eenheid_DEF.png`) heeft een natuurlijke resolutie van 4872 × 3530 pixels. De interactieve SVG-laag gebruikt één consistent coördinatensysteem met `viewBox="0 0 1100 800"`. Districtmarkeringen, labels, gevangenissen, meldingen en voertuigslots liggen binnen deze viewBox en schalen responsief mee met de kaartcontainer.
+De achtergrondkaart (`assets/kaart_Eenheid_DEF.png`) heeft een natuurlijke resolutie van 4872 × 3530 pixels. De interactieve SVG-laag gebruikt één consistent coördinatensysteem met `viewBox="0 0 1100 800"`. Districtmarkeringen, labels, meldingen en voertuigslots liggen binnen deze viewBox en schalen responsief mee met de kaartcontainer. Cellencomplexmarkeringen worden centraal uit de districtdata en sessieconfiguratie afgeleid: Rotterdam-Stad (`RS`) blijft beschikbaar en Zuid-Holland-Zuid (`ZHZ`) is het tweede standaardcomplex; Zeehaven (`ZH`) is geen cellencomplex meer.
 
 ## Handmatige testinstructies
 
@@ -69,4 +69,5 @@ Voer daarna minimaal deze scenario's uit:
 
 - Geen frameworks, npm, buildstap, Vite of TypeScript.
 - Alle animaties lopen via één `requestAnimationFrame`-loop.
-- Reset wist alle actieve dispatches, herpositioneringen, routes, timers, incidenten en UI-status.
+- Reset wist alle actieve dispatches, herpositioneringen, routes, timers, incidenten en UI-status, maar behoudt bij een sessiereset de gekozen voertuigaantallen en beschikbare cellencomplexen.
+- Nieuwe sessie instellen herstelt de standaardconfiguratie met 3 voertuigen per district en de cellencomplexopties Rotterdam-Stad en Zuid-Holland-Zuid.

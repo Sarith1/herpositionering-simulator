@@ -8,7 +8,7 @@ Hoofdcontroller van de applicatie.
 ==========================================================
 */
 
-import { createDefaultVehiclesPerDistrict } from "./data.js";
+import { createDefaultVehiclesPerDistrict, getDefaultPrisonDistrictIds } from "./data.js";
 import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
@@ -46,11 +46,15 @@ class App {
         this.bindButton("prisonBtn", () => this.engine.selectPrison());
         this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
         this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
-        this.bindButton("resetBtn", () => this.engine.reset({ restoreDefaults: true }));
-        this.bindButton("applyConfigBtn", () => this.engine.reset({ vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict() }));
+        this.bindButton("resetBtn", () => this.resetCurrentSession());
+        this.bindButton("failureResetBtn", () => this.resetCurrentSession());
+        this.bindButton("failureNewSessionBtn", () => this.newSessionSetup());
+        this.bindButton("failureInspectBtn", () => ({ success: true, message: "[EINDE SESSIE] Kaartsituatie blijft zichtbaar." }));
+        this.bindButton("applyConfigBtn", () => this.applyConfiguredSession());
         this.bindButton("restoreDefaultsBtn", () => {
             const defaults = createDefaultVehiclesPerDistrict();
             this.ui.setConfigValues(defaults);
+            this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
             return this.engine.reset({ restoreDefaults: true });
         });
     }
@@ -63,8 +67,11 @@ class App {
                 const result = action();
                 this.ui.log(result.message);
 
-                if (id === "resetBtn" || id === "restoreDefaultsBtn") {
+                if (id === "resetBtn" || id === "failureResetBtn") this.ui.hideRepositioningFailure();
+
+                if (id === "restoreDefaultsBtn" || id === "failureNewSessionBtn") {
                     this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
+                    this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
                 }
 
                 (result.events || []).forEach(event => this.handleEngineEvent(event));
@@ -91,7 +98,31 @@ class App {
         if (event.type === "vehicleReturned") this.ui.vehicleReturned(event.vehicle.id);
         if (event.type === "repositionStarted") this.ui.log(`[HERPOSITIONERING] ${event.vehicle.id} rijdt naar ${event.district.name}.`);
         if (event.type === "repositionComplete") this.ui.log(`[BESCHIKBAAR] ${event.vehicle.id} dekt nu ${event.district.name}.`);
+        if (event.type === "repositioningFailure") this.ui.showRepositioningFailure(event.failure);
         if (event.type === "missionFailed" || event.type === "error") this.ui.log(event.message);
+    }
+
+
+    applyConfiguredSession() {
+        const availablePrisons = this.ui.getConfiguredAvailablePrisons();
+        if (!availablePrisons.length) return { success: false, message: "[FOUT] Selecteer minimaal één cellencomplex." };
+        this.ui.hideRepositioningFailure();
+        return this.engine.reset({
+            vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
+            availablePrisons
+        });
+    }
+
+    resetCurrentSession() {
+        this.ui.hideRepositioningFailure();
+        return this.engine.reset();
+    }
+
+    newSessionSetup() {
+        this.ui.hideRepositioningFailure();
+        this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
+        this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
+        return this.engine.reset({ restoreDefaults: true });
     }
 
     sync() {
@@ -104,8 +135,8 @@ class App {
             const events = this.engine.update(now);
             events.forEach(event => this.handleEngineEvent(event));
 
-            if (this.engine.getButtonState().gameOver && !this.ui.gameOverLogged) {
-                this.ui.logGameOver();
+            if (this.engine.getButtonState().gameOver) {
+                this.ui.showRepositioningFailure(this.engine.getRepositioningFailure?.());
             }
 
             this.sync();

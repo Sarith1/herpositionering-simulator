@@ -82,6 +82,9 @@
                 <p class="config-help">Pas voertuigaantallen aan vóór de sessiestart.</p>
                 <div id="vehicleConfig" class="vehicle-config"></div>
                 <div class="config-summary">Totaal: <strong id="vehicleConfigTotal">21</strong> voertuigen</div>
+                <h3>Beschikbare cellencomplexen</h3>
+                <p class="config-help">Selecteer minimaal één complex voor celritten.</p>
+                <div id="prisonConfig" class="prison-config"></div>
                 <button id="applyConfigBtn" class="secondary-button">Configuratie toepassen</button>
                 <button id="restoreDefaultsBtn" class="secondary-button">Standaardwaarden herstellen</button>
             </section>
@@ -127,6 +130,24 @@
         </div>
 
     </footer>
+
+    <section id="repositioningFailureOverlay" class="failure-overlay" hidden aria-modal="true" role="dialog" aria-labelledby="failureTitle">
+        <div class="failure-dialog">
+            <div class="failure-icon" aria-hidden="true">⚠️</div>
+            <h2 id="failureTitle" data-failure-title>Herpositioneren is niet meer mogelijk</h2>
+            <p data-failure-explanation>Er is geen aangrenzend district dat veilig een voertuig kan afstaan. De gebiedsdekking kan niet meer worden hersteld.</p>
+            <dl class="failure-metrics">
+                <div><dt>District zonder oplossing</dt><dd data-failure-district>-</dd></div>
+                <div><dt>Actuele gebiedsdekking</dt><dd data-failure-coverage>-</dd></div>
+                <div><dt>Beschikbare voertuigen</dt><dd data-failure-available>-</dd></div>
+            </dl>
+            <div class="failure-actions">
+                <button id="failureResetBtn" class="reset-button">Reset sessie</button>
+                <button id="failureNewSessionBtn" class="secondary-button">Nieuwe sessie instellen</button>
+                <button id="failureInspectBtn" class="secondary-button">Bekijk situatie</button>
+            </div>
+        </div>
+    </section>
 
 </div>
 
