@@ -187,8 +187,6 @@ export const simulator = {
 
     travelTime: null,
 
-    score: 0,
-
     incidentsHandled: 0,
 
     maxIncidents: null,
@@ -199,9 +197,7 @@ export const simulator = {
 
     activeRoutes: [],
 
-    incidentHistory: [],
-
-    lastScoreBreakdown: null
+    incidentHistory: []
 
 };
 

@@ -658,19 +658,24 @@ footer button:disabled {
     line-height:1.45;
 }
 
-footer button.secondary {
-    background:#334155;
+footer button.reset-button {
+    background: transparent;
+    border: 1px solid rgba(184,198,214,.65);
+    color: var(--text-secondary);
+    font-weight: 700;
 }
 
-footer button.secondary:hover {
-    background:#475569;
+footer button.reset-button:hover,
+footer button.reset-button:focus-visible {
+    background: rgba(184,198,214,.12);
+    border-color: var(--accent-light);
+    color: var(--text);
 }
 
 /* ===========================================================
    SPRINT 1.5 EVALUATIEPANEEL
 =========================================================== */
 
-.score-breakdown,
 .incident-history p {
     margin-top:12px;
     padding:12px;
@@ -799,14 +804,25 @@ footer,
     min-height: 70px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 18px;
+    gap: 32px;
     padding: 14px 18px;
     background: var(--panel);
     border-top: 1px solid var(--border);
     box-shadow: 0 -8px 20px rgba(0,0,0,.25);
     overflow: visible;
+}
+
+.process-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.utility-controls {
+    display: flex;
+    margin-left: auto;
 }
 
 .control-bar button,
@@ -865,14 +881,30 @@ footer button {
 
     footer,
     .control-bar {
-        gap: 10px;
+        align-items: stretch;
+        gap: 18px;
         padding: 10px;
+    }
+
+    .process-controls {
+        flex: 1 1 100%;
+        gap: 10px;
+    }
+
+    .utility-controls {
+        flex: 1 1 100%;
+        justify-content: flex-end;
+        margin-left: 0;
     }
 
     footer button,
     .control-bar button {
         flex: 1 1 145px;
         padding: 12px 14px;
+    }
+
+    .utility-controls .reset-button {
+        flex: 0 1 180px;
     }
 }
 
@@ -896,5 +928,13 @@ footer button {
     .control-bar button {
         flex-basis: calc(50% - 10px);
         font-size: 14px;
+    }
+
+    .utility-controls {
+        justify-content: stretch;
+    }
+
+    .utility-controls .reset-button {
+        flex: 1 1 100%;
     }
 }

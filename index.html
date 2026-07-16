@@ -48,11 +48,6 @@
             </div>
 
             <div class="card">
-                <div id="scoreCount">0</div>
-                <small>Score</small>
-            </div>
-
-            <div class="card">
                 <div id="roundCount">0/5</div>
                 <small>Ronde</small>
             </div>
@@ -90,8 +85,6 @@
 
             <h2>Evaluatie</h2>
 
-            <div id="scoreBreakdown" class="score-breakdown">Nog geen afgehandelde melding.</div>
-
             <div id="incidentHistory" class="incident-history"></div>
 
         </aside>
@@ -100,26 +93,29 @@
 
     <footer class="control-bar" aria-label="Simulator bediening">
 
-        <button id="incidentBtn">
-            1. Melding
-        </button>
+        <div class="process-controls" aria-label="Processtappen">
+            <button id="incidentBtn">
+                1. Melding
+            </button>
 
-        <button id="prisonBtn">
-            2. Cel
-        </button>
+            <button id="prisonBtn">
+                2. Cel
+            </button>
 
-        <button id="travelBtn">
-            3. Reistijd
-        </button>
+            <button id="travelBtn">
+                3. Reistijd
+            </button>
 
-        <button id="dispatchBtn">
-            4. Pak melding op
-        </button>
+            <button id="dispatchBtn">
+                4. Pak melding op
+            </button>
+        </div>
 
-
-        <button id="resetBtn" class="secondary">
-            Reset
-        </button>
+        <div class="utility-controls" aria-label="Hulpfuncties">
+            <button id="resetBtn" class="reset-button" aria-label="Simulator resetten">
+                ↺ Reset
+            </button>
+        </div>
 
     </footer>
 
