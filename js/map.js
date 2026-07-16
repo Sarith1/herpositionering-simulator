@@ -16,6 +16,9 @@ const VEHICLE_SCALE = 1.15;
 const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
+const PRISON_ICON_SCALE = 1.20;
+const BASE_PRISON_FONT_SIZE = 32;
+const PRISON_ICON_OFFSET_Y = -48;
 
 export class MapView {
     constructor(containerId) {
@@ -32,6 +35,8 @@ export class MapView {
         this.districtLayer = null;
         this.vehicleLayer = null;
         this.incidentLayer = null;
+        this.prisonLayer = null;
+        this.labelLayer = null;
         this.incidentAnimationCleanup = null;
     }
 
@@ -73,8 +78,10 @@ export class MapView {
 
         this.routeLayer = this.createLayer("routes");
         this.districtLayer = this.createLayer("districts");
-        this.incidentLayer = this.createLayer("incidents");
         this.vehicleLayer = this.createLayer("vehicles");
+        this.incidentLayer = this.createLayer("incidents");
+        this.prisonLayer = this.createLayer("prisons");
+        this.labelLayer = this.createLayer("labels");
     }
 
     createLayer(name) {
@@ -87,10 +94,13 @@ export class MapView {
     render() {
         this.clearLayer(this.routeLayer);
         this.clearLayer(this.districtLayer);
+        this.clearLayer(this.labelLayer);
         this.syncIncident();
 
         this.drawRoutes();
         this.drawDistricts();
+        this.syncPrisons();
+        this.drawLabels();
         this.syncVehicles();
     }
 
@@ -137,6 +147,66 @@ export class MapView {
             code.setAttribute("class", "district-code");
             code.textContent = district.id;
 
+            group.append(circle, code);
+
+            this.districtLayer.appendChild(group);
+        });
+    }
+
+    syncPrisons() {
+        const visiblePrisonIds = new Set();
+
+        districts
+            .filter(district => district.prison && sessionConfig.availablePrisons.includes(district.id))
+            .forEach(district => {
+                visiblePrisonIds.add(district.id);
+
+                const group = this.getOrCreatePrisonElement(district.id);
+                group.setAttribute("class", simulator.selectedPrison === district.id ? "prison-marker selected" : "prison-marker");
+                group.setAttribute("transform", `translate(${district.x} ${district.y + PRISON_ICON_OFFSET_Y})`);
+            });
+
+        this.prisonLayer
+            .querySelectorAll("[data-prison-district-id]")
+            .forEach(element => {
+                if (!visiblePrisonIds.has(element.dataset.prisonDistrictId)) {
+                    element.remove();
+                }
+            });
+    }
+
+    getOrCreatePrisonElement(districtId) {
+        const selector = `[data-prison-district-id="${CSS.escape(districtId)}"]`;
+        const existingElement = this.prisonLayer.querySelector(selector);
+
+        if (existingElement) return existingElement;
+
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.dataset.prisonDistrictId = districtId;
+
+        const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        halo.setAttribute("class", "prison-halo");
+        halo.setAttribute("cx", 0);
+        halo.setAttribute("cy", 0);
+        halo.setAttribute("r", 21 * PRISON_ICON_SCALE);
+
+        const prison = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        prison.setAttribute("x", 0);
+        prison.setAttribute("y", 0);
+        prison.setAttribute("text-anchor", "middle");
+        prison.setAttribute("dominant-baseline", "central");
+        prison.setAttribute("class", "prison");
+        prison.style.fontSize = `${BASE_PRISON_FONT_SIZE * PRISON_ICON_SCALE}px`;
+        prison.textContent = "🏛️";
+
+        group.append(halo, prison);
+        this.prisonLayer.appendChild(group);
+
+        return group;
+    }
+
+    drawLabels() {
+        districts.forEach(district => {
             const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
             label.setAttribute("x", district.x);
             label.setAttribute("y", district.y + 60);
@@ -144,19 +214,7 @@ export class MapView {
             label.setAttribute("class", "district-label");
             label.textContent = district.name;
 
-            group.append(circle, code, label);
-
-            if (district.prison && sessionConfig.availablePrisons.includes(district.id)) {
-                const prison = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                prison.setAttribute("x", district.x);
-                prison.setAttribute("y", district.y - 45);
-                prison.setAttribute("text-anchor", "middle");
-                prison.setAttribute("class", simulator.selectedPrison === district.id ? "prison selected" : "prison");
-                prison.textContent = "🏛️";
-                group.appendChild(prison);
-            }
-
-            this.districtLayer.appendChild(group);
+            this.labelLayer.appendChild(label);
         });
     }
 

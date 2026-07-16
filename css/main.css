@@ -614,7 +614,6 @@ footer button:disabled {
     stroke-linejoin:round;
 }
 
-.prison,
 .incident,
 .vehicle {
     font-size:24px;
@@ -624,8 +623,51 @@ footer button:disabled {
     stroke-linejoin:round;
 }
 
-.prison.selected {
-    font-size:32px;
+.prison-marker {
+    pointer-events:auto;
+    cursor:pointer;
+    transform-box:fill-box;
+    transform-origin:center;
+    filter:drop-shadow(0 2px 4px rgba(2, 8, 23, .55)) drop-shadow(0 0 8px rgba(125, 211, 252, .45));
+    transition:filter .18s ease, opacity .18s ease;
+}
+
+.prison-marker:hover {
+    filter:drop-shadow(0 3px 5px rgba(2, 8, 23, .65)) drop-shadow(0 0 13px rgba(56, 189, 248, .8));
+}
+
+.prison-marker:hover .prison {
+    transform:scale(1.06);
+}
+
+.prison-marker.selected {
+    filter:drop-shadow(0 3px 6px rgba(2, 8, 23, .75)) drop-shadow(0 0 18px rgba(14, 165, 233, .95));
+}
+
+.prison-marker.selected .prison {
+    animation:prisonSelectedPulse .7s ease-in-out;
+}
+
+.prison-marker.selected .prison-halo {
+    animation:prisonHaloPulse .7s ease-in-out;
+    stroke:#38bdf8;
+    opacity:.92;
+}
+
+.prison {
+    paint-order:stroke;
+    stroke:#ffffff;
+    stroke-width:4px;
+    stroke-linejoin:round;
+    transform-box:fill-box;
+    transform-origin:center;
+    transition:transform .18s ease;
+}
+
+.prison-halo {
+    fill:rgba(14, 165, 233, .16);
+    stroke:rgba(255, 255, 255, .9);
+    stroke-width:2.5px;
 }
 
 .incident-position {
@@ -674,6 +716,17 @@ footer button:disabled {
     filter:drop-shadow(0 0 8px #facc15);
 }
 
+
+@keyframes prisonSelectedPulse {
+    0%, 100% { transform:scale(1); }
+    45% { transform:scale(1.14); }
+}
+
+@keyframes prisonHaloPulse {
+    0%, 100% { transform:scale(1); opacity:.8; }
+    45% { transform:scale(1.24); opacity:1; }
+}
+
 @keyframes incidentIntroPulse {
     0% { transform:scale(.85); }
     18% { transform:scale(1.25); }
@@ -704,7 +757,9 @@ footer button:disabled {
     .incident-marker--intro,
     .incident-marker--active,
     .incident-marker--intro .incident-ring,
-    .incident-marker--active .incident-ring {
+    .incident-marker--active .incident-ring,
+    .prison-marker.selected .prison,
+    .prison-marker.selected .prison-halo {
         animation:none;
     }
 
