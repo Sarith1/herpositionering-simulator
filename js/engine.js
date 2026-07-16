@@ -5,7 +5,7 @@ Stabilisatie: parallelle dispatches, voertuigfasen en herpositionering.
 ==========================================================
 */
 
-import { districts, simulator, vehicles } from "./data.js";
+import { districts, initializeVehicles, resetSessionConfigDefaults, setVehiclesPerDistrict, simulator, vehicles } from "./data.js";
 import { calculateTravelTime, findNearestAvailableVehicle, getDistrictById, getShortestRoute, getRouteDistance } from "./routing.js";
 
 const STEPS = { INCIDENT: "incident", PRISON: "prison", TRAVEL_TIME: "travelTime", DISPATCH: "dispatch" };
@@ -179,8 +179,15 @@ export class Engine {
 
     getButtonState() { return { incident: this.step === STEPS.INCIDENT && !simulator.gameOver && vehicles.some(v => v.status === STATUS.AVAILABLE), prison: this.step === STEPS.PRISON && !simulator.gameOver, travelTime: this.step === STEPS.TRAVEL_TIME && !simulator.gameOver, dispatch: this.step === STEPS.DISPATCH && !simulator.gameOver, reset: true, currentStep: this.step, waitingForReturn: this.activeDispatches.size > 0 || this.activeRepositions.size > 0, gameOver: simulator.gameOver }; }
 
-    reset() {
+    reset(options = {}) {
         Object.assign(simulator, { activeIncident: null, selectedPrison: null, travelTime: null, incidentsHandled: 0, gameOver: false, activeRoute: [], activeRoutes: [], incidentHistory: [] });
+        if (options.vehiclesPerDistrict) {
+            setVehiclesPerDistrict(options.vehiclesPerDistrict);
+        } else if (options.restoreDefaults) {
+            resetSessionConfigDefaults();
+        } else {
+            initializeVehicles();
+        }
         vehicles.forEach(vehicle => { vehicle.district = vehicle.homeDistrict; vehicle.status = STATUS.AVAILABLE; this.placeAtDistrict(vehicle, vehicle.homeDistrict); vehicle.targetX = vehicle.x; vehicle.targetY = vehicle.y; vehicle.incident = null; vehicle.prison = null; vehicle.angle = 0; });
         this.activeDispatches.clear(); this.activeRepositions.clear(); this.step = STEPS.INCIDENT;
         return this.result(true, "[RESET] Nieuwe oefening gestart.");

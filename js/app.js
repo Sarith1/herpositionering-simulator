@@ -8,6 +8,7 @@ Hoofdcontroller van de applicatie.
 ==========================================================
 */
 
+import { createDefaultVehiclesPerDistrict } from "./data.js";
 import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
@@ -45,7 +46,13 @@ class App {
         this.bindButton("prisonBtn", () => this.engine.selectPrison());
         this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
         this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
-        this.bindButton("resetBtn", () => this.engine.reset());
+        this.bindButton("resetBtn", () => this.engine.reset({ restoreDefaults: true }));
+        this.bindButton("applyConfigBtn", () => this.engine.reset({ vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict() }));
+        this.bindButton("restoreDefaultsBtn", () => {
+            const defaults = createDefaultVehiclesPerDistrict();
+            this.ui.setConfigValues(defaults);
+            return this.engine.reset({ restoreDefaults: true });
+        });
     }
 
     bindButton(id, action) {
@@ -55,6 +62,10 @@ class App {
             try {
                 const result = action();
                 this.ui.log(result.message);
+
+                if (id === "resetBtn" || id === "restoreDefaultsBtn") {
+                    this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
+                }
 
                 (result.events || []).forEach(event => this.handleEngineEvent(event));
 

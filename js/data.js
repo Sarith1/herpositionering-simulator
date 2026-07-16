@@ -136,41 +136,95 @@ Voertuigen
 ==========================================================
 */
 
+export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
+
+export const sessionConfig = {
+
+    vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
+
+    availablePrisons: districts
+        .filter(district => district.prison)
+        .map(district => district.id)
+
+};
+
 export const vehicles = [];
 
-districts.forEach(district => {
+export function createDefaultVehiclesPerDistrict() {
 
-    for (let i = 1; i <= 3; i++) {
+    return Object.fromEntries(
+        districts.map(district => [district.id, DEFAULT_VEHICLES_PER_DISTRICT])
+    );
 
-        vehicles.push({
+}
 
-            id: `${district.id}-${String(i).padStart(2, "0")}`,
+export function resetSessionConfigDefaults() {
 
-            district: district.id,
+    sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
+    sessionConfig.availablePrisons = districts
+        .filter(district => district.prison)
+        .map(district => district.id);
 
-            homeDistrict: district.id,
+    initializeVehicles();
 
-            status: "AVAILABLE",
+}
 
-            x: district.x,
+export function setVehiclesPerDistrict(vehiclesPerDistrict) {
 
-            y: district.y,
+    sessionConfig.vehiclesPerDistrict = {
+        ...createDefaultVehiclesPerDistrict(),
+        ...vehiclesPerDistrict
+    };
 
-            targetX: district.x,
+    initializeVehicles();
 
-            targetY: district.y,
+}
 
-            speed: 90,
+export function initializeVehicles() {
 
-            incident: null,
+    vehicles.splice(0, vehicles.length);
 
-            prison: null
+    districts.forEach(district => {
 
-        });
+        const vehicleCount = Math.max(0, Number(sessionConfig.vehiclesPerDistrict[district.id]) || 0);
 
-    }
+        for (let i = 1; i <= vehicleCount; i++) {
 
-});
+            vehicles.push({
+
+                id: `${district.id}-${String(i).padStart(2, "0")}`,
+
+                district: district.id,
+
+                homeDistrict: district.id,
+
+                status: "AVAILABLE",
+
+                x: district.x,
+
+                y: district.y,
+
+                targetX: district.x,
+
+                targetY: district.y,
+
+                speed: 90,
+
+                incident: null,
+
+                prison: null,
+
+                angle: 0
+
+            });
+
+        }
+
+    });
+
+}
+
+initializeVehicles();
 
 
 /*
