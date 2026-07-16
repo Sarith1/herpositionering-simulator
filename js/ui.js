@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.3
+Sprint 1.4
 Bestand: ui.js
 
 Verantwoordelijk voor:
@@ -30,6 +30,10 @@ export class UI {
         this.busyElement = null;
         this.incidentElement = null;
         this.coverageElement = null;
+        this.scoreElement = null;
+        this.roundElement = null;
+        this.stepHintElement = null;
+        this.gameOverLogged = false;
 
     }
 
@@ -58,6 +62,15 @@ export class UI {
 
         this.coverageElement =
             document.getElementById("coverageCount");
+
+        this.scoreElement =
+            document.getElementById("scoreCount");
+
+        this.roundElement =
+            document.getElementById("roundCount");
+
+        this.stepHintElement =
+            document.getElementById("stepHint");
 
         this.logContainer =
             document.getElementById("activityLog");
@@ -96,6 +109,12 @@ export class UI {
 
         if (this.coverageElement)
             this.coverageElement.textContent = `${this.calculateCoverage()}%`;
+
+        if (this.scoreElement)
+            this.scoreElement.textContent = simulator.score;
+
+        if (this.roundElement)
+            this.roundElement.textContent = `${simulator.incidentsHandled}/${simulator.maxIncidents}`;
 
     }
 
@@ -146,7 +165,8 @@ export class UI {
             incidentBtn: buttonState.incident,
             prisonBtn: buttonState.prison,
             travelBtn: buttonState.travelTime,
-            dispatchBtn: buttonState.dispatch
+            dispatchBtn: buttonState.dispatch,
+            resetBtn: buttonState.reset
         };
 
         Object.entries(mapping).forEach(([id, enabled]) => {
@@ -154,6 +174,33 @@ export class UI {
             if (!button) return;
             button.disabled = !enabled;
         });
+
+        this.updateStepHint(buttonState);
+
+    }
+
+    updateStepHint(buttonState) {
+
+        if (!this.stepHintElement) return;
+
+        if (buttonState.gameOver) {
+            this.stepHintElement.textContent = "Oefening afgerond. Bekijk je score of druk op reset.";
+            return;
+        }
+
+        if (buttonState.waitingForReturn) {
+            this.stepHintElement.textContent = "Voertuig keert terug naar het eigen district.";
+            return;
+        }
+
+        const labels = {
+            incident: "1. Plaats een nieuwe melding.",
+            prison: "2. Selecteer een cel voor de arrestant.",
+            travelTime: "3. Bereken de reistijd naar de cel.",
+            dispatch: "4. Stuur het dichtstbijzijnde voertuig."
+        };
+
+        this.stepHintElement.textContent = labels[buttonState.currentStep] || "Start met een melding.";
 
     }
 
@@ -173,6 +220,8 @@ export class UI {
     log(message) {
 
         if (!this.logContainer) return;
+
+        if (message.includes("Nieuwe Sprint 1.4")) this.gameOverLogged = false;
 
         const now = new Date();
 
@@ -220,6 +269,14 @@ export class UI {
         );
 
         this.refresh();
+
+    }
+
+    logGameOver() {
+
+        this.gameOverLogged = true;
+
+        this.log(`Oefening afgerond met ${simulator.score} punten.`);
 
     }
 

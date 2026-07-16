@@ -1,7 +1,7 @@
 /*
 ==========================================================
 Politie Herpositionering Simulator
-Sprint 1.3
+Sprint 1.4
 Bestand: map.js
 
 Verantwoordelijk voor de SVG-kaartlaag, districten, voertuigen,
