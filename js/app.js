@@ -145,7 +145,7 @@ class App {
 
     sync() {
         this.map.render();
-        this.ui.refresh(this.engine.getButtonState());
+        this.ui.refresh(this.engine.getControlState());
     }
 
     startRenderLoop() {
@@ -153,7 +153,7 @@ class App {
             const events = this.engine.update(now);
             events.forEach(event => this.handleEngineEvent(event));
 
-            if (this.engine.getButtonState().gameOver) {
+            if (this.engine.getControlState().gameOver) {
                 this.ui.showRepositioningFailure(this.engine.getRepositioningFailure?.());
             }
 

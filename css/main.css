@@ -959,6 +959,21 @@ aside,
     gap: 14px;
 }
 
+.dashboard-panel {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(125,211,255,.45) transparent;
+}
+
+.dashboard-panel::-webkit-scrollbar { width: 8px; }
+.dashboard-panel::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(125,211,255,.45);
+}
+
 #activityLog,
 .activity-log,
 #districtStatus,
@@ -1151,6 +1166,18 @@ footer button {
 
 .session-config h2 {
     margin:0;
+}
+
+.session-config__footer {
+    position: sticky;
+    bottom: -14px;
+    z-index: 2;
+    display: grid;
+    gap: 8px;
+    margin: 2px -14px -14px;
+    padding: 10px 14px 14px;
+    border-top: 1px solid rgba(125,211,255,.22);
+    background: #0f2438;
 }
 
 .config-help,
