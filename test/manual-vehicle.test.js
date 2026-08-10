@@ -95,3 +95,31 @@ test("autoplay keeps generating OPEN incidents without vehicles and game over st
   assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
   const count=engine.sequence;engine.update(due+100000);assert.equal(engine.sequence,count);
 });
+
+test("ten consecutive manual input cycles reset completely while dispatches stay active",()=>{
+  const engine=new Engine();engine.reset({operationMode:"manualVehicle",vehiclesPerDistrict:Object.fromEntries(["RN","ZH","RS","DG","VR","GO","HW"].map(id=>[id,3]))});
+  for(let cycle=0;cycle<10;cycle++){
+    assert.equal(engine.createIncident().success,true,`incident ${cycle+1}`);
+    assert.equal(engine.selectPrison().success,true);assert.equal(engine.calculateTravelTime().success,true);assert.equal(engine.startVehicleSelection().success,true);
+    const vehicle=vehicles.find(item=>item.status==="AVAILABLE");assert.ok(vehicle);assert.equal(engine.selectVehicle(vehicle.id).success,true);assert.equal(engine.confirmManualDispatch().success,true);
+    assert.deepEqual(simulator.inputCycleState,{step:"incident",incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null,selectionActive:false});
+    assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,confirming:false});
+    assert.equal(simulator.activeIncident,null);assert.equal(simulator.selectedPrison,null);assert.equal(simulator.travelTime,null);assert.equal(simulator.selectedVehicleId,null);
+  }
+  assert.equal(engine.activeDispatches.size,10);
+});
+
+test("manual reposition previews risk, preserves home district and uses central registry",()=>{
+  const engine=new Engine();engine.reset({operationMode:"automatic"});const vehicle=vehicles[0],origin=vehicle.district,target=origin==="RN"?"ZH":"RN",home=vehicle.homeDistrict;
+  assert.equal(engine.startManualReposition().success,true);assert.equal(engine.selectRepositionVehicle(vehicle.id).success,true);
+  const preview=engine.selectRepositionTarget(target);assert.equal(preview.success,true);assert.ok(preview.repositionPreview.route.includes("→"));
+  const started=engine.confirmManualReposition();assert.equal(started.success,true);assert.equal(vehicle.status,"REPOSITIONING");
+  const reposition=[...engine.activeRepositions.values()].find(item=>item.vehicleId===vehicle.id);assert.equal(reposition.type,"manual");assert.equal(engine.incoming(target),true);
+  engine.updateReposition(reposition,reposition.phaseStartTime+100000);assert.equal(vehicle.district,target);assert.equal(vehicle.homeDistrict,home);assert.equal(vehicle.status,"AVAILABLE");
+});
+
+test("manual reposition cancellation and stale vehicle confirmation are safe",()=>{
+  const engine=new Engine();engine.reset();const vehicle=vehicles[0],target=vehicle.district==="RN"?"ZH":"RN";
+  engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);engine.cancelManualReposition();assert.equal(vehicle.status,"AVAILABLE");assert.equal(engine.activeRepositions.size,0);
+  engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);vehicle.status="BUSY";const result=engine.confirmManualReposition();assert.equal(result.success,false);assert.deepEqual(simulator.manualRepositionState,{active:false,selectedVehicleId:null,targetDistrictId:null});
+});
