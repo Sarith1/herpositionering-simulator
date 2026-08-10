@@ -9,7 +9,7 @@ class FakeSvgNode {
   setAttribute(name,value){this.attributes[name]=String(value);if(name==="data-district-id")this.dataset.districtId=String(value);}
   addEventListener(type,handler){this.listeners[type]=handler;}
   appendChild(child){this.children.push(child);}
-  click(){this.listeners.click?.({});}
+  click(){this.listeners.click?.({preventDefault(){},stopPropagation(){}});}
 }
 
 test("the top SVG interaction layer dispatches the exact district clicked", () => {
@@ -22,7 +22,7 @@ test("the top SVG interaction layer dispatches the exact district clicked", () =
     engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);
     assert.equal(simulator.manualRepositionState.phase,"selectDistrict");
     const view=Object.create(MapView.prototype);view.interactionLayer=new FakeSvgNode();view.container={dispatchEvent:event=>emitted.push(event)};
-    view.drawDistrictInteractions();
+    view.syncInteractionLayer();
     const hit=view.interactionLayer.children.find(node=>node.dataset.districtId!==vehicle.district);assert.ok(hit);
     hit.click();assert.deepEqual(emitted.at(-1).detail,{districtId:hit.dataset.districtId});
     assert.equal(engine.selectRepositionTarget(emitted.at(-1).detail.districtId).success,true);
@@ -31,9 +31,9 @@ test("the top SVG interaction layer dispatches the exact district clicked", () =
   } finally {globalThis.document=originalDocument;globalThis.CustomEvent=originalCustomEvent;}
 });
 
-test("the stateful primary action completes ten consecutive manual repositions", () => {
+test("the stateful primary action completes fifteen consecutive manual repositions", () => {
   const engine = new Engine(); engine.reset({ operationMode: "automatic" }); const vehicle = vehicles[0], home = vehicle.homeDistrict;
-  for (let trip = 0; trip < 10; trip++) {
+  for (let trip = 0; trip < 15; trip++) {
     const target = vehicle.district === "RN" ? "ZH" : "RN";
     assert.equal(engine.handleManualRepositionAction().success, true);
     assert.equal(simulator.manualRepositionState.phase, "selectVehicle");

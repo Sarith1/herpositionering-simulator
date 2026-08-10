@@ -10,7 +10,7 @@ meldingen, gevangenissen en routes.
 */
 
 import { colors, detentionComplexes, districts, sessionConfig, simulator, vehicles } from "./data.js";
-import { getDistrictById } from "./routing.js";
+import { getDistrictById, getShortestRoute } from "./routing.js";
 
 const VEHICLE_SCALE = 1.15;
 const BASE_VEHICLE_FONT_SIZE = 24;
@@ -91,7 +91,8 @@ export class MapView {
         this.incidentLayer = this.createLayer("incidents");
         this.prisonLayer = this.createLayer("prisons");
         this.labelLayer = this.createLayer("labels");
-        this.interactionLayer = this.createLayer("interactions");
+        // Keep interaction targets last so visual map objects can never cover them.
+        this.interactionLayer = this.createLayer("interaction");
     }
 
     createLayer(name) {
@@ -113,7 +114,7 @@ export class MapView {
         this.syncPrisons();
         this.drawLabels();
         this.syncVehicles();
-        this.drawDistrictInteractions();
+        this.syncInteractionLayer();
     }
 
     clearLayer(layer) {
@@ -143,10 +144,8 @@ export class MapView {
     drawDistricts() {
         districts.forEach(district => {
             const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            const reposition=simulator.manualRepositionState,selectable=reposition.phase==="selectDistrict"&&!!reposition.selectedVehicleId&&vehicles.find(v=>v.id===reposition.selectedVehicleId)?.district!==district.id;
-            group.setAttribute("class", `district-marker${selectable ? " district--selectable" : ""}${reposition.targetDistrictId===district.id ? " district--selected" : ""}`);
-            group.dataset.districtId=district.id;group.setAttribute("tabindex",selectable?"0":"-1");
-            const choose=()=>{if(simulator.manualRepositionState.phase==="selectDistrict")this.container.dispatchEvent(new CustomEvent("district-select",{detail:{districtId:district.id}}));};group.addEventListener("click",choose);group.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();choose();}});
+            group.setAttribute("class", "district-marker");
+            group.dataset.districtId = district.id;
 
             const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             circle.setAttribute("cx", district.x);
@@ -169,27 +168,52 @@ export class MapView {
         });
     }
 
-    drawDistrictInteractions() {
-        if (simulator.manualRepositionState.phase !== "selectDistrict") return;
-        const selectedVehicle = vehicles.find(vehicle => vehicle.id === simulator.manualRepositionState.selectedVehicleId);
-        districts.filter(district => district.id !== selectedVehicle?.district).forEach(district => {
-            const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            hit.setAttribute("class", "district-hitarea district--selectable");
-            hit.dataset.districtId = district.id;
-            hit.setAttribute("data-district-id", district.id);
-            hit.setAttribute("cx", district.x);
-            hit.setAttribute("cy", district.y);
-            hit.setAttribute("r", "46");
-            hit.setAttribute("fill", "transparent");
-            hit.setAttribute("pointer-events", "all");
-            hit.setAttribute("tabindex", "0");
-            const choose = () => {
-                if (simulator.manualRepositionState.phase === "selectDistrict") this.container.dispatchEvent(new CustomEvent("district-select", { detail: { districtId: district.id } }));
-            };
-            hit.addEventListener("click", choose);
-            hit.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); choose(); } });
-            this.interactionLayer.appendChild(hit);
+    syncInteractionLayer() {
+        this.clearLayer(this.interactionLayer);
+        const state = simulator.manualRepositionState;
+
+        if (state.phase === "ready") {
+            const target = getDistrictById(state.targetDistrictId);
+            if (target) this.interactionLayer.appendChild(this.createRepositionTarget(target, true));
+            return;
+        }
+
+        if (state.phase !== "selectDistrict" || !state.selectedVehicleId) return;
+        const selectedVehicle = vehicles.find(vehicle => vehicle.id === state.selectedVehicleId);
+        if (!selectedVehicle || !getDistrictById(selectedVehicle.district)) return;
+
+        districts
+            .filter(district => district.id !== selectedVehicle.district && getShortestRoute(selectedVehicle.district, district.id).length > 0)
+            .forEach(district => this.interactionLayer.appendChild(this.createRepositionTarget(district, false)));
+    }
+
+    createRepositionTarget(district, selected) {
+        const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        hit.setAttribute("class", `reposition-target-hitarea${selected ? " reposition-target--selected" : ""}`);
+        hit.dataset.districtId = district.id;
+        hit.setAttribute("data-reposition-target-id", district.id);
+        hit.setAttribute("cx", district.x);
+        hit.setAttribute("cy", district.y);
+        hit.setAttribute("r", "48");
+        hit.setAttribute("fill", "transparent");
+        hit.setAttribute("pointer-events", "all");
+        hit.setAttribute("aria-label", `Kies ${district.name} als doeldistrict`);
+
+        if (selected) return hit;
+
+        hit.setAttribute("tabindex", "0");
+        hit.setAttribute("role", "button");
+        const choose = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (simulator.manualRepositionState.phase !== "selectDistrict") return;
+            this.container.dispatchEvent(new CustomEvent("district-select", { detail: { districtId: district.id } }));
+        };
+        hit.addEventListener("click", choose);
+        hit.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") choose(event);
         });
+        return hit;
     }
 
     syncPrisons() {
