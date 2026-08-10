@@ -290,6 +290,8 @@ export const simulator = {
 
     ,selectedVehicleId: null
 
+    ,vehicleSelection: { active: false, incidentId: null, selectedVehicleId: null, confirming: false }
+
     ,autoplayPaused: false
 
     ,nextIncidentAt: null

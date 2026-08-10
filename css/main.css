@@ -551,6 +551,32 @@ main{
 
 }
 
+/* Stable SVG vehicle groups: only these classes enable primary dispatch input. */
+.vehicle { cursor:default; outline:none; }
+.vehicle-symbol { pointer-events:none; transition:filter .18s ease, transform .18s ease, opacity .18s ease; transform-box:fill-box; transform-origin:center; }
+.vehicle-hitbox { fill:transparent; pointer-events:all; }
+.vehicle.busy .vehicle-symbol { opacity:.58; filter:grayscale(.35); }
+.vehicle--selectable { cursor:pointer; }
+.vehicle--selectable .vehicle-symbol { filter:drop-shadow(0 0 7px #7dd3ff) drop-shadow(0 0 12px #2da8ff); }
+.vehicle--selectable:hover .vehicle-symbol,
+.vehicle--selectable:focus-visible .vehicle-symbol { transform:scale(1.16); filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 14px #2da8ff); }
+.vehicle--selected .vehicle-symbol { transform:scale(1.2); filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 18px #2da8ff); animation:vehicleSelectedPulse 1.15s ease-in-out infinite; }
+.vehicle--selected .vehicle-hitbox { fill:rgba(45,168,255,.18); stroke:#7dd3ff; stroke-width:3; }
+@keyframes vehicleSelectedPulse { 50% { transform:scale(1.3); } }
+
+.incident-position.incident--selectable { pointer-events:all; cursor:pointer; outline:none; }
+.incident--selectable:hover .incident-visual,
+.incident--selectable:focus-visible .incident-visual { transform:scale(1.12); }
+.incident--selected .incident-ring { stroke:#fff; stroke-width:6px; filter:drop-shadow(0 0 8px #ef4444); }
+.route-line.selection-preview { stroke:#7dd3ff; stroke-width:5; opacity:.85; }
+
+.manual-dispatch-panel { margin:12px 0; padding:14px; border:2px solid var(--accent); border-radius:12px; background:#0d2940; }
+.manual-dispatch-panel dl { display:grid; grid-template-columns:minmax(105px,1fr) 1fr; gap:7px 10px; margin:10px 0; font-size:13px; }
+.manual-dispatch-panel dt { color:var(--text-secondary); }
+.manual-dispatch-panel button { width:100%; margin-top:8px; padding:11px; border-radius:8px; background:var(--accent); color:#fff; font-weight:700; }
+.manual-dispatch-panel button.secondary-button { background:#29445d; }
+.manual-dispatch-panel button:disabled { cursor:not-allowed; opacity:.45; }
+
 /* ===========================================================
    SPRINT 1.5 INTERACTIEVE OBJECTEN
 =========================================================== */
