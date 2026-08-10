@@ -113,13 +113,7 @@
             <div id="stepHint" class="step-hint">Start met een melding.</div>
             <div id="manualDispatchPanel" class="manual-dispatch-panel" hidden>
                 <h3>Geselecteerd voertuig</h3><div id="vehicleSelectionDetails"></div>
-                <button id="confirmVehicleBtn">Voertuig inzetten</button>
                 <button id="cancelVehicleBtn" class="secondary-button">Annuleer voertuigkeuze</button>
-            </div>
-            <div id="autoplayControls" class="autoplay-controls" hidden>
-                <strong id="autoplayStatus"></strong>
-                <button id="pauseAutoplayBtn">⏸ Pauze</button><button id="resumeAutoplayBtn" hidden>▶ Hervatten</button>
-                <button id="incidentNowBtn" class="secondary-button">Nieuwe melding nu</button>
             </div>
 
             <h2>Evaluatie</h2>
@@ -132,7 +126,7 @@
 
     <footer class="control-bar" aria-label="Simulator bediening">
 
-        <div class="process-controls" aria-label="Processtappen">
+        <div id="processControls" class="process-controls" aria-label="Processtappen">
             <button id="incidentBtn">
                 1. Melding
             </button>
@@ -145,9 +139,20 @@
                 3. Reistijd
             </button>
 
-            <button id="dispatchBtn">
+            <button id="dispatchBtn" class="dispatch-confirm-button">
                 4. Pak melding op
             </button>
+            <button id="selectVehicleBtn" class="vehicle-select-button" hidden>
+                4. Selecteer voertuig
+            </button>
+            <button id="confirmVehicleBtn" class="dispatch-confirm-button" hidden>
+                5. Voertuig inzetten
+            </button>
+        </div>
+
+        <div id="autoplayControls" class="autoplay-controls autoplay-controls--footer" hidden aria-label="Autoplay bediening">
+            <button id="autoplayToggleBtn" class="autoplay-toggle-button">▶ Play</button>
+            <span id="autoplayStatus" role="status"></span>
         </div>
 
         <div class="utility-controls" aria-label="Hulpfuncties">

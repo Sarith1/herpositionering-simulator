@@ -1463,3 +1463,12 @@ footer button {
 .dashboard { flex-wrap:wrap; }
 #modeCount { font-size:clamp(.75rem,1vw,1rem); }
 @keyframes prisonPulse { 50% { stroke-width:8; opacity:.35; } }
+
+/* Modus-specifieke bediening */
+.vehicle-select-button { border-color:#38bdf8; background:#075985; }
+.dispatch-confirm-button { background:#15803d; border-color:#4ade80; font-weight:800; }
+.autoplay-controls--footer { flex:1; margin:0; padding:0; border:0; background:transparent; display:flex; align-items:center; justify-content:center; gap:16px; }
+.autoplay-controls--footer[hidden] { display:none; }
+.autoplay-toggle-button { min-width:180px; padding:12px 28px; border-radius:999px; background:#15803d; border:2px solid #4ade80; color:#fff; font-size:1.05rem; font-weight:800; }
+.autoplay-toggle-button.is-playing { background:#b45309; border-color:#fbbf24; }
+#autoplayStatus { color:var(--text-secondary); font-size:.9rem; }

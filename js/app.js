@@ -46,11 +46,10 @@ class App {
         this.bindButton("prisonBtn", () => this.engine.selectPrison());
         this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
         this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
-        this.bindButton("confirmVehicleBtn", () => this.engine.dispatchVehicle());
+        this.bindButton("selectVehicleBtn", () => this.engine.startVehicleSelection());
+        this.bindButton("confirmVehicleBtn", () => this.engine.confirmManualDispatch());
         this.bindButton("cancelVehicleBtn", () => this.engine.cancelVehicleSelection());
-        this.bindButton("pauseAutoplayBtn", () => this.engine.toggleAutoplay(true));
-        this.bindButton("resumeAutoplayBtn", () => this.engine.toggleAutoplay(false));
-        this.bindButton("incidentNowBtn", () => this.engine.createIncident({ automatic: true }));
+        this.bindButton("autoplayToggleBtn", () => this.engine.toggleAutoplay());
         this.bindButton("resetBtn", () => this.resetCurrentSession());
         this.bindButton("failureResetBtn", () => this.resetCurrentSession());
         this.bindButton("failureNewSessionBtn", () => this.newSessionSetup());
@@ -81,8 +80,6 @@ class App {
                 this.ui.log(result.message);
                 if (result.followup) this.ui.log(result.followup);
                 if (id === "cancelVehicleBtn" || (id === "confirmVehicleBtn" && result.success)) this.ui.hideVehicleSelection();
-                if (id === "pauseAutoplayBtn" && result.success) { document.getElementById("pauseAutoplayBtn").hidden=true; document.getElementById("resumeAutoplayBtn").hidden=false; }
-                if (id === "resumeAutoplayBtn" && result.success) { document.getElementById("pauseAutoplayBtn").hidden=false; document.getElementById("resumeAutoplayBtn").hidden=true; }
 
                 if (id === "resetBtn" || id === "failureResetBtn") this.ui.hideRepositioningFailure();
 
