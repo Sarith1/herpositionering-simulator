@@ -15,10 +15,10 @@ const advanceMission = (engine, dispatch) => {
   engine.updateDispatch(dispatch, dispatch.phaseStartTime + 100000);
 };
 
-test("25 automatic input cycles dispatch their exact incident with five overlapping", () => {
+test("30 automatic input cycles dispatch their exact incident with five overlapping", () => {
   const engine = new Engine(); engine.reset({ operationMode: "automatic", vehiclesPerDistrict: fleet(5) });
   const pending=[];
-  for (let cycle = 0; cycle < 25; cycle++) {
+  for (let cycle = 0; cycle < 30; cycle++) {
     assert.equal(engine.createIncident().success, true); const incidentId = simulator.inputCycleState.incidentId;
     assert.equal(engine.selectPrison().success, true); assert.equal(engine.calculateTravelTime().success, true);
     const result = engine.dispatchVehicle(); assert.equal(result.success, true, `cycle ${cycle + 1}`);
@@ -30,7 +30,7 @@ test("25 automatic input cycles dispatch their exact incident with five overlapp
     if(pending.length>=5)advanceMission(engine,pending.shift());
   }
   pending.forEach(dispatch=>advanceMission(engine,dispatch));
-  assert.equal(simulator.incidentHistory.length, 25);
+  assert.equal(simulator.incidentHistory.length, 30);
 });
 
 test("automatic dispatch never falls back to another OPEN incident", () => {
@@ -43,7 +43,7 @@ test("automatic dispatch never falls back to another OPEN incident", () => {
   assert.equal(simulator.inputCycleState.step, "DISPATCH");
 });
 
-test("application button handlers complete 25 cycles without a reload", async () => {
+test("application button handlers complete 30 cycles without a reload", async () => {
   const originalWindow=globalThis.window,originalDocument=globalThis.document;
   const buttons=new Map();
   class Button {addEventListener(type,handler){if(type==="click")this.handler=handler;}click(){this.handler();}}
@@ -54,7 +54,7 @@ test("application button handlers complete 25 cycles without a reload", async ()
     app.ui={log(){},hideVehicleSelection(){},hideRepositioningFailure(){},setConfigValues(){},setPrisonConfigValues(){},updateModeConfigVisibility(){}};app.map={render(){}};app.sync=()=>{};
     app.engine.reset({operationMode:"automatic",vehiclesPerDistrict:fleet(5)});app.registerButtons();
     const pending=[];
-    for(let cycle=1;cycle<=25;cycle++){
+    for(let cycle=1;cycle<=30;cycle++){
       for(const id of ["incidentBtn","prisonBtn","travelBtn","dispatchBtn"])buttons.get(id).click();
       const dispatch=[...app.engine.activeDispatches.values()].at(-1);assert.ok(dispatch,`cycle ${cycle}`);pending.push(dispatch);
       if(pending.length>=5)advanceMission(app.engine,pending.shift());

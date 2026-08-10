@@ -7,6 +7,9 @@ const DRIVE_MS_PER_EDGE = 1400;
 export const INCIDENT_MARGIN = 38;
 export const INCIDENT_MIN_DISTANCE = 45;
 export function getRandomIncidentDelaySeconds(){return Math.floor(Math.random()*20)+1;}
+export function dedupePathPoints(points,epsilon=1e-6){
+ return points.filter((point,index,path)=>index===0||Math.abs(point.x-path[index-1].x)>=epsilon||Math.abs(point.y-path[index-1].y)>=epsilon);
+}
 export const INCIDENT_SPAWN_POLYGON = [
  {x:95,y:365},{x:155,y:185},{x:285,y:125},{x:455,y:120},{x:610,y:78},
  {x:680,y:275},{x:845,y:235},{x:1020,y:205},{x:1025,y:365},{x:875,y:405},
@@ -131,7 +134,11 @@ export class Engine {
  update(now=performance.now()){
   const events=[];
   const autoplay=simulator.autoplayState;if(sessionConfig.operationMode==="autoplay"&&autoplay.running&&!simulator.gameOver&&autoplay.nextIncidentAt!==null&&now>=autoplay.nextIncidentAt){const r=this.createIncident({automatic:true});events.push({type:"log",message:r.message});if(r.followup)events.push({type:"log",message:r.followup});events.push(...(r.events||[]));if(!simulator.gameOver)this.scheduleNextIncident(now);}
-  for(const d of [...this.activeDispatches.values()])events.push(...this.updateDispatch(d,now)); for(const r of [...this.activeRepositions.values()])events.push(...this.updateReposition(r,now));
+  for(const d of [...this.activeDispatches.values()]){
+   try{events.push(...this.updateDispatch(d,now));}
+   catch(error){console.error("Dispatch update failed",d,error);this.cancelCorruptDispatch(d);events.push({type:"log",message:`[FOUT] Dispatch ${d?.id||"onbekend"} is geannuleerd; overige opdrachten gaan door.`});}
+  }
+  for(const r of [...this.activeRepositions.values()])events.push(...this.updateReposition(r,now));
   if(!simulator.gameOver){const waiting=this.oldestOpen();if(waiting&&sessionConfig.operationMode==="autoplay"&&vehicles.some(v=>v.status===STATUS.AVAILABLE)){const result=this.assignIncident(waiting);events.push({type:"log",message:result.message},...(result.events||[]));}}
   return events;
  }
@@ -188,10 +195,28 @@ export class Engine {
  getControlState(){const blocked=simulator.gameOver,mode=sessionConfig.operationMode,autoplay=mode==="autoplay",manual=mode==="manualVehicle",selecting=simulator.vehicleSelection.active,repositionState=simulator.manualRepositionState,repositioning=repositionState.phase!=="idle";return{incident:!blocked&&!autoplay&&this.step===STEPS.INCIDENT,prison:!blocked&&!autoplay&&this.step===STEPS.PRISON,travelTime:!blocked&&!autoplay&&this.step===STEPS.TRAVEL_TIME,dispatch:!blocked&&mode==="automatic"&&this.step===STEPS.DISPATCH,selectVehicle:!blocked&&manual&&this.step===STEPS.DISPATCH&&!selecting,confirmVehicle:!blocked&&manual&&selecting&&!!simulator.selectedVehicleId&&!simulator.vehicleSelection.confirming,autoplayToggle:!blocked&&autoplay,reset:true,currentStep:this.step,gameOver:simulator.gameOver,mode,autoplayRunning:simulator.autoplayState.running,vehicleSelectionActive:selecting,manualRepositionActive:repositioning,manualRepositionPhase:repositionState.phase,manualRepositionStart:!blocked&&(repositionState.phase==="idle"&&(autoplay||this.step===STEPS.INCIDENT)&&!selecting||repositionState.phase==="ready"),manualRepositionConfirm:!blocked&&repositionState.phase==="ready"};}
  reset(o={}){Object.assign(simulator,{activeIncident:null,selectedPrison:null,travelTime:null,incidentsHandled:0,gameOver:false,activeRoute:[],activeRoutes:[],incidentHistory:[],repositioningFailure:null,incidents:[],selectedVehicleId:null,vehicleSelection:{active:false,incidentId:null,selectedVehicleId:null,confirming:false},inputCycleState:{step:STEPS.INCIDENT,incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null},manualRepositionState:{phase:"idle",selectedVehicleId:null,targetDistrictId:null},autoplayState:{running:false,nextIncidentAt:null,nextDelaySeconds:null}});if(o.restoreDefaults)resetSessionConfigDefaults();if(o.availablePrisons)setAvailablePrisons(o.availablePrisons);if(o.vehiclesPerDistrict)setVehiclesPerDistrict(o.vehiclesPerDistrict);if(o.operationMode)sessionConfig.operationMode=o.operationMode;initializeVehicles();this.activeDispatches.clear();this.activeRepositions.clear();return this.result(true,sessionConfig.operationMode==="autoplay"?"[MODUS] Autoplay klaar — druk op Play.":"[RESET] Nieuwe oefening gestart.");}
  triggerRepositioningFailure(d){this.clearVehicleSelection();this.clearManualReposition();simulator.gameOver=true;Object.assign(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});simulator.repositioningFailure={districtName:d.name,coveragePercentage:this.calculateCoveragePercentage(),availableVehicles:vehicles.filter(v=>v.status===STATUS.AVAILABLE).length,title:repositioningFailureConfig.title,explanation:repositioningFailureConfig.explanation};return{type:"repositioningFailure",failure:simulator.repositioningFailure};}
+ cancelCorruptDispatch(d){
+  const v=vehicles.find(vehicle=>vehicle.id===d?.vehicleId),incident=simulator.incidents.find(item=>item.id===d?.incidentId);
+  if(v){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.originDistrictId||v.district;if(getDistrictById(v.district))this.place(v);}
+  if(incident?.status==="ASSIGNED"){incident.status="OPEN";incident.vehicleId=null;}
+  this.activeDispatches.delete(d?.id);
+  [`${d?.id}-to-incident`,`${d?.id}-to-prison`,`${d?.id}-return`].forEach(id=>this.removeRoute(id));
+ }
  // Queue policy only: interactive Automatic and Manual Vehicle flows use inputCycleState.incidentId.
  oldestOpen(){return simulator.incidents.filter(i=>i.status==="OPEN").sort((a,b)=>a.createdAt-b.createdAt)[0]||null;} availableCount(id){return vehicles.filter(v=>v.district===id&&v.status===STATUS.AVAILABLE).length;} incoming(id){return[...this.activeRepositions.values()].some(r=>r.targetDistrictId===id);} calculateCoveragePercentage(){return Math.round(districts.filter(d=>this.availableCount(d.id)||this.incoming(d.id)).length/districts.length*100);} projectedCoverage(v){return Math.round(districts.filter(d=>d.id===v.district?this.availableCount(d.id)>1:this.availableCount(d.id)>0).length/districts.length*100);}
  phase(d,s,now,route,target){d.phase=s;d.phaseStartTime=now;d.fromX=vehicles.find(v=>v.id===d.vehicleId).x;d.fromY=vehicles.find(v=>v.id===d.vehicleId).y;d.toX=target.x;d.toY=target.y;}
- move(v,route,p,c){const pts=route.map(getDistrictById).filter(Boolean);if(pts.length<2)pts.push({x:c.toX,y:c.toY});pts[0]={x:c.fromX,y:c.fromY};pts[pts.length-1]={x:c.toX,y:c.toY};const q=p*(pts.length-1),i=Math.min(Math.floor(q),pts.length-2),f=q-i,oldX=v.x,oldY=v.y;v.x=pts[i].x+(pts[i+1].x-pts[i].x)*f;v.y=pts[i].y+(pts[i+1].y-pts[i].y)*f;v.angle=Math.atan2(v.y-oldY,v.x-oldX)*180/Math.PI;}
+ move(v,route,p,c){
+  if(!v)return;
+  if(!c||![c.fromX,c.fromY,c.toX,c.toY].every(Number.isFinite)){console.error("Invalid movement context",c);return;}
+  const safeRoute=Array.isArray(route)?route:[];
+  const routePoints=safeRoute.map(getDistrictById).filter(Boolean).map(node=>({x:node.x,y:node.y}));
+  const start={x:c.fromX,y:c.fromY},destination={x:c.toX,y:c.toY};
+  const points=dedupePathPoints([start,...routePoints.slice(1,-1),destination]);
+  if(points.length<2){v.x=destination.x;v.y=destination.y;return;}
+  const progress=Math.max(0,Math.min(1,Number.isFinite(p)?p:0)),q=progress*(points.length-1),i=Math.min(Math.floor(q),points.length-2),f=q-i,oldX=v.x,oldY=v.y;
+  v.x=points[i].x+(points[i+1].x-points[i].x)*f;v.y=points[i].y+(points[i+1].y-points[i].y)*f;
+  if(v.x!==oldX||v.y!==oldY)v.angle=Math.atan2(v.y-oldY,v.x-oldX)*180/Math.PI;
+ }
  place(v){const d=getDistrictById(v.district);v.x=d.x;v.y=d.y;} removeRoute(id){simulator.activeRoutes=simulator.activeRoutes.filter(r=>r.id!==id);} random(a){return a[Math.floor(Math.random()*a.length)];} result(success,message,data={}){return{success,message,...data};}
  handleIncident(id,handledAt){const index=simulator.incidents.findIndex(i=>i.id===id);if(index<0)return;const incident=simulator.incidents[index];incident.status="HANDLED";incident.handledAt=handledAt;simulator.incidentHistory.push({...incident});if(simulator.activeIncident?.id===id)simulator.activeIncident=null;}
  nearestDistrict(point){return districts.reduce((nearest,district)=>Math.hypot(point.x-district.x,point.y-district.y)<Math.hypot(point.x-nearest.x,point.y-nearest.y)?district:nearest,districts[0]);}

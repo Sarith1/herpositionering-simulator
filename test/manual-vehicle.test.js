@@ -96,9 +96,9 @@ test("autoplay keeps generating OPEN incidents without vehicles and game over st
   const count=engine.sequence;engine.update(due+100000);assert.equal(engine.sequence,count);
 });
 
-test("ten consecutive manual input cycles reset completely while dispatches stay active",()=>{
+test("fifteen consecutive manual input cycles reset completely while dispatches stay active",()=>{
   const engine=new Engine();engine.reset({operationMode:"manualVehicle",vehiclesPerDistrict:Object.fromEntries(["RN","ZH","RS","DG","VR","GO","HW"].map(id=>[id,3]))});
-  for(let cycle=0;cycle<10;cycle++){
+  for(let cycle=0;cycle<15;cycle++){
     assert.equal(engine.createIncident().success,true,`incident ${cycle+1}`);
     assert.equal(engine.selectPrison().success,true);assert.equal(engine.calculateTravelTime().success,true);assert.equal(engine.startVehicleSelection().success,true);
     const vehicle=vehicles.find(item=>item.status==="AVAILABLE");assert.ok(vehicle);assert.equal(engine.selectVehicle(vehicle.id).success,true);assert.equal(engine.confirmManualDispatch().success,true);
@@ -106,7 +106,7 @@ test("ten consecutive manual input cycles reset completely while dispatches stay
     assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,confirming:false});
     assert.equal(simulator.activeIncident,null);assert.equal(simulator.selectedPrison,null);assert.equal(simulator.travelTime,null);assert.equal(simulator.selectedVehicleId,null);
   }
-  assert.equal(engine.activeDispatches.size,10);
+  assert.equal(engine.activeDispatches.size,15);
 });
 
 test("manual reposition previews risk, preserves home district and uses central registry",()=>{
