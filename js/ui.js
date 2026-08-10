@@ -537,7 +537,7 @@ export class UI {
         if(panel)panel.hidden=!active;
         if(primary){primary.hidden=false;primary.disabled=!buttonState.manualRepositionStart;primary.textContent=state.phase==="idle"?"Herpositioneer voertuig":state.phase==="selectVehicle"?"Kies een voertuig":state.phase==="selectDistrict"?"Kies nu het doeldistrict":"Herpositionering starten";primary.classList.toggle("dispatch-confirm-button",state.phase==="ready");}
         if(cancel){cancel.hidden=!active;cancel.disabled=!active;}
-        if(instruction&&active)instruction.textContent=state.phase==="selectDistrict"?"Kies nu het doeldistrict.":state.phase==="selectVehicle"?"Kies een beschikbaar voertuig":"De herpositionering kan met de hoofdknop worden gestart";
+        if(instruction&&active)instruction.textContent=state.phase==="selectDistrict"?"Kies een doeldistrict op de kaart — klik op een blauw gemarkeerd district.":state.phase==="selectVehicle"?"Kies een beschikbaar voertuig":"De herpositionering kan met de hoofdknop worden gestart";
         const details=document.getElementById("manualRepositionDetails");
         if(details&&(!active||!state.targetDistrictId)){const vehicle=vehicles.find(item=>item.id===state.selectedVehicleId),origin=districts.find(item=>item.id===vehicle?.district);details.innerHTML=vehicle?`<dl><dt>Voertuig</dt><dd><strong>${vehicle.id}</strong></dd><dt>Van</dt><dd>${origin?.name||"—"}</dd><dt>Naar</dt><dd>Nog te kiezen</dd></dl>`:"";}
     }

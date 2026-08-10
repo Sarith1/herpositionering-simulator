@@ -18,8 +18,9 @@ const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
 const DETENTION_COMPLEX_SCALE = 1.20;
 const DETENTION_COMPLEX_OFFSET_Y = -62;
-export const REPOSITION_TARGET_HIT_RADIUS = 78;
-const REPOSITION_TARGET_RING_RADIUS = 60;
+export const REPOSITION_TARGET_HIT_RADIUS = 95;
+export const REPOSITION_TARGET_LABEL_WIDTH = 190;
+export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
 
 export class MapView {
     constructor(containerId) {
@@ -193,33 +194,45 @@ export class MapView {
         const target = document.createElementNS("http://www.w3.org/2000/svg", "g");
         target.setAttribute("class", `reposition-target${selected ? " reposition-target--selected" : ""}`);
         target.dataset.districtId = district.id;
-        const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        ring.setAttribute("class", "reposition-target-ring");
-        ring.setAttribute("cx", district.x);ring.setAttribute("cy", district.y);ring.setAttribute("r", REPOSITION_TARGET_RING_RADIUS);
+        target.setAttribute("data-reposition-target-id", district.id);
+        target.setAttribute("aria-label", `${selected ? "Gekozen doeldistrict" : "Kies"} ${district.name}`);
+
         const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        hit.setAttribute("class", "reposition-target-hitarea");
+        hit.setAttribute("class", "reposition-target-zone reposition-target-hitarea");
         hit.dataset.districtId = district.id;
-        hit.setAttribute("data-reposition-target-id", district.id);
         hit.setAttribute("cx", district.x);
         hit.setAttribute("cy", district.y);
         hit.setAttribute("r", REPOSITION_TARGET_HIT_RADIUS);
-        hit.setAttribute("fill", "transparent");
-        hit.setAttribute("pointer-events", "all");
-        hit.setAttribute("aria-label", `Kies ${district.name} als doeldistrict`);
 
-        target.append(ring, hit);
+        const labelZone = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        labelZone.setAttribute("class", "reposition-target-label-zone");
+        labelZone.dataset.districtId = district.id;
+        labelZone.setAttribute("x", district.x - REPOSITION_TARGET_LABEL_WIDTH / 2);
+        labelZone.setAttribute("y", district.y + 35);
+        labelZone.setAttribute("width", REPOSITION_TARGET_LABEL_WIDTH);
+        labelZone.setAttribute("height", REPOSITION_TARGET_LABEL_HEIGHT);
+        labelZone.setAttribute("rx", 18);
+
+        const prompt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        prompt.setAttribute("class", "reposition-target-prompt");
+        prompt.setAttribute("x", district.x);
+        prompt.setAttribute("y", district.y + 119);
+        prompt.setAttribute("text-anchor", "middle");
+        prompt.textContent = selected ? "Doeldistrict gekozen" : "Kies dit district";
+
+        target.append(hit, labelZone, prompt);
         if (selected) return target;
 
-        hit.setAttribute("tabindex", "0");
-        hit.setAttribute("role", "button");
+        target.setAttribute("tabindex", "0");
+        target.setAttribute("role", "button");
         const choose = event => {
             event.preventDefault();
             event.stopPropagation();
             if (simulator.manualRepositionState.phase !== "selectDistrict") return;
             this.container.dispatchEvent(new CustomEvent("district-select", { detail: { districtId: district.id } }));
         };
-        hit.addEventListener("click", choose);
-        hit.addEventListener("keydown", event => {
+        target.addEventListener("click", choose);
+        target.addEventListener("keydown", event => {
             if (event.key === "Enter" || event.key === " ") choose(event);
         });
         return target;

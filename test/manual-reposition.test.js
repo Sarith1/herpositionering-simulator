@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Engine } from "../js/engine.js";
-import { simulator, vehicles } from "../js/data.js";
-import { MapView, REPOSITION_TARGET_HIT_RADIUS } from "../js/map.js";
+import { districts, simulator, vehicles } from "../js/data.js";
+import { MapView, REPOSITION_TARGET_HIT_RADIUS, REPOSITION_TARGET_LABEL_HEIGHT, REPOSITION_TARGET_LABEL_WIDTH } from "../js/map.js";
 
 class FakeSvgNode {
   constructor(){this.attributes={};this.dataset={};this.listeners={};this.children=[];}
@@ -25,13 +25,31 @@ test("the top SVG interaction layer dispatches the exact district clicked", () =
     const view=Object.create(MapView.prototype);view.interactionLayer=new FakeSvgNode();view.container={dispatchEvent:event=>emitted.push(event)};
     view.syncInteractionLayer();
     const target=view.interactionLayer.children.find(node=>node.dataset.districtId!==vehicle.district);assert.ok(target);
-    const hit=target.children.find(node=>node.attributes.class==="reposition-target-hitarea");assert.ok(hit);
-    assert.equal(REPOSITION_TARGET_HIT_RADIUS,78);assert.equal(hit.attributes.r,"78");
-    hit.click();assert.deepEqual(emitted.at(-1).detail,{districtId:hit.dataset.districtId});
+    const hit=target.children.find(node=>node.attributes.class?.includes("reposition-target-hitarea"));assert.ok(hit);
+    const labelZone=target.children.find(node=>node.attributes.class==="reposition-target-label-zone");assert.ok(labelZone);
+    assert.equal(REPOSITION_TARGET_HIT_RADIUS,95);assert.equal(hit.attributes.r,"95");
+    assert.equal(REPOSITION_TARGET_LABEL_WIDTH,190);assert.equal(labelZone.attributes.width,"190");
+    assert.equal(REPOSITION_TARGET_LABEL_HEIGHT,55);assert.equal(labelZone.attributes.height,"55");
+    assert.ok(target.listeners.click);assert.equal(hit.listeners.click,undefined);assert.equal(labelZone.listeners.click,undefined);
+    target.click();assert.deepEqual(emitted.at(-1).detail,{districtId:target.dataset.districtId});
     assert.equal(engine.selectRepositionTarget(emitted.at(-1).detail.districtId).success,true);
-    assert.equal(simulator.manualRepositionState.targetDistrictId,hit.dataset.districtId);
+    assert.equal(simulator.manualRepositionState.targetDistrictId,target.dataset.districtId);
     assert.equal(engine.getControlState().manualRepositionConfirm,true);
   } finally {globalThis.document=originalDocument;globalThis.CustomEvent=originalCustomEvent;}
+});
+
+test("all seven districts can reliably become a reposition target", () => {
+  const engine=new Engine();
+  for (const target of districts) {
+    engine.reset({operationMode:"automatic"});
+    const vehicle=vehicles.find(item=>item.district!==target.id);
+    assert.ok(vehicle, `vehicle outside ${target.id}`);
+    assert.equal(engine.startManualReposition().success,true);
+    assert.equal(engine.selectRepositionVehicle(vehicle.id).success,true);
+    assert.equal(engine.selectRepositionTarget(target.id).success,true);
+    assert.equal(simulator.manualRepositionState.targetDistrictId,target.id);
+    assert.equal(engine.getControlState().manualRepositionConfirm,true);
+  }
 });
 
 test("the stateful primary action completes fifteen consecutive manual repositions", () => {
