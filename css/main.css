@@ -1465,7 +1465,6 @@ footer button {
 @keyframes prisonPulse { 50% { stroke-width:8; opacity:.35; } }
 
 /* Modus-specifieke bediening */
-.vehicle-select-button { border-color:#38bdf8; background:#075985; }
 .dispatch-confirm-button { background:#15803d; border-color:#4ade80; font-weight:800; }
 .autoplay-controls--footer { flex:1; margin:0; padding:0; border:0; background:transparent; display:flex; align-items:center; justify-content:center; gap:16px; }
 .autoplay-controls--footer[hidden] { display:none; }
@@ -1474,4 +1473,4 @@ footer button {
 #autoplayStatus { color:var(--text-secondary); font-size:.9rem; }
 
 .manual-reposition-panel{margin:1rem 0;padding:1rem;border:2px solid #38bdf8;border-radius:12px;background:#effaff}.manual-reposition-panel dl{display:grid;grid-template-columns:minmax(9rem,1fr) 1.4fr;gap:.35rem}.manual-reposition-panel dt{font-weight:700}.manual-reposition-panel dd{margin:0}.reposition-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem}.reposition-warning{padding:.75rem;border-left:5px solid #f59e0b;background:#fff7dd;color:#7c2d12}.route-line.selection-preview{stroke:#38bdf8;stroke-dasharray:12 7}
-#interaction{pointer-events:none}.reposition-target-hitarea{pointer-events:all;cursor:pointer;outline:none;stroke:rgba(56,189,248,.85);stroke-width:3;stroke-dasharray:8 6;filter:drop-shadow(0 0 4px rgba(56,189,248,.65))}.reposition-target-hitarea:focus{stroke:#facc15;stroke-width:5}.reposition-target--selected{stroke:#38bdf8;stroke-width:7;stroke-dasharray:none;filter:drop-shadow(0 0 8px #38bdf8)}.district-label,.prison-visual,.detention-connector{pointer-events:none}
+#interaction{pointer-events:none}.reposition-target{pointer-events:none}.reposition-target-ring{fill:none;stroke:rgba(56,189,248,.82);stroke-width:3;stroke-dasharray:8 6;filter:drop-shadow(0 0 4px rgba(56,189,248,.65));transition:opacity .15s,stroke-width .15s,transform .15s;transform-box:fill-box;transform-origin:center}.reposition-target-hitarea{pointer-events:all;cursor:pointer;fill:transparent;stroke:transparent;outline:none}.reposition-target:hover .reposition-target-ring,.reposition-target:focus-within .reposition-target-ring{opacity:1;stroke:#38bdf8;stroke-width:5;transform:scale(1.04);filter:drop-shadow(0 0 8px rgba(56,189,248,.9))}.reposition-target-hitarea:focus{stroke:rgba(250,204,21,.35);stroke-width:3}.reposition-target--selected .reposition-target-ring{stroke:#38bdf8;stroke-width:7;stroke-dasharray:none;filter:drop-shadow(0 0 8px #38bdf8)}.reposition-target--selected .reposition-target-hitarea{pointer-events:none;cursor:default}.district-label,.prison-visual,.detention-connector{pointer-events:none}

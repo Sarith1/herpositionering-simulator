@@ -46,7 +46,6 @@ export class App {
         this.bindButton("prisonBtn", () => this.engine.selectPrison());
         this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
         this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
-        this.bindButton("selectVehicleBtn", () => this.engine.startVehicleSelection());
         this.bindButton("confirmVehicleBtn", () => this.engine.confirmManualDispatch());
         this.bindButton("cancelVehicleBtn", () => this.engine.cancelVehicleSelection());
         this.bindButton("startRepositionBtn", () => this.engine.handleManualRepositionAction());
