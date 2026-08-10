@@ -121,5 +121,21 @@ test("manual reposition previews risk, preserves home district and uses central 
 test("manual reposition cancellation and stale vehicle confirmation are safe",()=>{
   const engine=new Engine();engine.reset();const vehicle=vehicles[0],target=vehicle.district==="RN"?"ZH":"RN";
   engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);engine.cancelManualReposition();assert.equal(vehicle.status,"AVAILABLE");assert.equal(engine.activeRepositions.size,0);
-  engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);vehicle.status="BUSY";const result=engine.confirmManualReposition();assert.equal(result.success,false);assert.deepEqual(simulator.manualRepositionState,{active:false,selectedVehicleId:null,targetDistrictId:null});
+  engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);vehicle.status="BUSY";const result=engine.confirmManualReposition();assert.equal(result.success,false);assert.match(result.message,/\[WAARSCHUWING\].*niet meer beschikbaar/);assert.deepEqual(simulator.manualRepositionState,{active:true,selectedVehicleId:null,targetDistrictId:null,confirming:false});
+});
+
+test("manual reposition requires both choices and duplicate confirmation starts only once",()=>{
+  const engine=new Engine();engine.reset();const vehicle=vehicles[0],target=vehicle.district==="RN"?"ZH":"RN";
+  engine.startManualReposition();assert.equal(engine.getControlState().manualRepositionConfirm,false);
+  engine.selectRepositionVehicle(vehicle.id);assert.equal(engine.getControlState().manualRepositionConfirm,false);
+  engine.selectRepositionTarget(target);assert.equal(engine.getControlState().manualRepositionConfirm,true);
+  assert.equal(engine.confirmManualReposition().success,true);assert.equal(engine.confirmManualReposition().success,false);
+  assert.equal([...engine.activeRepositions.values()].filter(item=>item.vehicleId===vehicle.id).length,1);
+});
+
+test("manual reposition can be selected during running autoplay and reset cleans its preview",()=>{
+  const engine=new Engine();engine.reset({operationMode:"autoplay"});engine.toggleAutoplay();engine.step="dispatch";
+  const vehicle=vehicles[0],target=vehicle.district==="RN"?"ZH":"RN";assert.equal(engine.getControlState().manualRepositionStart,true);
+  engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);assert.ok(simulator.activeRoutes.some(route=>route.id==="manual-reposition-preview"));
+  engine.reset({operationMode:"autoplay"});assert.deepEqual(simulator.manualRepositionState,{active:false,selectedVehicleId:null,targetDistrictId:null,confirming:false});assert.equal(simulator.activeRoutes.length,0);assert.equal(engine.activeRepositions.size,0);
 });

@@ -536,8 +536,9 @@ export class UI {
     updateManualReposition(buttonState){
         const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),start=document.getElementById("startRepositionBtn"),confirm=document.getElementById("confirmRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction");
         if(panel)panel.hidden=!state.active;if(start){start.disabled=!buttonState.manualRepositionStart;start.hidden=state.active;}if(confirm)confirm.disabled=!buttonState.manualRepositionConfirm;
-        if(instruction&&state.active)instruction.textContent=state.selectedVehicleId?"Kies een doeldistrict op de kaart.":"Kies eerst een beschikbaar voertuig.";
-        if(!state.active){const details=document.getElementById("manualRepositionDetails");if(details)details.innerHTML="";}
+        if(instruction&&state.active)instruction.textContent=!state.selectedVehicleId?"Stap 1 van 3 — Kies een voertuig":!state.targetDistrictId?"Stap 2 van 3 — Kies een doeldistrict":"Stap 3 van 3 — Controleer de keuze en start de herpositionering";
+        const details=document.getElementById("manualRepositionDetails");
+        if(details&&(!state.active||!state.targetDistrictId)){const vehicle=vehicles.find(item=>item.id===state.selectedVehicleId),origin=districts.find(item=>item.id===vehicle?.district);details.innerHTML=vehicle?`<dl><dt>Voertuig</dt><dd><strong>${vehicle.id}</strong></dd><dt>Van</dt><dd>${origin?.name||"—"}</dd><dt>Naar</dt><dd>Nog te kiezen</dd></dl>`:"";}
     }
     showRepositionPreview(preview){
         const details=document.getElementById("manualRepositionDetails");if(!details)return;

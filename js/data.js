@@ -292,7 +292,7 @@ export const simulator = {
 
     ,inputCycleState: { step: "incident", incidentId: null, prisonId: null, travelTime: null, selectedVehicleId: null, selectionActive: false }
 
-    ,manualRepositionState: { active: false, selectedVehicleId: null, targetDistrictId: null }
+    ,manualRepositionState: { active: false, selectedVehicleId: null, targetDistrictId: null, confirming: false }
 
     ,autoplayState: { running: false, nextIncidentAt: null, nextDelaySeconds: null }
 
