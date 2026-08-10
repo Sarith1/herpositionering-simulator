@@ -40,6 +40,7 @@ export class MapView {
         this.prisonLayer = null;
         this.labelLayer = null;
         this.interactionLayer = null;
+        this.lastInteractionSignature = null;
         this.incidentAnimationCleanups = new Map();
     }
 
@@ -96,6 +97,10 @@ export class MapView {
         this.labelLayer = this.createLayer("labels");
         // Keep interaction targets last so visual map objects can never cover them.
         this.interactionLayer = this.createLayer("interaction");
+        this.interactionLayer.addEventListener("click", event => this.handleRepositionTargetSelection(event));
+        this.interactionLayer.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") this.handleRepositionTargetSelection(event);
+        });
     }
 
     createLayer(name) {
@@ -109,7 +114,6 @@ export class MapView {
         this.clearLayer(this.routeLayer);
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.labelLayer);
-        this.clearLayer(this.interactionLayer);
         this.syncIncident();
 
         this.drawRoutes();
@@ -172,6 +176,19 @@ export class MapView {
     }
 
     syncInteractionLayer() {
+        const signature = this.getInteractionSignature();
+        if (signature === this.lastInteractionSignature) return;
+
+        this.rebuildInteractionLayer();
+        this.lastInteractionSignature = signature;
+    }
+
+    getInteractionSignature() {
+        const { phase, selectedVehicleId, targetDistrictId } = simulator.manualRepositionState;
+        return `${phase}:${selectedVehicleId || ""}:${targetDistrictId || ""}`;
+    }
+
+    rebuildInteractionLayer() {
         this.clearLayer(this.interactionLayer);
         const state = simulator.manualRepositionState;
 
@@ -190,16 +207,30 @@ export class MapView {
             .forEach(district => this.interactionLayer.appendChild(this.createRepositionTarget(district, false)));
     }
 
+    handleRepositionTargetSelection(event) {
+        const target = event.target?.closest?.("[data-reposition-target-id]");
+        if (!target || simulator.manualRepositionState.phase !== "selectDistrict") return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        this.container.dispatchEvent(new CustomEvent("district-select", {
+            detail: { districtId: target.dataset.repositionTargetId }
+        }));
+    }
+
     createRepositionTarget(district, selected) {
         const target = document.createElementNS("http://www.w3.org/2000/svg", "g");
         target.setAttribute("class", `reposition-target${selected ? " reposition-target--selected" : ""}`);
         target.dataset.districtId = district.id;
         target.setAttribute("data-reposition-target-id", district.id);
+        target.setAttribute("pointer-events", "all");
         target.setAttribute("aria-label", `${selected ? "Gekozen doeldistrict" : "Kies"} ${district.name}`);
 
         const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         hit.setAttribute("class", "reposition-target-zone reposition-target-hitarea");
         hit.dataset.districtId = district.id;
+        hit.setAttribute("data-reposition-target-id", district.id);
+        hit.setAttribute("pointer-events", "all");
         hit.setAttribute("cx", district.x);
         hit.setAttribute("cy", district.y);
         hit.setAttribute("r", REPOSITION_TARGET_HIT_RADIUS);
@@ -207,6 +238,8 @@ export class MapView {
         const labelZone = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         labelZone.setAttribute("class", "reposition-target-label-zone");
         labelZone.dataset.districtId = district.id;
+        labelZone.setAttribute("data-reposition-target-id", district.id);
+        labelZone.setAttribute("pointer-events", "all");
         labelZone.setAttribute("x", district.x - REPOSITION_TARGET_LABEL_WIDTH / 2);
         labelZone.setAttribute("y", district.y + 35);
         labelZone.setAttribute("width", REPOSITION_TARGET_LABEL_WIDTH);
@@ -225,16 +258,6 @@ export class MapView {
 
         target.setAttribute("tabindex", "0");
         target.setAttribute("role", "button");
-        const choose = event => {
-            event.preventDefault();
-            event.stopPropagation();
-            if (simulator.manualRepositionState.phase !== "selectDistrict") return;
-            this.container.dispatchEvent(new CustomEvent("district-select", { detail: { districtId: district.id } }));
-        };
-        target.addEventListener("click", choose);
-        target.addEventListener("keydown", event => {
-            if (event.key === "Enter" || event.key === " ") choose(event);
-        });
         return target;
     }
 
