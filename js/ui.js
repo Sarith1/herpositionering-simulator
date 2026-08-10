@@ -342,14 +342,12 @@ export class UI {
             { id: "prisonBtn", enabled: buttonState.prison, step: "PRISON" },
             { id: "travelBtn", enabled: buttonState.travelTime, step: "TRAVEL_TIME" },
             { id: "dispatchBtn", enabled: buttonState.dispatch, step: "DISPATCH" },
-            { id: "selectVehicleBtn", enabled: buttonState.selectVehicle, step: "DISPATCH" },
             { id: "confirmVehicleBtn", enabled: buttonState.confirmVehicle, step: "confirmVehicle" }
         ];
 
         const automatic = buttonState.mode === "automatic", manual = buttonState.mode === "manualVehicle", autoplay = buttonState.mode === "autoplay";
         document.getElementById("processControls").hidden = autoplay;
         document.getElementById("dispatchBtn").hidden = !automatic;
-        document.getElementById("selectVehicleBtn").hidden = !manual;
         document.getElementById("confirmVehicleBtn").hidden = !manual;
         document.getElementById("autoplayControls").hidden = !autoplay;
         const autoplayButton=document.getElementById("autoplayToggleBtn");
@@ -392,7 +390,7 @@ export class UI {
         }
 
         if (sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active) {
-            this.stepHintElement.textContent = simulator.selectedVehicleId ? "5. Bevestig de keuze met ‘Voertuig inzetten’." : "4. Kies een beschikbaar voertuig op de kaart.";
+            this.stepHintElement.textContent = simulator.selectedVehicleId ? "Bevestig de keuze met ‘Voertuig inzetten’." : "Kies een beschikbaar voertuig op de kaart.";
             return;
         }
         if (simulator.manualRepositionState.phase !== "idle") {
@@ -407,7 +405,7 @@ export class UI {
             INCIDENT: "1. Plaats een nieuwe melding.",
             PRISON: "2. Selecteer een cel voor de arrestant.",
             TRAVEL_TIME: "3. Bereken de reistijd naar de cel.",
-            DISPATCH: sessionConfig.operationMode === "manualVehicle" ? "4. Start de handmatige voertuigselectie." : "4. Stuur het dichtstbijzijnde voertuig."
+            DISPATCH: sessionConfig.operationMode === "manualVehicle" ? "Kies een beschikbaar voertuig op de kaart." : "4. Stuur het dichtstbijzijnde voertuig."
         };
 
         this.stepHintElement.textContent = labels[buttonState.currentStep] || "Start met een melding.";

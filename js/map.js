@@ -18,6 +18,8 @@ const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
 const DETENTION_COMPLEX_SCALE = 1.20;
 const DETENTION_COMPLEX_OFFSET_Y = -62;
+export const REPOSITION_TARGET_HIT_RADIUS = 78;
+const REPOSITION_TARGET_RING_RADIUS = 60;
 
 export class MapView {
     constructor(containerId) {
@@ -188,18 +190,25 @@ export class MapView {
     }
 
     createRepositionTarget(district, selected) {
+        const target = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        target.setAttribute("class", `reposition-target${selected ? " reposition-target--selected" : ""}`);
+        target.dataset.districtId = district.id;
+        const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        ring.setAttribute("class", "reposition-target-ring");
+        ring.setAttribute("cx", district.x);ring.setAttribute("cy", district.y);ring.setAttribute("r", REPOSITION_TARGET_RING_RADIUS);
         const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        hit.setAttribute("class", `reposition-target-hitarea${selected ? " reposition-target--selected" : ""}`);
+        hit.setAttribute("class", "reposition-target-hitarea");
         hit.dataset.districtId = district.id;
         hit.setAttribute("data-reposition-target-id", district.id);
         hit.setAttribute("cx", district.x);
         hit.setAttribute("cy", district.y);
-        hit.setAttribute("r", "48");
+        hit.setAttribute("r", REPOSITION_TARGET_HIT_RADIUS);
         hit.setAttribute("fill", "transparent");
         hit.setAttribute("pointer-events", "all");
         hit.setAttribute("aria-label", `Kies ${district.name} als doeldistrict`);
 
-        if (selected) return hit;
+        target.append(ring, hit);
+        if (selected) return target;
 
         hit.setAttribute("tabindex", "0");
         hit.setAttribute("role", "button");
@@ -213,7 +222,7 @@ export class MapView {
         hit.addEventListener("keydown", event => {
             if (event.key === "Enter" || event.key === " ") choose(event);
         });
-        return hit;
+        return target;
     }
 
     syncPrisons() {

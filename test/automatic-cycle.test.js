@@ -47,7 +47,7 @@ test("application button handlers complete 30 cycles without a reload", async ()
   const originalWindow=globalThis.window,originalDocument=globalThis.document;
   const buttons=new Map();
   class Button {addEventListener(type,handler){if(type==="click")this.handler=handler;}click(){this.handler();}}
-  ["incidentBtn","prisonBtn","travelBtn","dispatchBtn","selectVehicleBtn","confirmVehicleBtn","cancelVehicleBtn","startRepositionBtn","cancelRepositionBtn","autoplayToggleBtn","resetBtn","failureResetBtn","failureNewSessionBtn","failureInspectBtn","applyConfigBtn","restoreDefaultsBtn"].forEach(id=>buttons.set(id,new Button()));
+  ["incidentBtn","prisonBtn","travelBtn","dispatchBtn","confirmVehicleBtn","cancelVehicleBtn","startRepositionBtn","cancelRepositionBtn","autoplayToggleBtn","resetBtn","failureResetBtn","failureNewSessionBtn","failureInspectBtn","applyConfigBtn","restoreDefaultsBtn"].forEach(id=>buttons.set(id,new Button()));
   globalThis.window={addEventListener(){}};globalThis.document={getElementById:id=>buttons.get(id)||null,querySelectorAll:()=>[]};
   try {
     const {App}=await import(`../js/app.js?buttons=${Date.now()}`),app=new App();

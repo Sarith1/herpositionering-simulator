@@ -16,7 +16,7 @@ test("manual mode waits, permits changing selection, and dispatches the exact no
   const nearestDistrict=incident.district;
   const distant=vehicles.find(v=>v.district!==nearestDistrict);
   const nearest=vehicles.find(v=>v.district===nearestDistrict);
-  assert.equal(engine.startVehicleSelection().success,true);
+  assert.equal(simulator.vehicleSelection.active,true,"selection starts after travel time");
   assert.equal(vehicles.every(v=>v.status==="AVAILABLE"),true,"no vehicle leaves on Pak melding op");
   engine.selectVehicle(nearest.id);engine.selectVehicle(distant.id);
   assert.equal(simulator.vehicleSelection.selectedVehicleId,distant.id);
@@ -48,11 +48,9 @@ test("selection remains bound to its incident",()=>{
 });
 
 
-test("manual confirmation stays disabled until a vehicle is selected",()=>{
+test("manual selection starts automatically and confirmation stays disabled until a vehicle is selected",()=>{
   const engine=preparedEngine();
-  assert.equal(engine.getControlState().selectVehicle,true);
-  engine.startVehicleSelection();
-  assert.equal(engine.getControlState().selectVehicle,false);
+  assert.equal(simulator.vehicleSelection.active,true);
   assert.equal(engine.getControlState().confirmVehicle,false);
   engine.selectVehicle(vehicles[0].id);
   assert.equal(engine.getControlState().confirmVehicle,true);
@@ -100,7 +98,7 @@ test("fifteen consecutive manual input cycles reset completely while dispatches 
   const engine=new Engine();engine.reset({operationMode:"manualVehicle",vehiclesPerDistrict:Object.fromEntries(["RN","ZH","RS","DG","VR","GO","HW"].map(id=>[id,3]))});
   for(let cycle=0;cycle<15;cycle++){
     assert.equal(engine.createIncident().success,true,`incident ${cycle+1}`);
-    assert.equal(engine.selectPrison().success,true);assert.equal(engine.calculateTravelTime().success,true);assert.equal(engine.startVehicleSelection().success,true);
+    assert.equal(engine.selectPrison().success,true);assert.equal(engine.calculateTravelTime().success,true);assert.equal(simulator.vehicleSelection.active,true);
     const vehicle=vehicles.find(item=>item.status==="AVAILABLE");assert.ok(vehicle);assert.equal(engine.selectVehicle(vehicle.id).success,true);assert.equal(engine.confirmManualDispatch().success,true);
     assert.deepEqual(simulator.inputCycleState,{step:"INCIDENT",incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null});
     assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,confirming:false});

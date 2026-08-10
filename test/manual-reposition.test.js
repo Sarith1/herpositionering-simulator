@@ -2,13 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Engine } from "../js/engine.js";
 import { simulator, vehicles } from "../js/data.js";
-import { MapView } from "../js/map.js";
+import { MapView, REPOSITION_TARGET_HIT_RADIUS } from "../js/map.js";
 
 class FakeSvgNode {
   constructor(){this.attributes={};this.dataset={};this.listeners={};this.children=[];}
   setAttribute(name,value){this.attributes[name]=String(value);if(name==="data-district-id")this.dataset.districtId=String(value);}
   addEventListener(type,handler){this.listeners[type]=handler;}
   appendChild(child){this.children.push(child);}
+  append(...children){this.children.push(...children);}
   click(){this.listeners.click?.({preventDefault(){},stopPropagation(){}});}
 }
 
@@ -23,7 +24,9 @@ test("the top SVG interaction layer dispatches the exact district clicked", () =
     assert.equal(simulator.manualRepositionState.phase,"selectDistrict");
     const view=Object.create(MapView.prototype);view.interactionLayer=new FakeSvgNode();view.container={dispatchEvent:event=>emitted.push(event)};
     view.syncInteractionLayer();
-    const hit=view.interactionLayer.children.find(node=>node.dataset.districtId!==vehicle.district);assert.ok(hit);
+    const target=view.interactionLayer.children.find(node=>node.dataset.districtId!==vehicle.district);assert.ok(target);
+    const hit=target.children.find(node=>node.attributes.class==="reposition-target-hitarea");assert.ok(hit);
+    assert.equal(REPOSITION_TARGET_HIT_RADIUS,78);assert.equal(hit.attributes.r,"78");
     hit.click();assert.deepEqual(emitted.at(-1).detail,{districtId:hit.dataset.districtId});
     assert.equal(engine.selectRepositionTarget(emitted.at(-1).detail.districtId).success,true);
     assert.equal(simulator.manualRepositionState.targetDistrictId,hit.dataset.districtId);
