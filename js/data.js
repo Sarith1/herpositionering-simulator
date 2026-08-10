@@ -290,7 +290,7 @@ export const simulator = {
 
     ,vehicleSelection: { active: false, incidentId: null, selectedVehicleId: null, confirming: false }
 
-    ,inputCycleState: { step: "incident", incidentId: null, prisonId: null, travelTime: null, selectedVehicleId: null, selectionActive: false }
+    ,inputCycleState: { step: "INCIDENT", incidentId: null, prisonId: null, travelTime: null, selectedVehicleId: null }
 
     ,manualRepositionState: { phase: "idle", selectedVehicleId: null, targetDistrictId: null }
 

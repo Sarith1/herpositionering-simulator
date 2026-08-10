@@ -13,7 +13,7 @@ import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
 
-class App {
+export class App {
     constructor() {
         this.engine = new Engine();
         this.map = null;

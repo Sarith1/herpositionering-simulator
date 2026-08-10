@@ -338,11 +338,11 @@ export class UI {
     updateControlState(buttonState) {
 
         const controls = [
-            { id: "incidentBtn", enabled: buttonState.incident, step: "incident" },
-            { id: "prisonBtn", enabled: buttonState.prison, step: "prison" },
-            { id: "travelBtn", enabled: buttonState.travelTime, step: "travelTime" },
-            { id: "dispatchBtn", enabled: buttonState.dispatch, step: "dispatch" },
-            { id: "selectVehicleBtn", enabled: buttonState.selectVehicle, step: "dispatch" },
+            { id: "incidentBtn", enabled: buttonState.incident, step: "INCIDENT" },
+            { id: "prisonBtn", enabled: buttonState.prison, step: "PRISON" },
+            { id: "travelBtn", enabled: buttonState.travelTime, step: "TRAVEL_TIME" },
+            { id: "dispatchBtn", enabled: buttonState.dispatch, step: "DISPATCH" },
+            { id: "selectVehicleBtn", enabled: buttonState.selectVehicle, step: "DISPATCH" },
             { id: "confirmVehicleBtn", enabled: buttonState.confirmVehicle, step: "confirmVehicle" }
         ];
 
@@ -404,10 +404,10 @@ export class UI {
             return;
         }
         const labels = {
-            incident: "1. Plaats een nieuwe melding.",
-            prison: "2. Selecteer een cel voor de arrestant.",
-            travelTime: "3. Bereken de reistijd naar de cel.",
-            dispatch: sessionConfig.operationMode === "manualVehicle" ? "4. Start de handmatige voertuigselectie." : "4. Stuur het dichtstbijzijnde voertuig."
+            INCIDENT: "1. Plaats een nieuwe melding.",
+            PRISON: "2. Selecteer een cel voor de arrestant.",
+            TRAVEL_TIME: "3. Bereken de reistijd naar de cel.",
+            DISPATCH: sessionConfig.operationMode === "manualVehicle" ? "4. Start de handmatige voertuigselectie." : "4. Stuur het dichtstbijzijnde voertuig."
         };
 
         this.stepHintElement.textContent = labels[buttonState.currentStep] || "Start met een melding.";
@@ -537,9 +537,9 @@ export class UI {
         const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),primary=document.getElementById("startRepositionBtn"),cancel=document.getElementById("cancelRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction");
         const active=state.phase!=="idle";
         if(panel)panel.hidden=!active;
-        if(primary){primary.hidden=false;primary.disabled=!buttonState.manualRepositionStart||state.phase==="selecting";primary.textContent=state.phase==="idle"?"Herpositioneer voertuig":state.phase==="ready"?"Herpositionering starten":"Kies voertuig en district";primary.classList.toggle("dispatch-confirm-button",state.phase==="ready");}
+        if(primary){primary.hidden=false;primary.disabled=!buttonState.manualRepositionStart;primary.textContent=state.phase==="idle"?"Herpositioneer voertuig":state.phase==="selectVehicle"?"Kies een voertuig":state.phase==="selectDistrict"?"Kies nu het doeldistrict":"Herpositionering starten";primary.classList.toggle("dispatch-confirm-button",state.phase==="ready");}
         if(cancel){cancel.hidden=!active;cancel.disabled=!active;}
-        if(instruction&&active)instruction.textContent=!state.selectedVehicleId?"Kies een beschikbaar voertuig":!state.targetDistrictId?"Kies een doeldistrict":"De herpositionering kan met de hoofdknop worden gestart";
+        if(instruction&&active)instruction.textContent=state.phase==="selectDistrict"?"Kies nu het doeldistrict.":state.phase==="selectVehicle"?"Kies een beschikbaar voertuig":"De herpositionering kan met de hoofdknop worden gestart";
         const details=document.getElementById("manualRepositionDetails");
         if(details&&(!active||!state.targetDistrictId)){const vehicle=vehicles.find(item=>item.id===state.selectedVehicleId),origin=districts.find(item=>item.id===vehicle?.district);details.innerHTML=vehicle?`<dl><dt>Voertuig</dt><dd><strong>${vehicle.id}</strong></dd><dt>Van</dt><dd>${origin?.name||"—"}</dd><dt>Naar</dt><dd>Nog te kiezen</dd></dl>`:"";}
     }
