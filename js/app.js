@@ -67,6 +67,9 @@ class App {
         document.getElementById("map")?.addEventListener("vehicle-select", event => {
             const result=this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
         });
+        document.getElementById("map")?.addEventListener("incident-select", event => {
+            const result=this.engine.selectIncident(event.detail.incidentId);this.ui.log(result.message);this.sync();
+        });
     }
 
     bindButton(id, action) {

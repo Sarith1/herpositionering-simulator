@@ -259,6 +259,10 @@ export class MapView {
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
             element.classList.toggle("waiting", incident.status === "WAITING");
+            const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && (incident.status === "OPEN" || incident.status === "WAITING");
+            element.classList.toggle("incident--selectable", selectable);
+            element.classList.toggle("incident--selected", simulator.vehicleSelection.incidentId === incident.id || simulator.activeIncident?.id === incident.id);
+            element.setAttribute("tabindex", selectable ? "0" : "-1");
         });
         this.incidentLayer.querySelectorAll("[data-incident-id]").forEach(marker => {
             if (!visible.has(marker.dataset.incidentId)) this.removeIncidentElement(marker.dataset.incidentId);
@@ -269,6 +273,9 @@ export class MapView {
         const positionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         positionGroup.dataset.incidentId = incident.id;
         positionGroup.setAttribute("class", "incident-position");
+        const chooseIncident = () => this.container.dispatchEvent(new CustomEvent("incident-select", { detail: { incidentId: positionGroup.dataset.incidentId } }));
+        positionGroup.addEventListener("click", chooseIncident);
+        positionGroup.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); chooseIncident(); } });
 
         const visualGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         visualGroup.setAttribute("class", "incident-visual incident-marker--intro");
@@ -369,24 +376,30 @@ export class MapView {
 
         if (existingElement) return existingElement;
 
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.dataset.vehicleId = vehicle.id;
+        const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        hitbox.setAttribute("class", "vehicle-hitbox"); hitbox.setAttribute("r", "25");
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("text-anchor", "middle");
-        text.dataset.vehicleId = vehicle.id;
         text.setAttribute("dominant-baseline", "central");
+        text.setAttribute("class", "vehicle-symbol");
         text.textContent = "🚔";
-        text.addEventListener("click", () => this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: text.dataset.vehicleId } })));
-        this.vehicleLayer.appendChild(text);
+        group.addEventListener("click", () => { if (group.classList.contains("vehicle--selectable")) this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: group.dataset.vehicleId } })); });
+        group.addEventListener("keydown", event => { if (group.classList.contains("vehicle--selectable") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); group.dispatchEvent(new MouseEvent("click")); } });
+        group.append(hitbox, text); this.vehicleLayer.appendChild(group);
 
-        return text;
+        return group;
     }
 
     updateVehicleElement(element, vehicle, x, y) {
         element.setAttribute("transform", `translate(${x} ${y}) rotate(${vehicle.angle || 0})`);
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
-        element.style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
-        const selectable = sessionConfig.operationMode === "manualVehicle" && vehicle.status === "AVAILABLE" && (simulator.incidents || []).some(i => i.status === "OPEN" || i.status === "WAITING");
-        element.setAttribute("class", `${vehicle.status === "AVAILABLE" ? "vehicle" : `vehicle busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " selectable" : ""}${simulator.selectedVehicleId === vehicle.id ? " selected-vehicle" : ""}`);
+        element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
+        const selectable = sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active && !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident;
+        element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${simulator.vehicleSelection.selectedVehicleId === vehicle.id ? " vehicle--selected" : ""}`);
+        element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}`);
     }
 
     clamp(value, min, max) {

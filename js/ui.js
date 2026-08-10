@@ -114,7 +114,13 @@ export class UI {
 
         this.updateEvaluationPanel();
 
-        if (buttonState) this.updateButtons(buttonState);
+        if (buttonState) {
+            this.updateButtons(buttonState);
+            const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails"), confirm=document.getElementById("confirmVehicleBtn");
+            if(panel)panel.hidden=!buttonState.vehicleSelectionActive;
+            if(details&&buttonState.vehicleSelectionActive&&!simulator.vehicleSelection.selectedVehicleId)details.innerHTML="<p>Klik op een lichtblauw gemarkeerd beschikbaar voertuig op de kaart.</p>";
+            if(confirm){confirm.disabled=!buttonState.confirmVehicle;confirm.setAttribute("aria-disabled",String(!buttonState.confirmVehicle));}
+        }
 
     }
 
@@ -375,8 +381,8 @@ export class UI {
             return;
         }
 
-        if (sessionConfig.operationMode === "manualVehicle" && (simulator.incidents || []).some(i => i.status === "OPEN" || i.status === "WAITING")) {
-            this.stepHintElement.textContent = "Klik op een beschikbaar voertuig en bevestig de inzet.";
+        if (sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active) {
+            this.stepHintElement.textContent = "Selecteer een melding, kies een beschikbaar voertuig en bevestig de inzet.";
             return;
         }
         const labels = {
@@ -509,7 +515,7 @@ export class UI {
     }
     showVehicleSelection(selection) {
         const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");if(!panel||!details)return;
-        panel.hidden=false;details.innerHTML=`<strong>${selection.vehicleId}</strong><dl><dt>Huidig district</dt><dd>${selection.district}</dd><dt>Afstand</dt><dd>${selection.distance} netwerksegment(en)</dd><dt>Geschatte aanrijtijd</dt><dd>${selection.eta} sec</dd><dt>Over in vertrekdistrict</dt><dd>${selection.remaining}</dd><dt>Verwachte dekking</dt><dd>${selection.coverage}%</dd></dl>`;
+        panel.hidden=false;details.innerHTML=`<dl><dt>Voertuig</dt><dd><strong>${selection.vehicleId}</strong></dd><dt>Huidige standplaats</dt><dd>${selection.district}</dd><dt>Melding</dt><dd>${selection.incident}</dd><dt>Geschatte route</dt><dd>${selection.route}</dd><dt>Geschatte aanrijtijd</dt><dd>${selection.eta} seconden</dd><dt>Voertuigen die achterblijven</dt><dd>${selection.remaining}</dd><dt>Verwachte dekking na inzet</dt><dd>${selection.coverage}%</dd></dl>`;
     }
     hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
 
