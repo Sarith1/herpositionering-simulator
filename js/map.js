@@ -139,7 +139,7 @@ export class MapView {
     drawDistricts() {
         districts.forEach(district => {
             const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            const reposition=simulator.manualRepositionState,selectable=reposition.active&&!!reposition.selectedVehicleId&&vehicles.find(v=>v.id===reposition.selectedVehicleId)?.district!==district.id;
+            const reposition=simulator.manualRepositionState,selectable=reposition.phase!=="idle"&&!!reposition.selectedVehicleId&&vehicles.find(v=>v.id===reposition.selectedVehicleId)?.district!==district.id;
             group.setAttribute("class", `district-marker${selectable ? " district--selectable" : ""}${reposition.targetDistrictId===district.id ? " district--selected" : ""}`);
             group.dataset.districtId=district.id;group.setAttribute("tabindex",selectable?"0":"-1");
             const choose=()=>{if(selectable)this.container.dispatchEvent(new CustomEvent("district-select",{detail:{districtId:district.id}}));};group.addEventListener("click",choose);group.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();choose();}});
@@ -400,7 +400,7 @@ export class MapView {
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
         element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
-        const reposition=simulator.manualRepositionState,repositionSelectable=reposition.active&&!reposition.selectedVehicleId;
+        const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase!=="idle"&&!reposition.selectedVehicleId;
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=simulator.vehicleSelection.selectedVehicleId===vehicle.id||reposition.selectedVehicleId===vehicle.id;
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);

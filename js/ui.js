@@ -395,7 +395,7 @@ export class UI {
             this.stepHintElement.textContent = simulator.selectedVehicleId ? "5. Bevestig de keuze met ‘Voertuig inzetten’." : "4. Kies een beschikbaar voertuig op de kaart.";
             return;
         }
-        if (simulator.manualRepositionState.active) {
+        if (simulator.manualRepositionState.phase !== "idle") {
             this.stepHintElement.textContent = simulator.manualRepositionState.selectedVehicleId ? "Dekking: kies een doeldistrict op de kaart." : "Dekking: kies eerst een beschikbaar voertuig.";
             return;
         }
@@ -534,11 +534,14 @@ export class UI {
     }
     hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
     updateManualReposition(buttonState){
-        const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),start=document.getElementById("startRepositionBtn"),confirm=document.getElementById("confirmRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction");
-        if(panel)panel.hidden=!state.active;if(start){start.disabled=!buttonState.manualRepositionStart;start.hidden=state.active;}if(confirm)confirm.disabled=!buttonState.manualRepositionConfirm;
-        if(instruction&&state.active)instruction.textContent=!state.selectedVehicleId?"Stap 1 van 3 — Kies een voertuig":!state.targetDistrictId?"Stap 2 van 3 — Kies een doeldistrict":"Stap 3 van 3 — Controleer de keuze en start de herpositionering";
+        const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),primary=document.getElementById("startRepositionBtn"),cancel=document.getElementById("cancelRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction");
+        const active=state.phase!=="idle";
+        if(panel)panel.hidden=!active;
+        if(primary){primary.hidden=false;primary.disabled=!buttonState.manualRepositionStart||state.phase==="selecting";primary.textContent=state.phase==="idle"?"Herpositioneer voertuig":state.phase==="ready"?"Herpositionering starten":"Kies voertuig en district";primary.classList.toggle("dispatch-confirm-button",state.phase==="ready");}
+        if(cancel){cancel.hidden=!active;cancel.disabled=!active;}
+        if(instruction&&active)instruction.textContent=!state.selectedVehicleId?"Kies een beschikbaar voertuig":!state.targetDistrictId?"Kies een doeldistrict":"De herpositionering kan met de hoofdknop worden gestart";
         const details=document.getElementById("manualRepositionDetails");
-        if(details&&(!state.active||!state.targetDistrictId)){const vehicle=vehicles.find(item=>item.id===state.selectedVehicleId),origin=districts.find(item=>item.id===vehicle?.district);details.innerHTML=vehicle?`<dl><dt>Voertuig</dt><dd><strong>${vehicle.id}</strong></dd><dt>Van</dt><dd>${origin?.name||"—"}</dd><dt>Naar</dt><dd>Nog te kiezen</dd></dl>`:"";}
+        if(details&&(!active||!state.targetDistrictId)){const vehicle=vehicles.find(item=>item.id===state.selectedVehicleId),origin=districts.find(item=>item.id===vehicle?.district);details.innerHTML=vehicle?`<dl><dt>Voertuig</dt><dd><strong>${vehicle.id}</strong></dd><dt>Van</dt><dd>${origin?.name||"—"}</dd><dt>Naar</dt><dd>Nog te kiezen</dd></dl>`:"";}
     }
     showRepositionPreview(preview){
         const details=document.getElementById("manualRepositionDetails");if(!details)return;

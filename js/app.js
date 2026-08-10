@@ -49,8 +49,7 @@ class App {
         this.bindButton("selectVehicleBtn", () => this.engine.startVehicleSelection());
         this.bindButton("confirmVehicleBtn", () => this.engine.confirmManualDispatch());
         this.bindButton("cancelVehicleBtn", () => this.engine.cancelVehicleSelection());
-        this.bindButton("startRepositionBtn", () => this.engine.startManualReposition());
-        this.bindButton("confirmRepositionBtn", () => this.engine.confirmManualReposition());
+        this.bindButton("startRepositionBtn", () => this.engine.handleManualRepositionAction());
         this.bindButton("cancelRepositionBtn", () => this.engine.cancelManualReposition());
         this.bindButton("autoplayToggleBtn", () => this.engine.toggleAutoplay());
         this.bindButton("resetBtn", () => this.resetCurrentSession());
@@ -67,7 +66,7 @@ class App {
         });
         document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
         document.getElementById("map")?.addEventListener("vehicle-select", event => {
-            const result=simulator.manualRepositionState.active?this.engine.selectRepositionVehicle(event.detail.vehicleId):this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
+            const result=simulator.manualRepositionState.phase!=="idle"?this.engine.selectRepositionVehicle(event.detail.vehicleId):this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
         });
         document.getElementById("map")?.addEventListener("district-select", event => {const result=this.engine.selectRepositionTarget(event.detail.districtId);this.ui.log(result.message);if(result.repositionPreview)this.ui.showRepositionPreview(result.repositionPreview);this.sync();});
         document.getElementById("map")?.addEventListener("incident-select", event => {
