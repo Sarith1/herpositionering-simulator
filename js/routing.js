@@ -8,14 +8,16 @@ Kortste-route helpers voor districten, voertuigen en reistijd.
 ==========================================================
 */
 
-import { districts, sessionConfig } from "./data.js";
+import { detentionComplexes, districts, sessionConfig } from "./data.js";
+
+const getNodes = () => [...districts, ...detentionComplexes];
 
 export function getDistrictById(districtId) {
-    return districts.find(district => district.id === districtId) || null;
+    return getNodes().find(node => node.id === districtId) || null;
 }
 
 export function getPrisonDistricts() {
-    return districts.filter(district => district.prison && sessionConfig.availablePrisons.includes(district.id));
+    return detentionComplexes.filter(complex => sessionConfig.availablePrisons.includes(complex.id));
 }
 
 export function getShortestRoute(startDistrictId, endDistrictId) {
@@ -30,7 +32,8 @@ export function getShortestRoute(startDistrictId, endDistrictId) {
 
         if (!currentDistrict) continue;
 
-        for (const neighbourId of currentDistrict.neighbours) {
+        const reverseNeighbours = getNodes().filter(node => node.neighbours?.includes(currentDistrict.id)).map(node => node.id);
+        for (const neighbourId of [...new Set([...(currentDistrict.neighbours || []), ...reverseNeighbours])]) {
             if (visited.has(neighbourId)) continue;
 
             const nextRoute = [...route, neighbourId];

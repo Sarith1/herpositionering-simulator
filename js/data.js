@@ -138,11 +138,21 @@ Voertuigen
 
 export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
 
+// Cellencomplexen zijn zelfstandige routenetwerknodes. De centrale locatie ligt
+// bewust iets ten westen van het kaartmidden om labels en voertuigclusters vrij te houden.
+export const detentionComplexes = [
+    { id: "CELL_RS", name: "Cellencomplex Rotterdam-Stad", x: 590, y: 223, neighbours: ["RS", "RN"] },
+    { id: "CELL_ZHZ", name: "Cellencomplex Zuid-Holland-Zuid", x: 670, y: 438, neighbours: ["ZHZ", "RZ"] },
+    { id: "CELL_CENTRAL", name: "Centraal Cellencomplex", x: 410, y: 315, neighbours: ["RS", "RZ", "ZH"] }
+];
+
 export const sessionConfig = {
 
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
 
-    availablePrisons: getDefaultPrisonDistrictIds()
+    availablePrisons: getDefaultPrisonDistrictIds(),
+    operationMode: "automatic",
+    autoplayIntervalSeconds: 5
 
 };
 
@@ -162,16 +172,13 @@ export function createDefaultVehiclesPerDistrict() {
 }
 
 export function getDefaultPrisonDistrictIds() {
-
-    return districts
-        .filter(district => district.prison)
-        .map(district => district.id);
+    return detentionComplexes.map(complex => complex.id);
 
 }
 
 export function setAvailablePrisons(prisonIds) {
 
-    const validPrisonIds = new Set(getDefaultPrisonDistrictIds());
+    const validPrisonIds = new Set(detentionComplexes.map(complex => complex.id));
     const selected = [...new Set(prisonIds)].filter(id => validPrisonIds.has(id));
 
     if (!selected.length) {
@@ -186,6 +193,8 @@ export function resetSessionConfigDefaults() {
 
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
+    sessionConfig.operationMode = "automatic";
+    sessionConfig.autoplayIntervalSeconds = 5;
 
     initializeVehicles();
 
@@ -276,6 +285,14 @@ export const simulator = {
     incidentHistory: [],
 
     repositioningFailure: null
+
+    ,incidents: []
+
+    ,selectedVehicleId: null
+
+    ,autoplayPaused: false
+
+    ,nextIncidentAt: null
 
 };
 

@@ -56,6 +56,10 @@
                 <div id="averageTimeCount">-</div>
                 <small>Gem. tijd</small>
             </div>
+            <div class="card"><div id="waitingCount">0</div><small>Wachtend</small></div>
+            <div class="card"><div id="repositionCount">0</div><small>Herpositionering</small></div>
+            <div class="card"><div id="modeCount">Automatisch</div><small>Modus</small></div>
+            <div class="card"><div id="complexCount">3</div><small>Cellen open</small></div>
 
         </div>
 
@@ -80,6 +84,17 @@
             <section class="session-config" aria-label="Sessieconfiguratie">
                 <h2>Configuratie</h2>
                 <p class="config-help">Pas voertuigaantallen aan vóór de sessiestart.</p>
+                <h3>Werkwijze</h3>
+                <div id="operationModeConfig" class="mode-config">
+                    <label><input type="radio" name="operationMode" value="automatic" checked> Automatisch</label>
+                    <label><input type="radio" name="operationMode" value="manualVehicle"> Handmatig voertuig kiezen</label>
+                    <label><input type="radio" name="operationMode" value="autoplay"> Autoplay</label>
+                </div>
+                <div id="autoplayIntervalConfig" class="autoplay-config" hidden>
+                    <label for="autoplayInterval">Interval nieuwe meldingen</label>
+                    <input id="autoplayInterval" type="range" min="1" max="20" step="1" value="5">
+                    <output id="autoplayIntervalValue">Nieuwe melding iedere 5 seconden</output>
+                </div>
                 <div id="vehicleConfig" class="vehicle-config"></div>
                 <div class="config-summary">Totaal: <strong id="vehicleConfigTotal">21</strong> voertuigen</div>
                 <h3>Beschikbare cellencomplexen</h3>
@@ -94,6 +109,16 @@
             <h2>Fase</h2>
 
             <div id="stepHint" class="step-hint">Start met een melding.</div>
+            <div id="manualDispatchPanel" class="manual-dispatch-panel" hidden>
+                <h3>Geselecteerd voertuig</h3><div id="vehicleSelectionDetails"></div>
+                <button id="confirmVehicleBtn">Voertuig inzetten</button>
+                <button id="cancelVehicleBtn" class="secondary-button">Annuleer selectie</button>
+            </div>
+            <div id="autoplayControls" class="autoplay-controls" hidden>
+                <strong id="autoplayStatus"></strong>
+                <button id="pauseAutoplayBtn">⏸ Pauze</button><button id="resumeAutoplayBtn" hidden>▶ Hervatten</button>
+                <button id="incidentNowBtn" class="secondary-button">Nieuwe melding nu</button>
+            </div>
 
             <h2>Evaluatie</h2>
 
