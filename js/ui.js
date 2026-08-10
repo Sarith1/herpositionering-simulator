@@ -249,7 +249,7 @@ export class UI {
         if (this.averageTimeElement)
             this.averageTimeElement.textContent = this.getAverageTravelTimeLabel();
 
-        const waiting = (simulator.incidents || []).filter(i => i.status === "WAITING").length;
+        const waiting = (simulator.incidents || []).filter(i => i.status === "OPEN").length;
         document.getElementById("waitingCount").textContent = waiting;
         document.getElementById("repositionCount").textContent = vehicles.filter(v => v.status === "REPOSITIONING").length;
         document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay"})[sessionConfig.operationMode];
@@ -257,8 +257,9 @@ export class UI {
         document.getElementById("incidentCount").textContent = (simulator.incidents || []).filter(i => i.status !== "COMPLETED").length;
         const status = document.getElementById("autoplayStatus");
         if (status && sessionConfig.operationMode === "autoplay") {
-            const seconds = simulator.autoplayPaused || simulator.nextIncidentAt === null ? null : `${Math.max(0, (simulator.nextIncidentAt - performance.now()) / 1000).toFixed(1).replace(".", ",")} sec`;
-            status.textContent = simulator.autoplayPaused ? `Autoplay gepauzeerd · interval ${sessionConfig.autoplayIntervalSeconds}s` : `Autoplay actief · interval ${sessionConfig.autoplayIntervalSeconds}s · Volgende melding over: ${seconds}`;
+            const state=simulator.autoplayState;
+            const seconds = !state.running || state.nextIncidentAt === null ? null : `${Math.ceil(Math.max(0, state.nextIncidentAt-performance.now())/1000)} sec`;
+            status.textContent = state.running ? `Autoplay actief · Volgende melding over: ${seconds}` : "Autoplay gepauzeerd";
         }
 
     }
@@ -351,7 +352,7 @@ export class UI {
         document.getElementById("confirmVehicleBtn").hidden = !manual;
         document.getElementById("autoplayControls").hidden = !autoplay;
         const autoplayButton=document.getElementById("autoplayToggleBtn");
-        if(autoplayButton){autoplayButton.disabled=!buttonState.autoplayToggle;autoplayButton.textContent=buttonState.autoplayPaused?"▶ Play":"⏸ Pauze";autoplayButton.classList.toggle("is-playing",!buttonState.autoplayPaused);}
+        if(autoplayButton){autoplayButton.disabled=!buttonState.autoplayToggle;autoplayButton.textContent=buttonState.autoplayRunning?"⏸ Pauze":"▶ Play";autoplayButton.classList.toggle("is-playing",buttonState.autoplayRunning);}
 
         controls.forEach(control => {
             const button = document.getElementById(control.id);
@@ -394,7 +395,7 @@ export class UI {
             return;
         }
         if (sessionConfig.operationMode === "autoplay") {
-            this.stepHintElement.textContent = simulator.autoplayPaused ? "Druk op Play om autoplay te starten." : "Autoplay verwerkt meldingen automatisch.";
+            this.stepHintElement.textContent = simulator.autoplayState.running ? "Autoplay verwerkt meldingen automatisch." : "Druk op Play om autoplay te starten.";
             return;
         }
         const labels = {
@@ -515,15 +516,12 @@ export class UI {
     }
 
     getOperationMode() { return document.querySelector('input[name="operationMode"]:checked')?.value || "automatic"; }
-    getAutoplayInterval() { return Number(document.getElementById("autoplayInterval")?.value || 5); }
-    setOperationConfig(mode="automatic", interval=5) {
+    setOperationConfig(mode="automatic") {
         const radio=document.querySelector(`input[name="operationMode"][value="${mode}"]`); if(radio)radio.checked=true;
-        const range=document.getElementById("autoplayInterval");if(range)range.value=interval;
         this.updateModeConfigVisibility();
     }
     updateModeConfigVisibility() {
-        const autoplay=this.getOperationMode()==="autoplay", box=document.getElementById("autoplayIntervalConfig"), range=document.getElementById("autoplayInterval"), output=document.getElementById("autoplayIntervalValue");
-        if(box)box.hidden=!autoplay;if(range)range.disabled=!autoplay;if(output)output.textContent=`Nieuwe melding iedere ${this.getAutoplayInterval()} seconden`;
+        // Autoplay gebruikt voor iedere melding een nieuw willekeurig interval.
     }
     showVehicleSelection(selection) {
         const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");if(!panel||!details)return;

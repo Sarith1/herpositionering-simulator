@@ -62,7 +62,7 @@ class App {
             this.ui.setOperationConfig("automatic", 5);
             return this.engine.reset({ restoreDefaults: true });
         });
-        document.querySelectorAll('input[name="operationMode"], #autoplayInterval').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
+        document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
         document.getElementById("map")?.addEventListener("vehicle-select", event => {
             const result=this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
         });
@@ -125,8 +125,7 @@ class App {
         return this.engine.reset({
             vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
             availablePrisons,
-            operationMode: this.ui.getOperationMode(),
-            autoplayIntervalSeconds: this.ui.getAutoplayInterval()
+            operationMode: this.ui.getOperationMode()
         });
     }
 

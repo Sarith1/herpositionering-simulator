@@ -254,12 +254,12 @@ export class MapView {
 
     syncIncident() {
         const visible = new Set();
-        (simulator.incidents || []).filter(i => i.status === "OPEN" || i.status === "WAITING" || i.status === "ASSIGNED").forEach(incident => {
+        (simulator.incidents || []).filter(i => i.status === "OPEN" || i.status === "ASSIGNED").forEach(incident => {
             visible.add(incident.id);
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
-            element.classList.toggle("waiting", incident.status === "WAITING");
-            const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && (incident.status === "OPEN" || incident.status === "WAITING");
+            element.classList.toggle("waiting", incident.status === "OPEN");
+            const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && incident.status === "OPEN";
             element.classList.toggle("incident--selectable", selectable);
             element.classList.toggle("incident--selected", simulator.vehicleSelection.incidentId === incident.id || simulator.activeIncident?.id === incident.id);
             element.setAttribute("tabindex", selectable ? "0" : "-1");

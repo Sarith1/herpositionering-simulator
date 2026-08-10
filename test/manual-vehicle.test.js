@@ -58,13 +58,40 @@ test("manual confirmation stays disabled until a vehicle is selected",()=>{
   assert.equal(engine.getControlState().confirmVehicle,true);
 });
 
-test("autoplay starts paused, pauses only incident generation, and resumes",()=>{
-  const engine=new Engine();engine.reset({operationMode:"autoplay",autoplayIntervalSeconds:1});
-  assert.equal(simulator.autoplayPaused,true);assert.equal(simulator.nextIncidentAt,null);
-  engine.toggleAutoplay();const due=simulator.nextIncidentAt;
-  assert.equal(simulator.autoplayPaused,false);assert.ok(due>performance.now());
-  engine.update(due);assert.equal(engine.sequence,1);
-  engine.toggleAutoplay();assert.equal(simulator.nextIncidentAt,null);
-  const count=engine.sequence;engine.update(due+5000);assert.equal(engine.sequence,count);
-  engine.toggleAutoplay();assert.ok(simulator.nextIncidentAt>due);
+test("autoplay uses a new inclusive random delay after every incident and resumes with a new delay",()=>{
+  const originalRandom=Math.random,values=[0,.95,.2,.7];let index=0;Math.random=()=>values[index++%values.length];
+  try {
+    const engine=new Engine();engine.reset({operationMode:"autoplay"});
+    assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
+    engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,true);assert.equal(simulator.autoplayState.nextDelaySeconds,1);
+    let due=simulator.autoplayState.nextIncidentAt;engine.update(due);assert.equal(engine.sequence,1);
+    assert.equal(simulator.autoplayState.nextDelaySeconds>=1&&simulator.autoplayState.nextDelaySeconds<=20,true);
+    engine.toggleAutoplay();assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
+    const count=engine.sequence;engine.update(due+50000);assert.equal(engine.sequence,count);
+    engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,true);assert.ok(simulator.autoplayState.nextIncidentAt>due);
+  } finally {Math.random=originalRandom;}
+});
+
+test("twenty autoplay schedules are in range and are recalculated",()=>{
+  const engine=new Engine();engine.reset({operationMode:"autoplay"});
+  const delays=Array.from({length:20},(_,i)=>{const original=Math.random;Math.random=()=>i/20;const delay=engine.scheduleNextIncident(1000*i);Math.random=original;return delay;});
+  assert.equal(delays.every(delay=>delay>=1&&delay<=20),true);assert.ok(new Set(delays).size>1);
+});
+
+test("dispatch lifecycle is OPEN to ASSIGNED to HANDLED and reset clears all scheduler state",()=>{
+  const engine=preparedEngine("automatic"),incident=simulator.activeIncident;
+  assert.equal(incident.status,"OPEN");const result=engine.dispatchVehicle();assert.equal(result.success,true);
+  assert.equal(incident.status,"ASSIGNED");assert.equal(engine.activeDispatches.size,1);assert.equal(result.vehicle.status,"TO_INCIDENT");
+  const dispatch=[...engine.activeDispatches.values()][0];engine.updateDispatch(dispatch,dispatch.phaseStartTime+100000);
+  assert.equal(incident.status,"HANDLED");assert.equal(simulator.incidents.includes(incident),false);assert.equal(simulator.incidentHistory.at(-1).status,"HANDLED");
+  engine.reset();assert.equal(engine.activeDispatches.size,0);assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
+});
+
+test("autoplay keeps generating OPEN incidents without vehicles and game over stops its scheduler",()=>{
+  const engine=new Engine();engine.reset({operationMode:"autoplay"});vehicles.forEach(vehicle=>vehicle.status="BUSY");
+  engine.toggleAutoplay();const due=simulator.autoplayState.nextIncidentAt;engine.update(due);
+  assert.equal(simulator.incidents.length,1);assert.equal(simulator.incidents[0].status,"OPEN");assert.ok(simulator.autoplayState.nextIncidentAt>due);
+  engine.triggerRepositioningFailure({name:"Testdistrict"});
+  assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
+  const count=engine.sequence;engine.update(due+100000);assert.equal(engine.sequence,count);
 });

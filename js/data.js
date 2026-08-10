@@ -151,8 +151,7 @@ export const sessionConfig = {
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
 
     availablePrisons: getDefaultPrisonDistrictIds(),
-    operationMode: "automatic",
-    autoplayIntervalSeconds: 5
+    operationMode: "automatic"
 
 };
 
@@ -194,7 +193,6 @@ export function resetSessionConfigDefaults() {
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
     sessionConfig.operationMode = "automatic";
-    sessionConfig.autoplayIntervalSeconds = 5;
 
     initializeVehicles();
 
@@ -292,9 +290,7 @@ export const simulator = {
 
     ,vehicleSelection: { active: false, incidentId: null, selectedVehicleId: null, confirming: false }
 
-    ,autoplayPaused: false
-
-    ,nextIncidentAt: null
+    ,autoplayState: { running: false, nextIncidentAt: null, nextDelaySeconds: null }
 
 };
 
