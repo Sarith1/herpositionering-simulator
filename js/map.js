@@ -16,9 +16,8 @@ const VEHICLE_SCALE = 1.15;
 const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
-const PRISON_ICON_SCALE = 1.20;
-const BASE_PRISON_FONT_SIZE = 32;
-const PRISON_ICON_OFFSET_Y = -48;
+const DETENTION_COMPLEX_SCALE = 1.20;
+const DETENTION_COMPLEX_OFFSET_Y = -62;
 
 export class MapView {
     constructor(containerId) {
@@ -65,9 +64,18 @@ export class MapView {
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
-            <span><span class="legend-icon prison-icon">🏛️</span> geselecteerde cel</span>
+            <span><span class="legend-icon detention-legend-icon" aria-hidden="true">${this.getDetentionComplexLegendSvg(false)}</span> Beschikbaar cellencomplex</span>
+            <span><span class="legend-icon detention-legend-icon unavailable" aria-hidden="true">${this.getDetentionComplexLegendSvg(true)}</span> Niet beschikbaar cellencomplex</span>
         `;
         this.container.appendChild(legend);
+    }
+
+    getDetentionComplexLegendSvg(unavailable) {
+        return `<svg viewBox="-28 -25 56 50" focusable="false" class="detention-legend-svg${unavailable ? " unavailable" : ""}">
+            <path class="detention-building" d="M-20-9h40v27h-40z"/><path class="detention-roof" d="M-23-9L0-20 23-9z"/>
+            <path class="detention-badge" d="M0-16l3 4 5 1-4 4 1 5-5-2-5 2 1-5-4-4 5-1z"/>
+            <path class="detention-bars" d="M-13-3v14m7-14v14M-16-3h13m-13 14h13M6-3v14m7-14v14M3-3h13M3 11h13"/>
+        </svg>`;
     }
 
     createSVG() {
@@ -155,15 +163,20 @@ export class MapView {
 
     syncPrisons() {
         const visiblePrisonIds = new Set();
+        const availablePrisonIds = new Set(sessionConfig.availablePrisons);
 
         districts
-            .filter(district => district.prison && sessionConfig.availablePrisons.includes(district.id))
+            .filter(district => district.prison)
             .forEach(district => {
                 visiblePrisonIds.add(district.id);
 
                 const group = this.getOrCreatePrisonElement(district.id);
-                group.setAttribute("class", simulator.selectedPrison === district.id ? "prison-marker selected" : "prison-marker");
-                group.setAttribute("transform", `translate(${district.x} ${district.y + PRISON_ICON_OFFSET_Y})`);
+                const available = availablePrisonIds.has(district.id);
+                const selected = available && simulator.selectedPrison === district.id;
+                group.setAttribute("class", `prison-marker ${available ? "available" : "unavailable"}${selected ? " selected" : ""}`);
+                group.setAttribute("aria-label", `Cellencomplex ${district.name}. ${available ? "Beschikbaar" : "Niet beschikbaar"}`);
+                group.querySelector("title").textContent = `Cellencomplex ${district.name}\n${available ? "Beschikbaar" : "Niet beschikbaar"}`;
+                group.setAttribute("transform", `translate(${district.x} ${district.y + DETENTION_COMPLEX_OFFSET_Y})`);
             });
 
         this.prisonLayer
@@ -183,23 +196,44 @@ export class MapView {
 
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
         group.dataset.prisonDistrictId = districtId;
+        group.setAttribute("role", "img");
+        group.setAttribute("tabindex", "0");
+
+        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+
+        const connector = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        connector.setAttribute("class", "detention-connector");
+        connector.setAttribute("d", `M0 ${24 * DETENTION_COMPLEX_SCALE}V${-DETENTION_COMPLEX_OFFSET_Y - 32}`);
+
+        const visual = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        visual.setAttribute("class", "prison-visual");
+        visual.setAttribute("transform", `scale(${DETENTION_COMPLEX_SCALE})`);
 
         const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         halo.setAttribute("class", "prison-halo");
         halo.setAttribute("cx", 0);
         halo.setAttribute("cy", 0);
-        halo.setAttribute("r", 21 * PRISON_ICON_SCALE);
+        halo.setAttribute("r", 28);
 
-        const prison = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        prison.setAttribute("x", 0);
-        prison.setAttribute("y", 0);
-        prison.setAttribute("text-anchor", "middle");
-        prison.setAttribute("dominant-baseline", "central");
-        prison.setAttribute("class", "prison");
-        prison.style.fontSize = `${BASE_PRISON_FONT_SIZE * PRISON_ICON_SCALE}px`;
-        prison.textContent = "🏛️";
+        const flashRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        flashRing.setAttribute("class", "prison-selection-ring");
+        flashRing.setAttribute("r", 29);
 
-        group.append(halo, prison);
+        const building = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        building.setAttribute("class", "detention-building");
+        building.setAttribute("d", "M-22-10h44v30h-44z");
+        const roof = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        roof.setAttribute("class", "detention-roof");
+        roof.setAttribute("d", "M-25-10L0-22 25-10z");
+        const badge = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        badge.setAttribute("class", "detention-badge");
+        badge.setAttribute("d", "M0-18l3 4 5 1-4 4 1 5-5-2-5 2 1-5-4-4 5-1z");
+        const bars = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        bars.setAttribute("class", "detention-bars");
+        bars.setAttribute("d", "M-14-3v15m7-15v15M-17-3h13m-13 15h13M7-3v15m7-15v15M4-3h13M4 12h13");
+
+        visual.append(halo, flashRing, building, roof, badge, bars);
+        group.append(title, connector, visual);
         this.prisonLayer.appendChild(group);
 
         return group;
