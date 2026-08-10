@@ -36,6 +36,7 @@ export class MapView {
         this.incidentLayer = null;
         this.prisonLayer = null;
         this.labelLayer = null;
+        this.interactionLayer = null;
         this.incidentAnimationCleanups = new Map();
     }
 
@@ -90,6 +91,7 @@ export class MapView {
         this.incidentLayer = this.createLayer("incidents");
         this.prisonLayer = this.createLayer("prisons");
         this.labelLayer = this.createLayer("labels");
+        this.interactionLayer = this.createLayer("interactions");
     }
 
     createLayer(name) {
@@ -103,6 +105,7 @@ export class MapView {
         this.clearLayer(this.routeLayer);
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.labelLayer);
+        this.clearLayer(this.interactionLayer);
         this.syncIncident();
 
         this.drawRoutes();
@@ -110,6 +113,7 @@ export class MapView {
         this.syncPrisons();
         this.drawLabels();
         this.syncVehicles();
+        this.drawDistrictInteractions();
     }
 
     clearLayer(layer) {
@@ -139,10 +143,10 @@ export class MapView {
     drawDistricts() {
         districts.forEach(district => {
             const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            const reposition=simulator.manualRepositionState,selectable=reposition.phase!=="idle"&&!!reposition.selectedVehicleId&&vehicles.find(v=>v.id===reposition.selectedVehicleId)?.district!==district.id;
+            const reposition=simulator.manualRepositionState,selectable=reposition.phase==="selectDistrict"&&!!reposition.selectedVehicleId&&vehicles.find(v=>v.id===reposition.selectedVehicleId)?.district!==district.id;
             group.setAttribute("class", `district-marker${selectable ? " district--selectable" : ""}${reposition.targetDistrictId===district.id ? " district--selected" : ""}`);
             group.dataset.districtId=district.id;group.setAttribute("tabindex",selectable?"0":"-1");
-            const choose=()=>{if(selectable)this.container.dispatchEvent(new CustomEvent("district-select",{detail:{districtId:district.id}}));};group.addEventListener("click",choose);group.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();choose();}});
+            const choose=()=>{if(simulator.manualRepositionState.phase==="selectDistrict")this.container.dispatchEvent(new CustomEvent("district-select",{detail:{districtId:district.id}}));};group.addEventListener("click",choose);group.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();choose();}});
 
             const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             circle.setAttribute("cx", district.x);
@@ -162,6 +166,29 @@ export class MapView {
             group.append(circle, code);
 
             this.districtLayer.appendChild(group);
+        });
+    }
+
+    drawDistrictInteractions() {
+        if (simulator.manualRepositionState.phase !== "selectDistrict") return;
+        const selectedVehicle = vehicles.find(vehicle => vehicle.id === simulator.manualRepositionState.selectedVehicleId);
+        districts.filter(district => district.id !== selectedVehicle?.district).forEach(district => {
+            const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            hit.setAttribute("class", "district-hitarea district--selectable");
+            hit.dataset.districtId = district.id;
+            hit.setAttribute("data-district-id", district.id);
+            hit.setAttribute("cx", district.x);
+            hit.setAttribute("cy", district.y);
+            hit.setAttribute("r", "46");
+            hit.setAttribute("fill", "transparent");
+            hit.setAttribute("pointer-events", "all");
+            hit.setAttribute("tabindex", "0");
+            const choose = () => {
+                if (simulator.manualRepositionState.phase === "selectDistrict") this.container.dispatchEvent(new CustomEvent("district-select", { detail: { districtId: district.id } }));
+            };
+            hit.addEventListener("click", choose);
+            hit.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); choose(); } });
+            this.interactionLayer.appendChild(hit);
         });
     }
 
@@ -400,7 +427,7 @@ export class MapView {
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
         element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
-        const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase!=="idle"&&!reposition.selectedVehicleId;
+        const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=simulator.vehicleSelection.selectedVehicleId===vehicle.id||reposition.selectedVehicleId===vehicle.id;
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
