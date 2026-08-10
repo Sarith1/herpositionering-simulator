@@ -36,7 +36,7 @@ export class MapView {
         this.incidentLayer = null;
         this.prisonLayer = null;
         this.labelLayer = null;
-        this.incidentAnimationCleanup = null;
+        this.incidentAnimationCleanups = new Map();
     }
 
     initialize() {
@@ -121,10 +121,11 @@ export class MapView {
         if (simulator.activeRoute?.length > 1) routes.push({ id: "preview", route: simulator.activeRoute, type: "preview" });
 
         routes.forEach(routeInfo => {
-            if (!routeInfo.route || routeInfo.route.length < 2) return;
+            if (!routeInfo.route || (routeInfo.route.length < 2 && !routeInfo.destination)) return;
             const points = routeInfo.route
                 .map(getDistrictById)
                 .filter(Boolean)
+                .concat(routeInfo.destination || [])
                 .map(district => `${district.x},${district.y}`)
                 .join(" ");
             if (!points) return;
@@ -253,20 +254,18 @@ export class MapView {
 
     syncIncident() {
         const visible = new Set();
-        (simulator.incidents || []).filter(i => i.status !== "COMPLETED").forEach((incident, index) => {
+        (simulator.incidents || []).filter(i => i.status === "OPEN" || i.status === "WAITING" || i.status === "ASSIGNED").forEach(incident => {
             visible.add(incident.id);
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
-            element.setAttribute("transform", `translate(${incident.x + (index % 3) * 16 - 16} ${incident.y - 72})`);
+            element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
             element.classList.toggle("waiting", incident.status === "WAITING");
         });
         this.incidentLayer.querySelectorAll("[data-incident-id]").forEach(marker => {
-            if (!visible.has(marker.dataset.incidentId)) marker.remove();
+            if (!visible.has(marker.dataset.incidentId)) this.removeIncidentElement(marker.dataset.incidentId);
         });
     }
 
     createIncidentElement(incident) {
-        this.removeIncidentAnimationListener();
-
         const positionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         positionGroup.dataset.incidentId = incident.id;
         positionGroup.setAttribute("class", "incident-position");
@@ -295,25 +294,28 @@ export class MapView {
             if (event.animationName !== "incidentIntroPulse") return;
             visualGroup.classList.remove("incident-marker--intro");
             visualGroup.classList.add("incident-marker--active");
-            this.removeIncidentAnimationListener();
+            this.removeIncidentAnimationListener(incident.id);
         };
 
         visualGroup.addEventListener("animationend", handleIntroEnd);
-        this.incidentAnimationCleanup = () => visualGroup.removeEventListener("animationend", handleIntroEnd);
+        this.incidentAnimationCleanups.set(incident.id, () => visualGroup.removeEventListener("animationend", handleIntroEnd));
 
         this.incidentLayer.appendChild(positionGroup);
         return positionGroup;
     }
 
-    removeIncidentElement() {
-        this.removeIncidentAnimationListener();
-        this.clearLayer(this.incidentLayer);
+    removeIncidentElement(incidentId) {
+        this.removeIncidentAnimationListener(incidentId);
+        const marker = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incidentId)}"]`);
+        marker?.querySelector(".incident-visual")?.classList.remove("incident-marker--intro", "incident-marker--active");
+        marker?.remove();
     }
 
-    removeIncidentAnimationListener() {
-        if (!this.incidentAnimationCleanup) return;
-        this.incidentAnimationCleanup();
-        this.incidentAnimationCleanup = null;
+    removeIncidentAnimationListener(incidentId) {
+        const cleanup = this.incidentAnimationCleanups.get(incidentId);
+        if (!cleanup) return;
+        cleanup();
+        this.incidentAnimationCleanups.delete(incidentId);
     }
 
     syncVehicles() {
