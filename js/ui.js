@@ -116,10 +116,9 @@ export class UI {
 
         if (buttonState) {
             this.updateButtons(buttonState);
-            const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails"), confirm=document.getElementById("confirmVehicleBtn");
+            const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");
             if(panel)panel.hidden=!buttonState.vehicleSelectionActive;
             if(details&&buttonState.vehicleSelectionActive&&!simulator.vehicleSelection.selectedVehicleId)details.innerHTML="<p>Klik op een lichtblauw gemarkeerd beschikbaar voertuig op de kaart.</p>";
-            if(confirm){confirm.disabled=!buttonState.confirmVehicle;confirm.setAttribute("aria-disabled",String(!buttonState.confirmVehicle));}
         }
 
     }
@@ -256,12 +255,10 @@ export class UI {
         document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay"})[sessionConfig.operationMode];
         document.getElementById("complexCount").textContent = sessionConfig.availablePrisons.length;
         document.getElementById("incidentCount").textContent = (simulator.incidents || []).filter(i => i.status !== "COMPLETED").length;
-        const controls = document.getElementById("autoplayControls");
-        if (controls) controls.hidden = sessionConfig.operationMode !== "autoplay";
         const status = document.getElementById("autoplayStatus");
         if (status && sessionConfig.operationMode === "autoplay") {
-            const seconds = simulator.autoplayPaused || simulator.nextIncidentAt === null ? "gepauzeerd" : `${Math.max(0, (simulator.nextIncidentAt - performance.now()) / 1000).toFixed(1).replace(".", ",")} sec`;
-            status.textContent = `Interval ${sessionConfig.autoplayIntervalSeconds}s · Volgende melding over: ${seconds}`;
+            const seconds = simulator.autoplayPaused || simulator.nextIncidentAt === null ? null : `${Math.max(0, (simulator.nextIncidentAt - performance.now()) / 1000).toFixed(1).replace(".", ",")} sec`;
+            status.textContent = simulator.autoplayPaused ? `Autoplay gepauzeerd · interval ${sessionConfig.autoplayIntervalSeconds}s` : `Autoplay actief · interval ${sessionConfig.autoplayIntervalSeconds}s · Volgende melding over: ${seconds}`;
         }
 
     }
@@ -342,8 +339,19 @@ export class UI {
             { id: "incidentBtn", enabled: buttonState.incident, step: "incident" },
             { id: "prisonBtn", enabled: buttonState.prison, step: "prison" },
             { id: "travelBtn", enabled: buttonState.travelTime, step: "travelTime" },
-            { id: "dispatchBtn", enabled: buttonState.dispatch, step: "dispatch" }
+            { id: "dispatchBtn", enabled: buttonState.dispatch, step: "dispatch" },
+            { id: "selectVehicleBtn", enabled: buttonState.selectVehicle, step: "dispatch" },
+            { id: "confirmVehicleBtn", enabled: buttonState.confirmVehicle, step: "confirmVehicle" }
         ];
+
+        const automatic = buttonState.mode === "automatic", manual = buttonState.mode === "manualVehicle", autoplay = buttonState.mode === "autoplay";
+        document.getElementById("processControls").hidden = autoplay;
+        document.getElementById("dispatchBtn").hidden = !automatic;
+        document.getElementById("selectVehicleBtn").hidden = !manual;
+        document.getElementById("confirmVehicleBtn").hidden = !manual;
+        document.getElementById("autoplayControls").hidden = !autoplay;
+        const autoplayButton=document.getElementById("autoplayToggleBtn");
+        if(autoplayButton){autoplayButton.disabled=!buttonState.autoplayToggle;autoplayButton.textContent=buttonState.autoplayPaused?"▶ Play":"⏸ Pauze";autoplayButton.classList.toggle("is-playing",!buttonState.autoplayPaused);}
 
         controls.forEach(control => {
             const button = document.getElementById(control.id);
@@ -382,14 +390,18 @@ export class UI {
         }
 
         if (sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active) {
-            this.stepHintElement.textContent = "Selecteer een melding, kies een beschikbaar voertuig en bevestig de inzet.";
+            this.stepHintElement.textContent = simulator.selectedVehicleId ? "5. Bevestig de keuze met ‘Voertuig inzetten’." : "4. Kies een beschikbaar voertuig op de kaart.";
+            return;
+        }
+        if (sessionConfig.operationMode === "autoplay") {
+            this.stepHintElement.textContent = simulator.autoplayPaused ? "Druk op Play om autoplay te starten." : "Autoplay verwerkt meldingen automatisch.";
             return;
         }
         const labels = {
             incident: "1. Plaats een nieuwe melding.",
             prison: "2. Selecteer een cel voor de arrestant.",
             travelTime: "3. Bereken de reistijd naar de cel.",
-            dispatch: "4. Stuur het dichtstbijzijnde voertuig."
+            dispatch: sessionConfig.operationMode === "manualVehicle" ? "4. Start de handmatige voertuigselectie." : "4. Stuur het dichtstbijzijnde voertuig."
         };
 
         this.stepHintElement.textContent = labels[buttonState.currentStep] || "Start met een melding.";
