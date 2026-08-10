@@ -9,7 +9,7 @@ meldingen, gevangenissen en routes.
 ==========================================================
 */
 
-import { colors, districts, sessionConfig, simulator, vehicles } from "./data.js";
+import { colors, detentionComplexes, districts, sessionConfig, simulator, vehicles } from "./data.js";
 import { getDistrictById } from "./routing.js";
 
 const VEHICLE_SCALE = 1.15;
@@ -165,8 +165,7 @@ export class MapView {
         const visiblePrisonIds = new Set();
         const availablePrisonIds = new Set(sessionConfig.availablePrisons);
 
-        districts
-            .filter(district => district.prison)
+        detentionComplexes
             .forEach(district => {
                 visiblePrisonIds.add(district.id);
 
@@ -176,7 +175,7 @@ export class MapView {
                 group.setAttribute("class", `prison-marker ${available ? "available" : "unavailable"}${selected ? " selected" : ""}`);
                 group.setAttribute("aria-label", `Cellencomplex ${district.name}. ${available ? "Beschikbaar" : "Niet beschikbaar"}`);
                 group.querySelector("title").textContent = `Cellencomplex ${district.name}\n${available ? "Beschikbaar" : "Niet beschikbaar"}`;
-                group.setAttribute("transform", `translate(${district.x} ${district.y + DETENTION_COMPLEX_OFFSET_Y})`);
+                group.setAttribute("transform", `translate(${district.x} ${district.y})`);
             });
 
         this.prisonLayer
@@ -253,21 +252,16 @@ export class MapView {
     }
 
     syncIncident() {
-        if (!simulator.activeIncident) {
-            this.removeIncidentElement();
-            return;
-        }
-
-        const incident = simulator.activeIncident;
-        const existingElement = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`);
-        const element = existingElement || this.createIncidentElement(incident);
-        element.setAttribute("transform", `translate(${incident.x} ${incident.y - 72})`);
-
-        this.incidentLayer
-            .querySelectorAll("[data-incident-id]")
-            .forEach(marker => {
-                if (marker !== element) marker.remove();
-            });
+        const visible = new Set();
+        (simulator.incidents || []).filter(i => i.status !== "COMPLETED").forEach((incident, index) => {
+            visible.add(incident.id);
+            const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
+            element.setAttribute("transform", `translate(${incident.x + (index % 3) * 16 - 16} ${incident.y - 72})`);
+            element.classList.toggle("waiting", incident.status === "WAITING");
+        });
+        this.incidentLayer.querySelectorAll("[data-incident-id]").forEach(marker => {
+            if (!visible.has(marker.dataset.incidentId)) marker.remove();
+        });
     }
 
     createIncidentElement(incident) {
@@ -378,6 +372,7 @@ export class MapView {
         text.dataset.vehicleId = vehicle.id;
         text.setAttribute("dominant-baseline", "central");
         text.textContent = "🚔";
+        text.addEventListener("click", () => this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: text.dataset.vehicleId } })));
         this.vehicleLayer.appendChild(text);
 
         return text;
@@ -388,7 +383,8 @@ export class MapView {
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
         element.style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
-        element.setAttribute("class", vehicle.status === "AVAILABLE" ? "vehicle" : `vehicle busy ${String(vehicle.status).toLowerCase()}`);
+        const selectable = sessionConfig.operationMode === "manualVehicle" && vehicle.status === "AVAILABLE" && (simulator.incidents || []).some(i => i.status === "OPEN" || i.status === "WAITING");
+        element.setAttribute("class", `${vehicle.status === "AVAILABLE" ? "vehicle" : `vehicle busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " selectable" : ""}${simulator.selectedVehicleId === vehicle.id ? " selected-vehicle" : ""}`);
     }
 
     clamp(value, min, max) {

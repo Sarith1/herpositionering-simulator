@@ -71,3 +71,9 @@ Voer daarna minimaal deze scenario's uit:
 - Alle animaties lopen via één `requestAnimationFrame`-loop.
 - Reset wist alle actieve dispatches, herpositioneringen, routes, timers, incidenten en UI-status, maar behoudt bij een sessiereset de gekozen voertuigaantallen en beschikbare cellencomplexen.
 - Nieuwe sessie instellen herstelt de standaardconfiguratie met 3 voertuigen per district en de cellencomplexopties Rotterdam-Stad en Zuid-Holland-Zuid.
+
+## Operationele modi
+
+De sessieconfiguratie biedt **Automatisch**, **Handmatige voertuigkeuze** en **Autoplay**. Autoplay gebruikt de centrale `requestAnimationFrame`-simulatieklok; er wordt bewust geen `setInterval` gestart. Pauzeren blokkeert alleen het ontstaan van nieuwe meldingen. Voertuigen die al onderweg of bezig zijn, blijven doorrijden. Wachtende meldingen worden op aanmaaktijd (oudste eerst) opnieuw aangeboden zodra een voertuig beschikbaar komt.
+
+Alle drie de cellencomplexen zijn zelfstandige nodes in het routenetwerk. Daardoor gebruikt ook het Centraal Cellencomplex de normale netwerkroute en geen rechtstreekse teleportatie.

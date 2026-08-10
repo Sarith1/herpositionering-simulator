@@ -46,6 +46,11 @@ class App {
         this.bindButton("prisonBtn", () => this.engine.selectPrison());
         this.bindButton("travelBtn", () => this.engine.calculateTravelTime());
         this.bindButton("dispatchBtn", () => this.engine.dispatchVehicle());
+        this.bindButton("confirmVehicleBtn", () => this.engine.dispatchVehicle());
+        this.bindButton("cancelVehicleBtn", () => this.engine.cancelVehicleSelection());
+        this.bindButton("pauseAutoplayBtn", () => this.engine.toggleAutoplay(true));
+        this.bindButton("resumeAutoplayBtn", () => this.engine.toggleAutoplay(false));
+        this.bindButton("incidentNowBtn", () => this.engine.createIncident({ automatic: true }));
         this.bindButton("resetBtn", () => this.resetCurrentSession());
         this.bindButton("failureResetBtn", () => this.resetCurrentSession());
         this.bindButton("failureNewSessionBtn", () => this.newSessionSetup());
@@ -55,7 +60,12 @@ class App {
             const defaults = createDefaultVehiclesPerDistrict();
             this.ui.setConfigValues(defaults);
             this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
+            this.ui.setOperationConfig("automatic", 5);
             return this.engine.reset({ restoreDefaults: true });
+        });
+        document.querySelectorAll('input[name="operationMode"], #autoplayInterval').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
+        document.getElementById("map")?.addEventListener("vehicle-select", event => {
+            const result=this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
         });
     }
 
@@ -66,6 +76,10 @@ class App {
             try {
                 const result = action();
                 this.ui.log(result.message);
+                if (result.followup) this.ui.log(result.followup);
+                if (id === "cancelVehicleBtn" || (id === "confirmVehicleBtn" && result.success)) this.ui.hideVehicleSelection();
+                if (id === "pauseAutoplayBtn" && result.success) { document.getElementById("pauseAutoplayBtn").hidden=true; document.getElementById("resumeAutoplayBtn").hidden=false; }
+                if (id === "resumeAutoplayBtn" && result.success) { document.getElementById("pauseAutoplayBtn").hidden=false; document.getElementById("resumeAutoplayBtn").hidden=true; }
 
                 if (id === "resetBtn" || id === "failureResetBtn") this.ui.hideRepositioningFailure();
 
@@ -100,6 +114,7 @@ class App {
         if (event.type === "repositionComplete") this.ui.log(`[BESCHIKBAAR] ${event.vehicle.id} dekt nu ${event.district.name}.`);
         if (event.type === "repositioningFailure") this.ui.showRepositioningFailure(event.failure);
         if (event.type === "missionFailed" || event.type === "error") this.ui.log(event.message);
+        if (event.type === "log") this.ui.log(event.message);
     }
 
 
@@ -109,7 +124,9 @@ class App {
         this.ui.hideRepositioningFailure();
         return this.engine.reset({
             vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
-            availablePrisons
+            availablePrisons,
+            operationMode: this.ui.getOperationMode(),
+            autoplayIntervalSeconds: this.ui.getAutoplayInterval()
         });
     }
 
@@ -122,6 +139,7 @@ class App {
         this.ui.hideRepositioningFailure();
         this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
         this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
+        this.ui.setOperationConfig("automatic", 5);
         return this.engine.reset({ restoreDefaults: true });
     }
 

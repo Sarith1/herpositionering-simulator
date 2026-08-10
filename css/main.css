@@ -1386,3 +1386,27 @@ footer button {
     flex-wrap:wrap;
     gap:10px;
 }
+
+/* Sprint 2.2: modi, tactische selectie en autoplay */
+.mode-config { display:grid; gap:.45rem; margin-bottom:.8rem; }
+.mode-config label, .prison-config-row { display:flex; gap:.55rem; align-items:center; cursor:pointer; }
+.autoplay-config { padding:.75rem; border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; margin-bottom:1rem; }
+.autoplay-config input { width:100%; accent-color:#2563eb; }
+.autoplay-config output { display:block; color:#1e40af; font-weight:700; margin-top:.35rem; }
+.autoplay-controls,.manual-dispatch-panel { margin-top:1rem; padding:.75rem; border-radius:10px; background:#eff6ff; border:1px solid #93c5fd; }
+.autoplay-controls strong { display:block; margin-bottom:.6rem; }
+.manual-dispatch-panel dl { display:grid; grid-template-columns:1fr auto; gap:.25rem .75rem; }
+.manual-dispatch-panel dd { margin:0; font-weight:700; }
+.vehicle.selectable { cursor:pointer; filter:drop-shadow(0 0 5px #22c55e); }
+.vehicle.selectable:hover { font-size:35px !important; }
+.vehicle.selected-vehicle { filter:drop-shadow(0 0 9px #facc15) drop-shadow(0 0 3px #fff); font-size:38px !important; }
+.vehicle.busy { cursor:not-allowed; opacity:.65; }
+.incident-position.waiting .incident-ring { stroke:#f59e0b; stroke-dasharray:5 3; }
+.prison-marker .detention-building { fill:#1d4ed8; }
+.prison-marker .detention-roof { fill:#3b82f6; }
+.prison-marker.selected { filter:drop-shadow(0 0 14px #38bdf8); }
+.prison-marker.selected .prison-selection-ring { animation:prisonPulse 1s infinite; }
+.prison-marker.unavailable { opacity:.25; filter:grayscale(1); }
+.dashboard { flex-wrap:wrap; }
+#modeCount { font-size:clamp(.75rem,1vw,1rem); }
+@keyframes prisonPulse { 50% { stroke-width:8; opacity:.35; } }

@@ -15,6 +15,7 @@ Verantwoordelijk voor:
 
 import {
     districts,
+    detentionComplexes,
     DEFAULT_VEHICLES_PER_DISTRICT,
     sessionConfig,
     repositioningFailureConfig,
@@ -148,13 +149,13 @@ export class UI {
 
         this.prisonConfigContainer.innerHTML = "";
 
-        districts.filter(district => district.prison).forEach(district => {
+        detentionComplexes.forEach(district => {
             const label = document.createElement("label");
             label.className = "prison-config-row";
             const checked = sessionConfig.availablePrisons.includes(district.id) ? "checked" : "";
             label.innerHTML = `
                 <input type="checkbox" value="${district.id}" data-prison-id="${district.id}" ${checked}>
-                <span>${district.name} (${district.id})</span>
+                <span>${district.name}</span>
             `;
             this.prisonConfigContainer.appendChild(label);
         });
@@ -242,6 +243,20 @@ export class UI {
 
         if (this.averageTimeElement)
             this.averageTimeElement.textContent = this.getAverageTravelTimeLabel();
+
+        const waiting = (simulator.incidents || []).filter(i => i.status === "WAITING").length;
+        document.getElementById("waitingCount").textContent = waiting;
+        document.getElementById("repositionCount").textContent = vehicles.filter(v => v.status === "REPOSITIONING").length;
+        document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay"})[sessionConfig.operationMode];
+        document.getElementById("complexCount").textContent = sessionConfig.availablePrisons.length;
+        document.getElementById("incidentCount").textContent = (simulator.incidents || []).filter(i => i.status !== "COMPLETED").length;
+        const controls = document.getElementById("autoplayControls");
+        if (controls) controls.hidden = sessionConfig.operationMode !== "autoplay";
+        const status = document.getElementById("autoplayStatus");
+        if (status && sessionConfig.operationMode === "autoplay") {
+            const seconds = simulator.autoplayPaused || simulator.nextIncidentAt === null ? "gepauzeerd" : `${Math.max(0, (simulator.nextIncidentAt - performance.now()) / 1000).toFixed(1).replace(".", ",")} sec`;
+            status.textContent = `Interval ${sessionConfig.autoplayIntervalSeconds}s · Volgende melding over: ${seconds}`;
+        }
 
     }
 
@@ -360,6 +375,10 @@ export class UI {
             return;
         }
 
+        if (sessionConfig.operationMode === "manualVehicle" && (simulator.incidents || []).some(i => i.status === "OPEN" || i.status === "WAITING")) {
+            this.stepHintElement.textContent = "Klik op een beschikbaar voertuig en bevestig de inzet.";
+            return;
+        }
         const labels = {
             incident: "1. Plaats een nieuwe melding.",
             prison: "2. Selecteer een cel voor de arrestant.",
@@ -476,5 +495,22 @@ export class UI {
         this.refresh();
 
     }
+
+    getOperationMode() { return document.querySelector('input[name="operationMode"]:checked')?.value || "automatic"; }
+    getAutoplayInterval() { return Number(document.getElementById("autoplayInterval")?.value || 5); }
+    setOperationConfig(mode="automatic", interval=5) {
+        const radio=document.querySelector(`input[name="operationMode"][value="${mode}"]`); if(radio)radio.checked=true;
+        const range=document.getElementById("autoplayInterval");if(range)range.value=interval;
+        this.updateModeConfigVisibility();
+    }
+    updateModeConfigVisibility() {
+        const autoplay=this.getOperationMode()==="autoplay", box=document.getElementById("autoplayIntervalConfig"), range=document.getElementById("autoplayInterval"), output=document.getElementById("autoplayIntervalValue");
+        if(box)box.hidden=!autoplay;if(range)range.disabled=!autoplay;if(output)output.textContent=`Nieuwe melding iedere ${this.getAutoplayInterval()} seconden`;
+    }
+    showVehicleSelection(selection) {
+        const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");if(!panel||!details)return;
+        panel.hidden=false;details.innerHTML=`<strong>${selection.vehicleId}</strong><dl><dt>Huidig district</dt><dd>${selection.district}</dd><dt>Afstand</dt><dd>${selection.distance} netwerksegment(en)</dd><dt>Geschatte aanrijtijd</dt><dd>${selection.eta} sec</dd><dt>Over in vertrekdistrict</dt><dd>${selection.remaining}</dd><dt>Verwachte dekking</dt><dd>${selection.coverage}%</dd></dl>`;
+    }
+    hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
 
 }
