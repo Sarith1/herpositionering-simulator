@@ -119,6 +119,7 @@ export class UI {
             const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");
             if(panel)panel.hidden=!buttonState.vehicleSelectionActive;
             if(details&&buttonState.vehicleSelectionActive&&!simulator.vehicleSelection.selectedVehicleId)details.innerHTML="<p>Klik op een lichtblauw gemarkeerd beschikbaar voertuig op de kaart.</p>";
+            this.updateManualReposition(buttonState);
         }
 
     }
@@ -394,6 +395,10 @@ export class UI {
             this.stepHintElement.textContent = simulator.selectedVehicleId ? "5. Bevestig de keuze met ‘Voertuig inzetten’." : "4. Kies een beschikbaar voertuig op de kaart.";
             return;
         }
+        if (simulator.manualRepositionState.active) {
+            this.stepHintElement.textContent = simulator.manualRepositionState.selectedVehicleId ? "Dekking: kies een doeldistrict op de kaart." : "Dekking: kies eerst een beschikbaar voertuig.";
+            return;
+        }
         if (sessionConfig.operationMode === "autoplay") {
             this.stepHintElement.textContent = simulator.autoplayState.running ? "Autoplay verwerkt meldingen automatisch." : "Druk op Play om autoplay te starten.";
             return;
@@ -528,5 +533,15 @@ export class UI {
         panel.hidden=false;details.innerHTML=`<dl><dt>Voertuig</dt><dd><strong>${selection.vehicleId}</strong></dd><dt>Huidige standplaats</dt><dd>${selection.district}</dd><dt>Melding</dt><dd>${selection.incident}</dd><dt>Geschatte route</dt><dd>${selection.route}</dd><dt>Geschatte aanrijtijd</dt><dd>${selection.eta} seconden</dd><dt>Voertuigen die achterblijven</dt><dd>${selection.remaining}</dd><dt>Verwachte dekking na inzet</dt><dd>${selection.coverage}%</dd></dl>`;
     }
     hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
+    updateManualReposition(buttonState){
+        const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),start=document.getElementById("startRepositionBtn"),confirm=document.getElementById("confirmRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction");
+        if(panel)panel.hidden=!state.active;if(start){start.disabled=!buttonState.manualRepositionStart;start.hidden=state.active;}if(confirm)confirm.disabled=!buttonState.manualRepositionConfirm;
+        if(instruction&&state.active)instruction.textContent=state.selectedVehicleId?"Kies een doeldistrict op de kaart.":"Kies eerst een beschikbaar voertuig.";
+        if(!state.active){const details=document.getElementById("manualRepositionDetails");if(details)details.innerHTML="";}
+    }
+    showRepositionPreview(preview){
+        const details=document.getElementById("manualRepositionDetails");if(!details)return;
+        details.innerHTML=`<dl><dt>Voertuig</dt><dd><strong>${preview.vehicleId}</strong></dd><dt>Van</dt><dd>${preview.origin}</dd><dt>Naar</dt><dd>${preview.target}</dd><dt>Route</dt><dd>${preview.route}</dd><dt>Voertuigen vertrekdistrict na vertrek</dt><dd>${preview.originAfter}</dd><dt>Voertuigen doeldistrict na aankomst</dt><dd>${preview.targetAfter}</dd><dt>Huidige dekking</dt><dd>${preview.current}%</dd><dt>Verwachte dekking tijdens verplaatsing</dt><dd>${preview.during}%</dd><dt>Verwachte dekking na aankomst</dt><dd>${preview.after}%</dd></dl>${preview.warning?`<p class="reposition-warning"><strong>Waarschuwing:</strong> ${preview.origin} heeft tijdens deze verplaatsing geen beschikbaar voertuig meer.</p>`:""}`;
+    }
 
 }
