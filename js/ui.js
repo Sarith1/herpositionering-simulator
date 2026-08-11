@@ -43,6 +43,7 @@ export class UI {
         this.prisonConfigContainer = null;
         this.failureOverlay = null;
         this.gameOverLogged = false;
+        this.travelTimeTimer = null;
 
     }
 
@@ -106,6 +107,9 @@ export class UI {
         const percentageInput = document.getElementById("multiUnitIncidentPercentage");
         percentageInput?.addEventListener("input", () => this.updateMultiUnitIncidentLabel());
         this.setMultiUnitIncidentPercentage(sessionConfig.multiUnitIncidentPercentage);
+        this.setAutoplayDelayValues(sessionConfig.autoplayMinDelaySeconds, sessionConfig.autoplayMaxDelaySeconds);
+        ["autoplayMinDelay", "autoplayMaxDelay"].forEach(id => document.getElementById(id)?.addEventListener("input", event => this.handleAutoplayDelayInput(event.target)));
+        this.updateModeConfigVisibility();
 
     }
 
@@ -473,7 +477,8 @@ export class UI {
 
         const item = document.createElement("div");
 
-        item.className = "log-item";
+        const type=(message.match(/^\[([^\]]+)\]/)?.[1]||"INFO").toLowerCase().replace(/[^a-z]/g,"");
+        item.className = `log-item log-item--${type}`;
 
         item.innerHTML = `
             <div class="log-time">${time}</div>
@@ -504,12 +509,14 @@ export class UI {
 
     showRepositioningFailure(failure) {
 
-        if (!this.failureOverlay || !failure || this.gameOverLogged) return;
+        if (!this.failureOverlay || !failure || simulator.failureInspectionMode) return;
 
-        this.gameOverLogged = true;
-        this.log(`[DEKKING] ${failure.districtName} heeft geen beschikbaar voertuig meer.`);
-        this.log(`[HERPOSITIONERING] Er is geen veilig donor-district beschikbaar voor ${failure.districtName}.`);
-        this.log(`[EINDE SESSIE] ${repositioningFailureConfig.title}.`);
+        if(!this.gameOverLogged){
+            this.gameOverLogged = true;
+            this.log(`[DEKKING] ${failure.districtName} heeft geen beschikbaar voertuig meer.`);
+            this.log(`[HERPOSITIONERING] Er is geen veilig donor-district beschikbaar voor ${failure.districtName}.`);
+            this.log(`[EINDE SESSIE] ${repositioningFailureConfig.title}.`);
+        }
 
         this.failureOverlay.querySelector("[data-failure-title]").textContent = repositioningFailureConfig.title;
         this.failureOverlay.querySelector("[data-failure-explanation]").textContent = repositioningFailureConfig.explanation;
@@ -525,8 +532,36 @@ export class UI {
 
         if (this.failureOverlay) this.failureOverlay.hidden = true;
         document.querySelector(".simulator")?.classList.remove("failure-active");
+        const button=document.getElementById("failureReturnBtn");
+        if(button)button.hidden=true;
+        simulator.failureInspectionMode=false;
         this.gameOverLogged = false;
 
+    }
+
+    hideRepositioningFailureForInspection() {
+        if (this.failureOverlay) this.failureOverlay.hidden = true;
+        document.querySelector(".simulator")?.classList.remove("failure-active");
+        const button=document.getElementById("failureReturnBtn");
+        if(button)button.hidden=false;
+    }
+
+    showRepositioningFailureScreen() {
+        simulator.failureInspectionMode=false;
+        const button=document.getElementById("failureReturnBtn");
+        if(button)button.hidden=true;
+        this.showRepositioningFailure(simulator.repositioningFailure);
+    }
+
+    showTravelTime(seconds) {
+        const toast=document.getElementById("travelTimeToast"), value=document.getElementById("travelTimeToastValue");
+        if(!toast||!value)return;
+        clearTimeout(this.travelTimeTimer);
+        toast.classList.remove("is-visible");
+        void toast.offsetWidth;
+        value.textContent=`${seconds} sec`;
+        toast.classList.add("is-visible");
+        this.travelTimeTimer=setTimeout(()=>toast.classList.remove("is-visible"),2000);
     }
 
     vehicleReturned(vehicleId) {
@@ -545,8 +580,21 @@ export class UI {
         this.updateModeConfigVisibility();
     }
     updateModeConfigVisibility() {
-        // Autoplay gebruikt voor iedere melding een nieuw willekeurig interval.
+        const config=document.getElementById("autoplayIntervalConfig");
+        if(config)config.hidden=this.getOperationMode()!=="autoplay";
     }
+    getAutoplayDelayValues(){return{min:Number(document.getElementById("autoplayMinDelay")?.value||1),max:Number(document.getElementById("autoplayMaxDelay")?.value||20)};}
+    setAutoplayDelayValues(min=1,max=20){
+        const minInput=document.getElementById("autoplayMinDelay"),maxInput=document.getElementById("autoplayMaxDelay");
+        if(minInput)minInput.value=String(min);if(maxInput)maxInput.value=String(Math.max(min,max));this.updateAutoplayDelayLabels();
+    }
+    handleAutoplayDelayInput(input){
+        const min=document.getElementById("autoplayMinDelay"),max=document.getElementById("autoplayMaxDelay");if(!min||!max)return;
+        if(input===min&&Number(min.value)>Number(max.value))max.value=min.value;
+        if(input===max&&Number(max.value)<Number(min.value))min.value=max.value;
+        this.updateAutoplayDelayLabels();
+    }
+    updateAutoplayDelayLabels(){const {min,max}=this.getAutoplayDelayValues();const a=document.getElementById("autoplayMinDelayLabel"),b=document.getElementById("autoplayMaxDelayLabel");if(a)a.textContent=`${min} sec`;if(b)b.textContent=`${max} sec`;}
     showVehicleSelection(selection) {
         const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");if(!panel||!details)return;
         const incident=simulator.incidents.find(item=>item.id===simulator.vehicleSelection.incidentId);

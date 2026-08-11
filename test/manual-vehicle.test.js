@@ -76,6 +76,17 @@ test("twenty autoplay schedules are in range and are recalculated",()=>{
   assert.equal(delays.every(delay=>delay>=1&&delay<=20),true);assert.ok(new Set(delays).size>1);
 });
 
+test("configured autoplay range is inclusive and survives current-session reset",()=>{
+  const engine=new Engine();engine.reset({operationMode:"autoplay",autoplayMinDelaySeconds:4,autoplayMaxDelaySeconds:12});
+  const original=Math.random;
+  try{
+    Math.random=()=>0;assert.equal(engine.scheduleNextIncident(0),4);
+    Math.random=()=>.9999;assert.equal(engine.scheduleNextIncident(0),12);
+    engine.reset();assert.equal(sessionConfig.autoplayMinDelaySeconds,4);assert.equal(sessionConfig.autoplayMaxDelaySeconds,12);
+    engine.reset({restoreDefaults:true});assert.equal(sessionConfig.autoplayMinDelaySeconds,1);assert.equal(sessionConfig.autoplayMaxDelaySeconds,20);
+  }finally{Math.random=original;}
+});
+
 test("dispatch lifecycle is OPEN to ASSIGNED to HANDLED and reset clears all scheduler state",()=>{
   const engine=preparedEngine("automatic"),incident=simulator.activeIncident;
   assert.equal(incident.status,"OPEN");const result=engine.dispatchVehicle();assert.equal(result.success,true);

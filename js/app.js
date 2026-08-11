@@ -8,7 +8,7 @@ Hoofdcontroller van de applicatie.
 ==========================================================
 */
 
-import { createDefaultVehiclesPerDistrict, getDefaultPrisonDistrictIds, simulator } from "./data.js";
+import { createDefaultVehiclesPerDistrict, getDefaultPrisonDistrictIds, sessionConfig, simulator } from "./data.js";
 import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
@@ -54,7 +54,15 @@ export class App {
         this.bindButton("resetBtn", () => this.resetCurrentSession());
         this.bindButton("failureResetBtn", () => this.resetCurrentSession());
         this.bindButton("failureNewSessionBtn", () => this.newSessionSetup());
-        this.bindButton("failureInspectBtn", () => ({ success: true, message: "[EINDE SESSIE] Kaartsituatie blijft zichtbaar." }));
+        this.bindButton("failureInspectBtn", () => {
+            simulator.failureInspectionMode = true;
+            this.ui.hideRepositioningFailureForInspection();
+            return { success: true, message: "[EINDE SESSIE] Inspectiemodus actief; de simulatie blijft geblokkeerd." };
+        });
+        this.bindButton("failureReturnBtn", () => {
+            this.ui.showRepositioningFailureScreen();
+            return { success: true, message: "[EINDE SESSIE] Eindscherm opnieuw geopend." };
+        });
         this.bindButton("applyConfigBtn", () => this.applyConfiguredSession());
         this.bindButton("restoreDefaultsBtn", () => {
             const defaults = createDefaultVehiclesPerDistrict();
@@ -62,6 +70,7 @@ export class App {
             this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
             this.ui.setOperationConfig("automatic", 5);
             this.ui.setMultiUnitIncidentPercentage(20);
+            this.ui.setAutoplayDelayValues(1, 20);
             return this.engine.reset({ restoreDefaults: true });
         });
         document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
@@ -83,6 +92,7 @@ export class App {
                 this.ui.log(result.message);
                 if (result.followup) this.ui.log(result.followup);
                 if (id === "cancelVehicleBtn" || (id === "confirmVehicleBtn" && result.success)) this.ui.hideVehicleSelection();
+                if (id === "travelBtn" && result.success && sessionConfig.operationMode !== "autoplay") this.ui.showTravelTime?.(simulator.travelTime);
 
                 if (id === "resetBtn" || id === "failureResetBtn") this.ui.hideRepositioningFailure();
 
@@ -130,6 +140,8 @@ export class App {
             availablePrisons,
             operationMode: this.ui.getOperationMode(),
             multiUnitIncidentPercentage: this.ui.getMultiUnitIncidentPercentage()
+            ,autoplayMinDelaySeconds: this.ui.getAutoplayDelayValues().min
+            ,autoplayMaxDelaySeconds: this.ui.getAutoplayDelayValues().max
         });
     }
 
@@ -144,6 +156,7 @@ export class App {
         this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
         this.ui.setOperationConfig("automatic", 5);
         this.ui.setMultiUnitIncidentPercentage(20);
+        this.ui.setAutoplayDelayValues(1, 20);
         return this.engine.reset({ restoreDefaults: true });
     }
 
