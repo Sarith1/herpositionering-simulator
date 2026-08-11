@@ -17,7 +17,9 @@ const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
 const DETENTION_COMPLEX_SCALE = 1.20;
+export const DETENTION_COMPLEX_OFFSET_X = 55;
 const DETENTION_COMPLEX_OFFSET_Y = -62;
+const DETENTION_COMPLEX_SAFE_MARGIN = 48;
 export const REPOSITION_TARGET_HIT_RADIUS = 95;
 export const REPOSITION_TARGET_LABEL_WIDTH = 190;
 export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
@@ -275,7 +277,12 @@ export class MapView {
                 group.setAttribute("class", `prison-marker ${available ? "available" : "unavailable"}${selected ? " selected" : ""}`);
                 group.setAttribute("aria-label", `Cellencomplex ${district.name}. ${available ? "Beschikbaar" : "Niet beschikbaar"}`);
                 group.querySelector("title").textContent = `Cellencomplex ${district.name}\n${available ? "Beschikbaar" : "Niet beschikbaar"}`;
-                group.setAttribute("transform", `translate(${district.x} ${district.y})`);
+                const position = this.getDetentionComplexPosition(district);
+                group.setAttribute("transform", `translate(${position.x} ${position.y})`);
+                group.querySelector(".detention-connector").setAttribute(
+                    "d",
+                    `M0 ${24 * DETENTION_COMPLEX_SCALE}L${district.x - position.x} ${district.y - position.y}`
+                );
             });
 
         this.prisonLayer
@@ -285,6 +292,16 @@ export class MapView {
                     element.remove();
                 }
             });
+    }
+
+    getDetentionComplexPosition(district) {
+        return {
+            x: Math.min(
+                district.x + DETENTION_COMPLEX_OFFSET_X,
+                this.width - DETENTION_COMPLEX_SAFE_MARGIN
+            ),
+            y: district.y + DETENTION_COMPLEX_OFFSET_Y
+        };
     }
 
     getOrCreatePrisonElement(districtId) {
@@ -302,7 +319,6 @@ export class MapView {
 
         const connector = document.createElementNS("http://www.w3.org/2000/svg", "path");
         connector.setAttribute("class", "detention-connector");
-        connector.setAttribute("d", `M0 ${24 * DETENTION_COMPLEX_SCALE}V${-DETENTION_COMPLEX_OFFSET_Y - 32}`);
 
         const visual = document.createElementNS("http://www.w3.org/2000/svg", "g");
         visual.setAttribute("class", "prison-visual");
