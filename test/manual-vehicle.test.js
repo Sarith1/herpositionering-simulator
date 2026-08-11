@@ -36,7 +36,7 @@ test("invalid vehicles cannot be selected and cancellation/reset fully clean sel
 
 test("automatic and autoplay retain automatic dispatch",()=>{
   let engine=preparedEngine("automatic");assert.equal(engine.dispatchVehicle().success,true);assert.ok(vehicles.some(v=>v.status==="TO_INCIDENT"));
-  engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});const result=engine.createIncident({automatic:true});
+  engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});const result=engine.createIncident({autoplayGenerated:true});
   assert.equal(result.success,true);assert.ok(vehicles.some(v=>v.status==="TO_INCIDENT"));assert.equal(simulator.vehicleSelection.active,false);
 });
 
