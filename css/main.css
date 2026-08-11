@@ -77,8 +77,6 @@ button {
 .incident-unit-badge { fill:#fff; stroke:#ef4444; stroke-width:2; }
 .incident-unit-badge-text { fill:#991b1b; font-size:12px; font-weight:800; }
 .incident-marker--multi .incident-ring { stroke-width:5; }
-.incident-progress { fill:#fff; font-size:12px; font-weight:700; paint-order:stroke; stroke:#08121d; stroke-width:3px; }
-
 #app {
 
     width: 100vw;

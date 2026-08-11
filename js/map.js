@@ -358,7 +358,6 @@ export class MapView {
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
             element.classList.toggle("waiting", ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status));
-            element.querySelector(".incident-progress").textContent = `${incident.arrivedVehicleIds?.length || 0}/${incident.requiredUnits || 1} aanwezig · ${incident.assignedVehicleIds?.length || 0}/${incident.requiredUnits || 1} onderweg`;
             const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status);
             element.classList.toggle("incident--selectable", selectable);
             element.classList.toggle("incident--selected", simulator.vehicleSelection.incidentId === incident.id || simulator.activeIncident?.id === incident.id);
@@ -396,13 +395,10 @@ export class MapView {
         text.textContent = "🦹";
 
         visualGroup.append(ring, text);
-        const progress = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        progress.setAttribute("class", "incident-progress");progress.setAttribute("text-anchor", "middle");progress.setAttribute("y", "45");
         if (incident.requiredUnits > 1) {
             const badge=document.createElementNS("http://www.w3.org/2000/svg","circle");badge.setAttribute("class","incident-unit-badge");badge.setAttribute("cx","23");badge.setAttribute("cy","-22");badge.setAttribute("r","14");
             const badgeText=document.createElementNS("http://www.w3.org/2000/svg","text");badgeText.setAttribute("class","incident-unit-badge-text");badgeText.setAttribute("x","23");badgeText.setAttribute("y","-18");badgeText.setAttribute("text-anchor","middle");badgeText.textContent=`${incident.requiredUnits}x`;visualGroup.append(badge,badgeText);
         }
-        visualGroup.append(progress);
         positionGroup.appendChild(visualGroup);
 
         const handleIntroEnd = event => {
