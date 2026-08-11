@@ -353,12 +353,13 @@ export class MapView {
 
     syncIncident() {
         const visible = new Set();
-        (simulator.incidents || []).filter(i => i.status === "OPEN" || i.status === "ASSIGNED").forEach(incident => {
+        (simulator.incidents || []).filter(i => i.status !== "HANDLED").forEach(incident => {
             visible.add(incident.id);
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
-            element.classList.toggle("waiting", incident.status === "OPEN");
-            const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && incident.status === "OPEN";
+            element.classList.toggle("waiting", ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status));
+            element.querySelector(".incident-progress").textContent = `${incident.arrivedVehicleIds?.length || 0}/${incident.requiredUnits || 1} aanwezig · ${incident.assignedVehicleIds?.length || 0}/${incident.requiredUnits || 1} onderweg`;
+            const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status);
             element.classList.toggle("incident--selectable", selectable);
             element.classList.toggle("incident--selected", simulator.vehicleSelection.incidentId === incident.id || simulator.activeIncident?.id === incident.id);
             element.setAttribute("tabindex", selectable ? "0" : "-1");
@@ -378,6 +379,7 @@ export class MapView {
 
         const visualGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         visualGroup.setAttribute("class", "incident-visual incident-marker--intro");
+        visualGroup.classList.toggle("incident-marker--multi", incident.requiredUnits > 1);
 
         const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         ring.setAttribute("class", "incident-ring");
@@ -394,6 +396,13 @@ export class MapView {
         text.textContent = "🦹";
 
         visualGroup.append(ring, text);
+        const progress = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        progress.setAttribute("class", "incident-progress");progress.setAttribute("text-anchor", "middle");progress.setAttribute("y", "45");
+        if (incident.requiredUnits > 1) {
+            const badge=document.createElementNS("http://www.w3.org/2000/svg","circle");badge.setAttribute("class","incident-unit-badge");badge.setAttribute("cx","23");badge.setAttribute("cy","-22");badge.setAttribute("r","14");
+            const badgeText=document.createElementNS("http://www.w3.org/2000/svg","text");badgeText.setAttribute("class","incident-unit-badge-text");badgeText.setAttribute("x","23");badgeText.setAttribute("y","-18");badgeText.setAttribute("text-anchor","middle");badgeText.textContent=`${incident.requiredUnits}x`;visualGroup.append(badge,badgeText);
+        }
+        visualGroup.append(progress);
         positionGroup.appendChild(visualGroup);
 
         const handleIntroEnd = event => {
@@ -498,7 +507,7 @@ export class MapView {
         element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
-        const selected=simulator.vehicleSelection.selectedVehicleId===vehicle.id||reposition.selectedVehicleId===vehicle.id;
+        const selected=(simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id;
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
         element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}`);
     }

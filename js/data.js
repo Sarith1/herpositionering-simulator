@@ -137,6 +137,7 @@ Voertuigen
 */
 
 export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
+export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
 
 // Cellencomplexen zijn zelfstandige routenetwerknodes. De centrale locatie ligt
 // bewust iets ten westen van het kaartmidden om labels en voertuigclusters vrij te houden.
@@ -151,7 +152,8 @@ export const sessionConfig = {
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
 
     availablePrisons: getDefaultPrisonDistrictIds(),
-    operationMode: "automatic"
+    operationMode: "automatic",
+    multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE
 
 };
 
@@ -193,6 +195,7 @@ export function resetSessionConfigDefaults() {
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
     sessionConfig.operationMode = "automatic";
+    sessionConfig.multiUnitIncidentPercentage = DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE;
 
     initializeVehicles();
 
@@ -287,10 +290,11 @@ export const simulator = {
     ,incidents: []
 
     ,selectedVehicleId: null
+    ,selectedVehicleIds: []
 
-    ,vehicleSelection: { active: false, incidentId: null, selectedVehicleId: null, confirming: false }
+    ,vehicleSelection: { active: false, incidentId: null, selectedVehicleId: null, selectedVehicleIds: [], confirming: false }
 
-    ,inputCycleState: { step: "INCIDENT", incidentId: null, prisonId: null, travelTime: null, selectedVehicleId: null }
+    ,inputCycleState: { step: "INCIDENT", incidentId: null, prisonId: null, travelTime: null, selectedVehicleId: null, selectedVehicleIds: [] }
 
     ,manualRepositionState: { phase: "idle", selectedVehicleId: null, targetDistrictId: null }
 

@@ -90,6 +90,11 @@
                     <label><input type="radio" name="operationMode" value="manualVehicle"> Handmatig voertuig kiezen</label>
                     <label><input type="radio" name="operationMode" value="autoplay"> Autoplay</label>
                 </div>
+                <label class="multi-unit-config" for="multiUnitIncidentPercentage">
+                    <strong>Percentage grotere incidenten</strong>
+                    <input id="multiUnitIncidentPercentage" type="range" min="0" max="100" step="5" value="20">
+                    <span id="multiUnitIncidentPercentageLabel">20% van de meldingen vraagt meerdere eenheden</span>
+                </label>
                 <div id="vehicleConfig" class="vehicle-config"></div>
                 <div class="config-summary">Totaal: <strong id="vehicleConfigTotal">21</strong> voertuigen</div>
                 <h3>Beschikbare cellencomplexen</h3>
@@ -107,7 +112,7 @@
 
             <div id="stepHint" class="step-hint">Start met een melding.</div>
             <div id="manualDispatchPanel" class="manual-dispatch-panel" hidden>
-                <h3>Geselecteerd voertuig</h3><div id="vehicleSelectionDetails"></div>
+                <h3>Voertuigen selecteren</h3><div id="vehicleSelectionDetails"></div>
                 <button id="cancelVehicleBtn" class="secondary-button">Annuleer voertuigkeuze</button>
             </div>
             <section id="manualRepositionPanel" class="manual-reposition-panel" hidden aria-live="polite">

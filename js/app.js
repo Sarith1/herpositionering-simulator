@@ -61,6 +61,7 @@ export class App {
             this.ui.setConfigValues(defaults);
             this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
             this.ui.setOperationConfig("automatic", 5);
+            this.ui.setMultiUnitIncidentPercentage(20);
             return this.engine.reset({ restoreDefaults: true });
         });
         document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
@@ -127,7 +128,8 @@ export class App {
         return this.engine.reset({
             vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
             availablePrisons,
-            operationMode: this.ui.getOperationMode()
+            operationMode: this.ui.getOperationMode(),
+            multiUnitIncidentPercentage: this.ui.getMultiUnitIncidentPercentage()
         });
     }
 
@@ -141,6 +143,7 @@ export class App {
         this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
         this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
         this.ui.setOperationConfig("automatic", 5);
+        this.ui.setMultiUnitIncidentPercentage(20);
         return this.engine.reset({ restoreDefaults: true });
     }
 
