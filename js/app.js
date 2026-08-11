@@ -8,7 +8,7 @@ Hoofdcontroller van de applicatie.
 ==========================================================
 */
 
-import { createDefaultVehiclesPerDistrict, getDefaultPrisonDistrictIds, sessionConfig, simulator } from "./data.js";
+import { createDefaultDetentionCapacity, createDefaultVehiclesPerDistrict, getDefaultPrisonDistrictIds, sessionConfig, simulator } from "./data.js";
 import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
@@ -68,6 +68,7 @@ export class App {
             const defaults = createDefaultVehiclesPerDistrict();
             this.ui.setConfigValues(defaults);
             this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
+            this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
             this.ui.setOperationConfig("automatic", 5);
             this.ui.setMultiUnitIncidentPercentage(20);
             this.ui.setAutoplayDelayValues(1, 20);
@@ -92,7 +93,7 @@ export class App {
                 this.ui.log(result.message);
                 if (result.followup) this.ui.log(result.followup);
                 if (id === "cancelVehicleBtn" || (id === "confirmVehicleBtn" && result.success)) this.ui.hideVehicleSelection();
-                if (id === "travelBtn" && result.success && sessionConfig.operationMode !== "autoplay") this.ui.showTravelTime?.(simulator.travelTime);
+                if (id === "travelBtn" && result.success && sessionConfig.operationMode !== "autoplay") this.ui.showTravelTime?.(simulator.travelTime, simulator.activeIncident?.capacityExceeded);
 
                 if (id === "resetBtn" || id === "failureResetBtn") this.ui.hideRepositioningFailure();
 
@@ -120,7 +121,9 @@ export class App {
         if (!event) return;
         if (event.type === "incidentCleared") this.ui.log(`[AANKOMST] ${event.vehicle.id} is aangekomen bij de melding.`);
         if (event.type === "transport") this.ui.log(`[TRANSPORT] ${event.vehicle.id} rijdt naar de cel in ${event.district.name}.`);
-        if (event.type === "prisonReached") this.ui.log(`[CEL] ${event.vehicle.id} is ${event.seconds} seconden tijdelijk bezet.`);
+        if (event.type === "prisonReached") this.ui.log(`[CAPACITEIT] ${event.prison.name}: ${event.occupancy}/${event.capacity} bezet.`);
+        if (event.type === "prisonReleased") this.ui.log(`[CEL] 1 plek vrijgekomen in ${event.prison.name}.`);
+        if (event.type === "capacityWarning") { this.ui.log(event.message); this.ui.showTravelTime(event.incident.travelTime, true); }
         if (event.type === "returning") this.ui.log(`[TERUGRIT] ${event.vehicle.id} rijdt terug naar de standplaats.`);
         if (event.type === "vehicleReturned") this.ui.vehicleReturned(event.vehicle.id);
         if (event.type === "repositionStarted") this.ui.log(`[HERPOSITIONERING] ${event.vehicle.id} rijdt naar ${event.district.name}.`);
@@ -138,6 +141,7 @@ export class App {
         return this.engine.reset({
             vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
             availablePrisons,
+            detentionCapacity: this.ui.getConfiguredDetentionCapacity(),
             operationMode: this.ui.getOperationMode(),
             multiUnitIncidentPercentage: this.ui.getMultiUnitIncidentPercentage()
             ,autoplayMinDelaySeconds: this.ui.getAutoplayDelayValues().min
@@ -154,6 +158,7 @@ export class App {
         this.ui.hideRepositioningFailure();
         this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
         this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
+        this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
         this.ui.setOperationConfig("automatic", 5);
         this.ui.setMultiUnitIncidentPercentage(20);
         this.ui.setAutoplayDelayValues(1, 20);

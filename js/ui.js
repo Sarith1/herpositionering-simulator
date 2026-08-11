@@ -16,6 +16,8 @@ Verantwoordelijk voor:
 import {
     districts,
     detentionComplexes,
+    getTotalDetentionCapacity,
+    getTotalDetentionOccupancy,
     DEFAULT_VEHICLES_PER_DISTRICT,
     sessionConfig,
     repositioningFailureConfig,
@@ -163,16 +165,39 @@ export class UI {
         this.prisonConfigContainer.innerHTML = "";
 
         detentionComplexes.forEach(district => {
-            const label = document.createElement("label");
+            const label = document.createElement("div");
             label.className = "prison-config-row";
             const checked = sessionConfig.availablePrisons.includes(district.id) ? "checked" : "";
             label.innerHTML = `
-                <input type="checkbox" value="${district.id}" data-prison-id="${district.id}" ${checked}>
-                <span>${district.name}</span>
+                <label class="prison-availability"><input type="checkbox" value="${district.id}" data-prison-id="${district.id}" ${checked}> <span>${district.name}</span></label>
+                <label class="prison-capacity">Aantal plekken <input type="number" min="0" max="50" step="1" value="${sessionConfig.detentionCapacity[district.id]}" data-prison-capacity-id="${district.id}" ${checked ? "" : "disabled"}></label>
             `;
             this.prisonConfigContainer.appendChild(label);
         });
+        this.prisonConfigContainer.addEventListener("input", event => {
+            if (event.target.matches("[data-prison-id]")) {
+                const capacityInput=this.prisonConfigContainer.querySelector(`[data-prison-capacity-id="${event.target.dataset.prisonId}"]`);
+                if(capacityInput)capacityInput.disabled=!event.target.checked;
+            }
+            this.updateCapacityWarning();
+        });
+        this.updateCapacityWarning();
 
+    }
+
+    getConfiguredDetentionCapacity() {
+        return Object.fromEntries([...this.prisonConfigContainer.querySelectorAll("[data-prison-capacity-id]")].map(input => [input.dataset.prisonCapacityId, Math.max(0, Math.min(50, Number.parseInt(input.value,10)||0))]));
+    }
+
+    setDetentionCapacityValues(values) {
+        this.prisonConfigContainer?.querySelectorAll("[data-prison-capacity-id]").forEach(input => { input.value=String(values[input.dataset.prisonCapacityId] ?? 10); });
+        this.updateCapacityWarning();
+    }
+
+    updateCapacityWarning() {
+        const warning=document.getElementById("detentionCapacityWarning");if(!warning)return;
+        const selected=new Set(this.getConfiguredAvailablePrisons()),capacities=this.getConfiguredDetentionCapacity();
+        warning.hidden=[...selected].reduce((sum,id)=>sum+(capacities[id]||0),0)!==0;
     }
 
     getConfiguredAvailablePrisons() {
@@ -191,7 +216,10 @@ export class UI {
         const selected = new Set(prisonIds);
         this.prisonConfigContainer.querySelectorAll("input[data-prison-id]").forEach(input => {
             input.checked = selected.has(input.dataset.prisonId);
+            const capacityInput=this.prisonConfigContainer.querySelector(`[data-prison-capacity-id="${input.dataset.prisonId}"]`);
+            if(capacityInput)capacityInput.disabled=!input.checked;
         });
+        this.updateCapacityWarning();
 
     }
 
@@ -278,6 +306,8 @@ export class UI {
         document.getElementById("repositionCount").textContent = vehicles.filter(v => v.status === "REPOSITIONING").length;
         document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay"})[sessionConfig.operationMode];
         document.getElementById("complexCount").textContent = sessionConfig.availablePrisons.length;
+        const occupancy=getTotalDetentionOccupancy(),capacity=getTotalDetentionCapacity(),capacityCount=document.getElementById("detentionCapacityCount");
+        if(capacityCount){capacityCount.textContent=`${occupancy} / ${capacity}`;capacityCount.dataset.level=capacity===0||occupancy>=capacity?"full":occupancy/capacity>=.8?"near":"available";}
         document.getElementById("incidentCount").textContent = (simulator.incidents || []).filter(i => i.status !== "COMPLETED").length;
         const status = document.getElementById("autoplayStatus");
         if (status && sessionConfig.operationMode === "autoplay") {
@@ -553,13 +583,15 @@ export class UI {
         this.showRepositioningFailure(simulator.repositioningFailure);
     }
 
-    showTravelTime(seconds) {
+    showTravelTime(seconds, capacityExceeded=false) {
         const toast=document.getElementById("travelTimeToast"), value=document.getElementById("travelTimeToastValue");
         if(!toast||!value)return;
         clearTimeout(this.travelTimeTimer);
         toast.classList.remove("is-visible");
         void toast.offsetWidth;
         value.textContent=`${seconds} sec`;
+        toast.classList.toggle("capacity-exceeded",capacityExceeded);
+        const reason=document.getElementById("travelTimeToastReason");if(reason)reason.textContent=capacityExceeded?"Cellencapaciteit bereikt — reistijd verdubbeld":"naar cellencomplex";
         toast.classList.add("is-visible");
         this.travelTimeTimer=setTimeout(()=>toast.classList.remove("is-visible"),2000);
     }

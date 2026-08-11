@@ -60,6 +60,7 @@
             <div class="card"><div id="repositionCount">0</div><small>Herpositionering</small></div>
             <div class="card"><div id="modeCount">Automatisch</div><small>Modus</small></div>
             <div class="card"><div id="complexCount">3</div><small>Cellen open</small></div>
+            <div class="card capacity-card"><div id="detentionCapacityCount">0 / 30</div><small>Cellencapaciteit</small></div>
 
         </div>
 
@@ -89,6 +90,7 @@
                 <div class="config-section"><h3>Cellencomplexen</h3>
                 <p class="config-help">Selecteer minimaal één complex voor celritten.</p>
                 <div id="prisonConfig" class="prison-config"></div></div>
+                <p id="detentionCapacityWarning" class="capacity-warning" role="status" hidden>Let op: totale beschikbare cellencapaciteit is 0. Alle celritten duren dubbel zo lang.</p>
                 <div class="config-section"><h3>Werkwijze</h3>
                 <div id="operationModeConfig" class="mode-config">
                     <label><input type="radio" name="operationMode" value="automatic" checked> Automatisch</label>
@@ -175,7 +177,7 @@
     </footer>
 
     <div id="travelTimeToast" class="travel-time-toast" role="status" aria-live="polite" aria-atomic="true">
-        <span>Reistijd</span><strong id="travelTimeToastValue">—</strong><small>naar cellencomplex</small>
+        <span>Reistijd</span><strong id="travelTimeToastValue">—</strong><small id="travelTimeToastReason">naar cellencomplex</small>
     </div>
     <button id="failureReturnBtn" class="failure-return-button" hidden>Terug naar eindscherm</button>
 
