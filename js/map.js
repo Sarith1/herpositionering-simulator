@@ -61,16 +61,16 @@ export class MapView {
     }
 
     createLegend() {
-        const legend = document.createElement("div");
+        const legend = document.createElement("details");
         legend.className = "map-legend";
         legend.setAttribute("aria-label", "Legenda");
         legend.innerHTML = `
-            <strong>Legenda</strong>
+            <summary>Legenda</summary><div class="legend-details">
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
             <span><span class="legend-icon detention-legend-icon" aria-hidden="true">${this.getDetentionComplexLegendSvg(false)}</span> Beschikbaar cellencomplex</span>
-            <span><span class="legend-icon detention-legend-icon unavailable" aria-hidden="true">${this.getDetentionComplexLegendSvg(true)}</span> Niet beschikbaar cellencomplex</span>
+            <span><span class="legend-icon detention-legend-icon unavailable" aria-hidden="true">${this.getDetentionComplexLegendSvg(true)}</span> Niet beschikbaar cellencomplex</span></div>
         `;
         this.container.appendChild(legend);
     }

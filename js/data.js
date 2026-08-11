@@ -138,6 +138,8 @@ Voertuigen
 
 export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
+export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
+export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 20;
 
 // Cellencomplexen zijn zelfstandige routenetwerknodes. De centrale locatie ligt
 // bewust iets ten westen van het kaartmidden om labels en voertuigclusters vrij te houden.
@@ -153,7 +155,9 @@ export const sessionConfig = {
 
     availablePrisons: getDefaultPrisonDistrictIds(),
     operationMode: "automatic",
-    multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE
+    multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE,
+    autoplayMinDelaySeconds: DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS,
+    autoplayMaxDelaySeconds: DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS
 
 };
 
@@ -196,6 +200,8 @@ export function resetSessionConfigDefaults() {
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
     sessionConfig.operationMode = "automatic";
     sessionConfig.multiUnitIncidentPercentage = DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE;
+    sessionConfig.autoplayMinDelaySeconds = DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS;
+    sessionConfig.autoplayMaxDelaySeconds = DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS;
 
     initializeVehicles();
 
@@ -299,6 +305,7 @@ export const simulator = {
     ,manualRepositionState: { phase: "idle", selectedVehicleId: null, targetDistrictId: null }
 
     ,autoplayState: { running: false, nextIncidentAt: null, nextDelaySeconds: null }
+    ,failureInspectionMode: false
 
 };
 
