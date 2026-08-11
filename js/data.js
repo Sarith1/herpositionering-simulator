@@ -140,6 +140,8 @@ export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
 export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
 export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 20;
+export const DEFAULT_DETENTION_CAPACITY = 10;
+export const MAX_DETENTION_CAPACITY = 50;
 
 // Cellencomplexen zijn zelfstandige routenetwerknodes. De centrale locatie ligt
 // bewust iets ten westen van het kaartmidden om labels en voertuigclusters vrij te houden.
@@ -149,11 +151,20 @@ export const detentionComplexes = [
     { id: "CELL_CENTRAL", name: "Centraal Cellencomplex", x: 410, y: 315, neighbours: ["RS", "RZ", "ZH"] }
 ];
 
+export function createDefaultDetentionCapacity() {
+    return Object.fromEntries(detentionComplexes.map(complex => [complex.id, DEFAULT_DETENTION_CAPACITY]));
+}
+
+export function createEmptyDetentionOccupancy() {
+    return Object.fromEntries(detentionComplexes.map(complex => [complex.id, 0]));
+}
+
 export const sessionConfig = {
 
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
 
     availablePrisons: getDefaultPrisonDistrictIds(),
+    detentionCapacity: createDefaultDetentionCapacity(),
     operationMode: "automatic",
     multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE,
     autoplayMinDelaySeconds: DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS,
@@ -198,6 +209,7 @@ export function resetSessionConfigDefaults() {
 
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
+    sessionConfig.detentionCapacity = createDefaultDetentionCapacity();
     sessionConfig.operationMode = "automatic";
     sessionConfig.multiUnitIncidentPercentage = DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE;
     sessionConfig.autoplayMinDelaySeconds = DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS;
@@ -205,6 +217,21 @@ export function resetSessionConfigDefaults() {
 
     initializeVehicles();
 
+}
+
+export function setDetentionCapacity(capacityByPrison) {
+    sessionConfig.detentionCapacity = Object.fromEntries(detentionComplexes.map(complex => [
+        complex.id,
+        Math.max(0, Math.min(MAX_DETENTION_CAPACITY, Number.parseInt(capacityByPrison?.[complex.id], 10) || 0))
+    ]));
+}
+
+export function getTotalDetentionCapacity() {
+    return sessionConfig.availablePrisons.reduce((total, id) => total + (sessionConfig.detentionCapacity[id] || 0), 0);
+}
+
+export function getTotalDetentionOccupancy() {
+    return sessionConfig.availablePrisons.reduce((total, id) => total + (simulator.detentionOccupancy[id] || 0), 0);
 }
 
 export function setVehiclesPerDistrict(vehiclesPerDistrict) {
@@ -278,6 +305,7 @@ export const simulator = {
     selectedPrison: null,
 
     travelTime: null,
+    detentionOccupancy: createEmptyDetentionOccupancy(),
 
     incidentsHandled: 0,
 

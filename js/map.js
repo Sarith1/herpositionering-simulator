@@ -91,9 +91,9 @@ export class MapView {
 
         this.routeLayer = this.createLayer("routes");
         this.districtLayer = this.createLayer("districts");
+        this.prisonLayer = this.createLayer("prisons");
         this.vehicleLayer = this.createLayer("vehicles");
         this.incidentLayer = this.createLayer("incidents");
-        this.prisonLayer = this.createLayer("prisons");
         this.labelLayer = this.createLayer("labels");
         // Keep interaction targets last so visual map objects can never cover them.
         this.interactionLayer = this.createLayer("interaction");

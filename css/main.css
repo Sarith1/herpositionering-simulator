@@ -1463,12 +1463,24 @@ footer button {
 .incident-position.waiting .incident-ring { stroke:#f59e0b; stroke-dasharray:5 3; }
 .prison-marker .detention-building { fill:#1d4ed8; }
 .prison-marker .detention-roof { fill:#3b82f6; }
-.prison-marker.selected { filter:drop-shadow(0 0 14px #38bdf8); }
+.prison-marker.selected { filter:drop-shadow(0 0 10px rgba(56,189,248,.8)); }
 .prison-marker.selected .prison-selection-ring { animation:prisonPulse 1s infinite; }
 .prison-marker.unavailable { opacity:.25; filter:grayscale(1); }
 .dashboard { flex-wrap:wrap; }
 #modeCount { font-size:clamp(.75rem,1vw,1rem); }
 @keyframes prisonPulse { 50% { stroke-width:8; opacity:.35; } }
+
+.prison-marker:not(.selected) .prison-halo{opacity:.18}
+.prison-config-row{align-items:stretch!important;flex-direction:column;cursor:default!important}
+.prison-availability,.prison-capacity{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.prison-availability{justify-content:flex-start;font-weight:700}
+.prison-capacity{color:var(--text-muted);font-size:11px}
+.prison-capacity input{width:64px;padding:4px 6px;color:var(--text-primary);background:var(--bg-primary);border:1px solid var(--border-subtle);border-radius:4px}
+.prison-capacity input:disabled{opacity:.4}
+.capacity-warning{margin:7px 0 0;padding:7px 8px;color:#fbbf24;background:rgba(245,158,11,.12);border-left:3px solid #f59e0b;font-size:11px;line-height:1.35}
+#detentionCapacityCount[data-level="available"]{color:#86efac}#detentionCapacityCount[data-level="near"]{color:#fbbf24}#detentionCapacityCount[data-level="full"]{color:#f87171}
+.travel-time-toast.capacity-exceeded{border-color:rgba(245,158,11,.8);box-shadow:var(--shadow-large),0 0 30px rgba(245,158,11,.28)}
+.travel-time-toast.capacity-exceeded strong,.travel-time-toast.capacity-exceeded small{color:#fbbf24}
 
 /* Modus-specifieke bediening */
 .dispatch-confirm-button { background:#15803d; border-color:#4ade80; font-weight:800; }
