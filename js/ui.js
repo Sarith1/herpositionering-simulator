@@ -103,6 +103,9 @@ export class UI {
             document.getElementById("repositioningFailureOverlay");
 
         this.renderSessionConfig();
+        const percentageInput = document.getElementById("multiUnitIncidentPercentage");
+        percentageInput?.addEventListener("input", () => this.updateMultiUnitIncidentLabel());
+        this.setMultiUnitIncidentPercentage(sessionConfig.multiUnitIncidentPercentage);
 
     }
 
@@ -118,7 +121,7 @@ export class UI {
             this.updateButtons(buttonState);
             const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");
             if(panel)panel.hidden=!buttonState.vehicleSelectionActive;
-            if(details&&buttonState.vehicleSelectionActive&&!simulator.vehicleSelection.selectedVehicleId)details.innerHTML="<p>Klik op een lichtblauw gemarkeerd beschikbaar voertuig op de kaart.</p>";
+            if(details&&buttonState.vehicleSelectionActive)this.showVehicleSelection();
             this.updateManualReposition(buttonState);
         }
 
@@ -201,6 +204,22 @@ export class UI {
 
     }
 
+    getMultiUnitIncidentPercentage() {
+        const input = document.getElementById("multiUnitIncidentPercentage");
+        return Math.max(0, Math.min(100, Number(input?.value ?? sessionConfig.multiUnitIncidentPercentage)));
+    }
+
+    setMultiUnitIncidentPercentage(value) {
+        const input = document.getElementById("multiUnitIncidentPercentage");
+        if (input) input.value = String(Math.max(0, Math.min(100, Number(value) || 0)));
+        this.updateMultiUnitIncidentLabel();
+    }
+
+    updateMultiUnitIncidentLabel() {
+        const label = document.getElementById("multiUnitIncidentPercentageLabel");
+        if (label) label.textContent = `${this.getMultiUnitIncidentPercentage()}% van de meldingen vraagt meerdere eenheden`;
+    }
+
     setConfigValues(vehiclesPerDistrict) {
 
         if (!this.configContainer) return;
@@ -250,7 +269,7 @@ export class UI {
         if (this.averageTimeElement)
             this.averageTimeElement.textContent = this.getAverageTravelTimeLabel();
 
-        const waiting = (simulator.incidents || []).filter(i => i.status === "OPEN").length;
+        const waiting = (simulator.incidents || []).filter(i => ["OPEN", "PARTIALLY_ASSIGNED"].includes(i.status)).length;
         document.getElementById("waitingCount").textContent = waiting;
         document.getElementById("repositionCount").textContent = vehicles.filter(v => v.status === "REPOSITIONING").length;
         document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay"})[sessionConfig.operationMode];
@@ -528,7 +547,11 @@ export class UI {
     }
     showVehicleSelection(selection) {
         const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");if(!panel||!details)return;
-        panel.hidden=false;details.innerHTML=`<dl><dt>Voertuig</dt><dd><strong>${selection.vehicleId}</strong></dd><dt>Huidige standplaats</dt><dd>${selection.district}</dd><dt>Melding</dt><dd>${selection.incident}</dd><dt>Geschatte route</dt><dd>${selection.route}</dd><dt>Geschatte aanrijtijd</dt><dd>${selection.eta} seconden</dd><dt>Voertuigen die achterblijven</dt><dd>${selection.remaining}</dd><dt>Verwachte dekking na inzet</dt><dd>${selection.coverage}%</dd></dl>`;
+        const incident=simulator.incidents.find(item=>item.id===simulator.vehicleSelection.incidentId);
+        const ids=simulator.vehicleSelection.selectedVehicleIds||[];
+        if(!incident){details.innerHTML="<p>Kies een open melding.</p>";return;}
+        const required=incident.requiredUnits||1, missing=Math.max(0,required-ids.length);
+        panel.hidden=false;details.innerHTML=`<dl><dt>Incident</dt><dd>${districts.find(d=>d.id===incident.district)?.name||incident.district}</dd><dt>Benodigde eenheden</dt><dd>${required}</dd><dt>Geselecteerd</dt><dd><strong>${ids.length} / ${required}</strong></dd><dt>Voertuigen</dt><dd>${ids.length?ids.join(", "):"Nog geen"}</dd><dt>Nog nodig</dt><dd>${missing}</dd></dl><p>${missing?"Klik op gemarkeerde voertuigen om de selectie compleet te maken.":"De inzet is gereed voor bevestiging."}</p>`;
     }
     hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
     updateManualReposition(buttonState){

@@ -4,7 +4,7 @@ import { Engine } from "../js/engine.js";
 import { sessionConfig, simulator, vehicles } from "../js/data.js";
 
 function preparedEngine(mode="manualVehicle") {
-  const engine=new Engine();engine.reset({operationMode:mode});
+  const engine=new Engine();engine.reset({operationMode:mode,multiUnitIncidentPercentage:0});
   assert.equal(engine.createIncident().success,true);
   assert.equal(engine.selectPrison().success,true);
   assert.equal(engine.calculateTravelTime().success,true);
@@ -31,12 +31,12 @@ test("invalid vehicles cannot be selected and cancellation/reset fully clean sel
   engine.selectVehicle(vehicle.id);engine.cancelVehicleSelection();
   assert.equal(simulator.vehicleSelection.active,false);assert.equal(vehicle.status,"AVAILABLE");
   engine.startVehicleSelection();engine.selectVehicle(vehicle.id);engine.reset();
-  assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,confirming:false});
+  assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,selectedVehicleIds:[],confirming:false});
 });
 
 test("automatic and autoplay retain automatic dispatch",()=>{
   let engine=preparedEngine("automatic");assert.equal(engine.dispatchVehicle().success,true);assert.ok(vehicles.some(v=>v.status==="TO_INCIDENT"));
-  engine=new Engine();engine.reset({operationMode:"autoplay"});const result=engine.createIncident({automatic:true});
+  engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});const result=engine.createIncident({automatic:true});
   assert.equal(result.success,true);assert.ok(vehicles.some(v=>v.status==="TO_INCIDENT"));assert.equal(simulator.vehicleSelection.active,false);
 });
 
@@ -59,7 +59,7 @@ test("manual selection starts automatically and confirmation stays disabled unti
 test("autoplay uses a new inclusive random delay after every incident and resumes with a new delay",()=>{
   const originalRandom=Math.random,values=[0,.95,.2,.7];let index=0;Math.random=()=>values[index++%values.length];
   try {
-    const engine=new Engine();engine.reset({operationMode:"autoplay"});
+    const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});
     assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
     engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,true);assert.equal(simulator.autoplayState.nextDelaySeconds,1);
     let due=simulator.autoplayState.nextIncidentAt;engine.update(due);assert.equal(engine.sequence,1);
@@ -71,7 +71,7 @@ test("autoplay uses a new inclusive random delay after every incident and resume
 });
 
 test("twenty autoplay schedules are in range and are recalculated",()=>{
-  const engine=new Engine();engine.reset({operationMode:"autoplay"});
+  const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});
   const delays=Array.from({length:20},(_,i)=>{const original=Math.random;Math.random=()=>i/20;const delay=engine.scheduleNextIncident(1000*i);Math.random=original;return delay;});
   assert.equal(delays.every(delay=>delay>=1&&delay<=20),true);assert.ok(new Set(delays).size>1);
 });
@@ -79,14 +79,14 @@ test("twenty autoplay schedules are in range and are recalculated",()=>{
 test("dispatch lifecycle is OPEN to ASSIGNED to HANDLED and reset clears all scheduler state",()=>{
   const engine=preparedEngine("automatic"),incident=simulator.activeIncident;
   assert.equal(incident.status,"OPEN");const result=engine.dispatchVehicle();assert.equal(result.success,true);
-  assert.equal(incident.status,"ASSIGNED");assert.equal(engine.activeDispatches.size,1);assert.equal(result.vehicle.status,"TO_INCIDENT");
+  assert.equal(incident.status,"FULLY_ASSIGNED");assert.equal(engine.activeDispatches.size,1);assert.equal(result.vehicle.status,"TO_INCIDENT");
   const dispatch=[...engine.activeDispatches.values()][0];engine.updateDispatch(dispatch,dispatch.phaseStartTime+100000);
   assert.equal(incident.status,"HANDLED");assert.equal(simulator.incidents.includes(incident),true);assert.equal(simulator.incidentHistory.at(-1).status,"HANDLED");
   engine.reset();assert.equal(engine.activeDispatches.size,0);assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
 });
 
 test("autoplay keeps generating OPEN incidents without vehicles and game over stops its scheduler",()=>{
-  const engine=new Engine();engine.reset({operationMode:"autoplay"});vehicles.forEach(vehicle=>vehicle.status="BUSY");
+  const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});vehicles.forEach(vehicle=>vehicle.status="BUSY");
   engine.toggleAutoplay();const due=simulator.autoplayState.nextIncidentAt;engine.update(due);
   assert.equal(simulator.incidents.length,1);assert.equal(simulator.incidents[0].status,"OPEN");assert.ok(simulator.autoplayState.nextIncidentAt>due);
   engine.triggerRepositioningFailure({name:"Testdistrict"});
@@ -100,8 +100,8 @@ test("fifteen consecutive manual input cycles reset completely while dispatches 
     assert.equal(engine.createIncident().success,true,`incident ${cycle+1}`);
     assert.equal(engine.selectPrison().success,true);assert.equal(engine.calculateTravelTime().success,true);assert.equal(simulator.vehicleSelection.active,true);
     const vehicle=vehicles.find(item=>item.status==="AVAILABLE");assert.ok(vehicle);assert.equal(engine.selectVehicle(vehicle.id).success,true);assert.equal(engine.confirmManualDispatch().success,true);
-    assert.deepEqual(simulator.inputCycleState,{step:"INCIDENT",incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null});
-    assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,confirming:false});
+    assert.deepEqual(simulator.inputCycleState,{step:"INCIDENT",incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null,selectedVehicleIds:[]});
+    assert.deepEqual(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,selectedVehicleIds:[],confirming:false});
     assert.equal(simulator.activeIncident,null);assert.equal(simulator.selectedPrison,null);assert.equal(simulator.travelTime,null);assert.equal(simulator.selectedVehicleId,null);
   }
   assert.equal(engine.activeDispatches.size,15);
@@ -132,8 +132,8 @@ test("manual reposition requires both choices and duplicate confirmation starts 
 });
 
 test("manual reposition can be selected during running autoplay and reset cleans its preview",()=>{
-  const engine=new Engine();engine.reset({operationMode:"autoplay"});engine.toggleAutoplay();simulator.inputCycleState.step="DISPATCH";
+  const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});engine.toggleAutoplay();simulator.inputCycleState.step="DISPATCH";
   const vehicle=vehicles[0],target=vehicle.district==="RN"?"ZH":"RN";assert.equal(engine.getControlState().manualRepositionStart,true);
   engine.startManualReposition();engine.selectRepositionVehicle(vehicle.id);engine.selectRepositionTarget(target);assert.ok(simulator.activeRoutes.some(route=>route.id==="manual-reposition-preview"));
-  engine.reset({operationMode:"autoplay"});assert.deepEqual(simulator.manualRepositionState,{phase:"idle",selectedVehicleId:null,targetDistrictId:null});assert.equal(simulator.activeRoutes.length,0);assert.equal(engine.activeRepositions.size,0);
+  engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});assert.deepEqual(simulator.manualRepositionState,{phase:"idle",selectedVehicleId:null,targetDistrictId:null});assert.equal(simulator.activeRoutes.length,0);assert.equal(engine.activeRepositions.size,0);
 });
