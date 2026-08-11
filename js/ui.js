@@ -368,6 +368,8 @@ export class UI {
         document.getElementById("processControls").hidden = autoplay;
         document.getElementById("dispatchBtn").hidden = !automatic;
         document.getElementById("confirmVehicleBtn").hidden = !manual;
+        const confirmVehicleButton=document.getElementById("confirmVehicleBtn");
+        if(confirmVehicleButton&&manual){const count=simulator.vehicleSelection.selectedVehicleIds?.length||0;confirmVehicleButton.textContent=count===1?"1 eenheid inzetten":`${count} eenheden inzetten`;}
         document.getElementById("autoplayControls").hidden = !autoplay;
         const autoplayButton=document.getElementById("autoplayToggleBtn");
         if(autoplayButton){autoplayButton.disabled=!buttonState.autoplayToggle;autoplayButton.textContent=buttonState.autoplayRunning?"⏸ Pauze":"▶ Play";autoplayButton.classList.toggle("is-playing",buttonState.autoplayRunning);}
