@@ -103,9 +103,12 @@
                     <label><input type="radio" name="operationMode" value="automatic" checked> Automatisch</label>
                     <label><input type="radio" name="operationMode" value="manualVehicle"> Handmatig voertuig kiezen</label>
                     <label><input type="radio" name="operationMode" value="autoplay"> Autoplay</label>
+                    <label class="reposition-training-option"><input type="radio" name="operationMode" value="repositionTraining"> Herpositioneringsmodus
+                        <small>Meldingen en inzet verlopen automatisch. Jij beheert alleen de gebiedsdekking.</small>
+                    </label>
                 </div></div>
                 <div id="autoplayIntervalConfig" class="config-section autoplay-interval" hidden>
-                    <h3>Autoplay</h3><p class="config-help">Interval meldingen</p>
+                    <h3>Automatische meldingen</h3><p class="config-help">Interval meldingen voor Autoplay en Herpositioneringsmodus</p>
                     <label for="autoplayMinDelay"><span>Minimum interval</span><output id="autoplayMinDelayLabel">1 sec</output></label>
                     <input id="autoplayMinDelay" type="range" min="1" max="60" value="1">
                     <label for="autoplayMaxDelay"><span>Maximum interval</span><output id="autoplayMaxDelayLabel">20 sec</output></label>
@@ -173,8 +176,14 @@
             <span id="autoplayStatus" role="status"></span>
         </div>
 
+        <div id="repositionTrainingControls" class="autoplay-controls autoplay-controls--footer reposition-training-controls" hidden aria-label="Herpositioneringsoefening bediening">
+            <button id="repositionTrainingToggleBtn" class="autoplay-toggle-button">▶ Start oefening</button>
+            <span id="repositionTrainingStatus" role="status"></span>
+        </div>
+
         <div class="utility-controls" aria-label="Hulpfuncties">
-            <button id="startRepositionBtn" class="secondary-button">Herpositioneer voertuig</button>
+            <span id="repositionShortcutHint" class="reposition-shortcut-hint" hidden><strong>HERPOSITIONERING</strong><span><kbd>H</kbd> Herpositioneer voertuig</span><small>Of druk op H</small></span>
+            <button id="startRepositionBtn" class="secondary-button" aria-keyshortcuts="H">Herpositioneer voertuig</button>
             <button id="cancelRepositionBtn" class="secondary-button" hidden>Annuleren</button>
             <button id="resetBtn" class="reset-button" aria-label="Simulator resetten">
                 ↺ Reset
