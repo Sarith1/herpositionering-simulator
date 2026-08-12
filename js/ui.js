@@ -140,14 +140,23 @@ export class UI {
         this.configContainer.innerHTML = "";
 
         districts.forEach(district => {
-            const label = document.createElement("label");
-            label.className = "vehicle-config-row";
-            label.innerHTML = `
-                <span>${district.name}</span>
-                <input type="number" min="0" max="9" step="1" value="${sessionConfig.vehiclesPerDistrict[district.id] ?? DEFAULT_VEHICLES_PER_DISTRICT}" data-district-id="${district.id}">
+            const row = document.createElement("div");
+            row.className = "vehicle-config-row";
+            row.innerHTML = `
+                <span class="vehicle-config-name">${district.name}</span>
+                <label class="vehicle-count" for="vehicle-count-${district.id}">
+                    <span class="visually-hidden">Voertuigen in ${district.name}</span>
+                    <input id="vehicle-count-${district.id}" type="number" min="0" max="9" step="1" value="${sessionConfig.vehiclesPerDistrict[district.id] ?? DEFAULT_VEHICLES_PER_DISTRICT}" data-district-id="${district.id}">
+                </label>
+                <label class="hotzone-config" for="hotzone-${district.id}">
+                    <input id="hotzone-${district.id}" type="checkbox" data-hotzone-district-id="${district.id}">
+                    <span>Hotzone</span>
+                </label>
             `;
-            this.configContainer.appendChild(label);
+            this.configContainer.appendChild(row);
         });
+
+        this.setHotzoneConfigValues(sessionConfig.hotzoneDistrictIds);
 
         this.renderPrisonConfig();
 
@@ -234,6 +243,22 @@ export class UI {
             ])
         );
 
+    }
+
+    getConfiguredHotzones() {
+        if (!this.configContainer) return [...sessionConfig.hotzoneDistrictIds];
+
+        return [...this.configContainer.querySelectorAll("[data-hotzone-district-id]:checked")]
+            .map(input => input.dataset.hotzoneDistrictId);
+    }
+
+    setHotzoneConfigValues(ids = []) {
+        if (!this.configContainer) return;
+
+        const selected = new Set(ids);
+        this.configContainer.querySelectorAll("[data-hotzone-district-id]").forEach(input => {
+            input.checked = selected.has(input.dataset.hotzoneDistrictId);
+        });
     }
 
     getMultiUnitIncidentPercentage() {
