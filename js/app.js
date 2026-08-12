@@ -27,6 +27,7 @@ export class App {
         this.initializeMap();
         this.initializeUI();
         this.registerButtons();
+        this.initializeWorkspaceLayout();
         this.sync();
         this.startRenderLoop();
     }
@@ -110,6 +111,35 @@ export class App {
         }
     }
 
+    initializeWorkspaceLayout() {
+        const shell = document.querySelector(".simulator");
+        const activityToggle = document.getElementById("activityPanelToggle");
+        const configToggle = document.getElementById("configPanelToggle");
+        const focusToggle = document.getElementById("mapFocusToggle");
+        const setPanel = (name, collapsed) => {
+            shell?.classList.toggle(`${name}-collapsed`, collapsed);
+            const button = name === "activity" ? activityToggle : configToggle;
+            button?.setAttribute("aria-expanded", String(!collapsed));
+            button?.setAttribute("title", `${name === "activity" ? "Activiteiten" : "Configuratie"} ${collapsed ? "openen" : "inklappen"}`);
+            button?.querySelector(".visually-hidden")?.replaceChildren(`${name === "activity" ? "Activiteiten" : "Configuratie"} ${collapsed ? "openen" : "inklappen"}`);
+        };
+        const setFocus = active => {
+            shell?.classList.toggle("map-focus-mode", active);
+            document.body.classList.toggle("map-focus-mode", active);
+            focusToggle.textContent = active ? "×" : "⛶";
+            focusToggle.title = active ? "Normale weergave" : "Kaart vergroten";
+            focusToggle.setAttribute("aria-label", focusToggle.title);
+            focusToggle.setAttribute("aria-pressed", String(active));
+        };
+        activityToggle?.addEventListener("click", () => setPanel("activity", !shell.classList.contains("activity-collapsed")));
+        configToggle?.addEventListener("click", () => setPanel("config", !shell.classList.contains("config-collapsed")));
+        focusToggle?.addEventListener("click", () => setFocus(!shell.classList.contains("map-focus-mode")));
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape" && simulator.manualRepositionState.phase === "idle" && shell?.classList.contains("map-focus-mode")) setFocus(false);
+        });
+        this.setWorkspacePanel = setPanel;
+    }
+
     bindButton(id, action) {
         const button = document.getElementById(id);
 
@@ -164,17 +194,23 @@ export class App {
         const availablePrisons = this.ui.getConfiguredAvailablePrisons();
         if (!availablePrisons.length) return { success: false, message: "[FOUT] Selecteer minimaal één cellencomplex." };
         this.ui.hideRepositioningFailure();
-        return this.engine.reset({
+        const mode = this.ui.getOperationMode();
+        const result = this.engine.reset({
             vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
             hotzoneDistrictIds: this.ui.getConfiguredHotzones(),
             hotzoneIncidentPercentage: this.ui.getHotzoneIncidentPercentage(),
             availablePrisons,
             detentionCapacity: this.ui.getConfiguredDetentionCapacity(),
-            operationMode: this.ui.getOperationMode(),
+            operationMode: mode,
             multiUnitIncidentPercentage: this.ui.getMultiUnitIncidentPercentage()
             ,autoplayMinDelaySeconds: this.ui.getAutoplayDelayValues().min
             ,autoplayMaxDelaySeconds: this.ui.getAutoplayDelayValues().max
         });
+        if (result.success && mode === "repositionTraining") {
+            this.setWorkspacePanel?.("config", true);
+            this.setWorkspacePanel?.("activity", true);
+        }
+        return result;
     }
 
     resetCurrentSession() {

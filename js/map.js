@@ -72,7 +72,9 @@ export class MapView {
     }
 
     initialize() {
-        this.container.innerHTML = "";
+        [...this.container.children].forEach(child => {
+            if (!child.classList.contains("map-focus-toggle")) child.remove();
+        });
         this.createBackground();
         this.createSVG();
         this.createMapInformationPanels();

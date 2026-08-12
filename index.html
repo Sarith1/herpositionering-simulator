@@ -68,19 +68,22 @@
 
     <main class="main-content">
 
-        <aside class="activity-panel">
+        <aside class="activity-panel" aria-label="Activiteiten">
 
-            <h2>Activiteiten</h2>
+            <div class="side-panel-heading"><h2>Activiteiten</h2><button id="activityPanelToggle" class="panel-toggle" aria-expanded="true" aria-controls="activityLog" title="Activiteiten inklappen"><span aria-hidden="true">‹</span><span class="visually-hidden">Activiteiten inklappen</span></button></div>
+            <p id="activityCompactPreview" class="activity-compact-preview" aria-hidden="true"></p>
 
             <div id="activityLog" class="activity-log"></div>
 
         </aside>
 
-        <section id="map" class="map-panel map-container"></section>
+        <section id="map" class="map-panel map-container" aria-label="Interactieve kaart">
+            <button id="mapFocusToggle" class="map-focus-toggle" title="Kaart vergroten" aria-label="Kaart vergroten" aria-pressed="false">⛶</button>
+        </section>
 
-        <aside class="dashboard-panel">
+        <aside class="dashboard-panel" aria-label="Configuratie en status">
 
-            <h2>Status</h2>
+            <div class="side-panel-heading"><h2>Status &amp; configuratie</h2><button id="configPanelToggle" class="panel-toggle" aria-expanded="true" title="Configuratie inklappen"><span aria-hidden="true">›</span><span class="visually-hidden">Configuratie inklappen</span></button></div>
 
             <section class="session-config" aria-label="Sessieconfiguratie">
                 <div class="panel-heading"><span>Configuratie</span><small>Sessie-instellingen</small></div>
