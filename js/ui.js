@@ -572,6 +572,9 @@ export class UI {
 
         this.logContainer.prepend(item);
 
+        const compactPreview = document.getElementById("activityCompactPreview");
+        if (compactPreview) compactPreview.textContent = `↳ ${message}`;
+
     }
 
     setCoverage(percent) {

@@ -1607,3 +1607,53 @@ kbd{display:inline-flex;min-width:2rem;min-height:2rem;align-items:center;justif
 .reposition-training-mode .district-status{border-left:3px solid rgba(39,153,232,.35)}
 @media(max-width:800px){.reposition-shortcut-hint>strong,.reposition-shortcut-hint small{display:none}}
 .reposition-shortcut-hint[hidden]{display:none}
+
+/* ===========================================================
+   MAP-FIRST WORKSPACE
+=========================================================== */
+.side-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto}
+.side-panel-heading h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary)}
+.panel-toggle,.map-focus-toggle{display:inline-grid;place-items:center;width:34px;height:34px;min-width:34px;padding:0;border:1px solid rgba(132,212,255,.35);border-radius:7px;background:rgba(39,77,106,.55);color:#fff;font-size:22px;line-height:1}
+.map-focus-toggle{position:absolute;z-index:20;top:12px;right:12px;box-shadow:0 5px 18px rgba(0,0,0,.4)}
+.activity-compact-preview{display:none;color:var(--text-muted);font-size:11px;line-height:1.35}
+
+.simulator.activity-collapsed .main-content{grid-template-columns:48px minmax(0,1fr) minmax(235px,285px)}
+.simulator.config-collapsed .main-content{grid-template-columns:minmax(210px,250px) minmax(0,1fr) 48px}
+.simulator.activity-collapsed.config-collapsed .main-content{grid-template-columns:48px minmax(0,1fr) 48px}
+.activity-collapsed .activity-panel,.config-collapsed .dashboard-panel{padding:7px;overflow:hidden}
+.activity-collapsed .activity-panel>:not(.side-panel-heading),.config-collapsed .dashboard-panel>:not(.side-panel-heading){display:none!important}
+.activity-collapsed .activity-panel .side-panel-heading,.config-collapsed .dashboard-panel .side-panel-heading{height:100%;flex-direction:column;justify-content:flex-start}
+.activity-collapsed .activity-panel h2,.config-collapsed .dashboard-panel h2{writing-mode:vertical-rl;font-size:10px;white-space:nowrap}
+.activity-collapsed .activity-panel .panel-toggle span[aria-hidden="true"],.config-collapsed .dashboard-panel .panel-toggle span[aria-hidden="true"]{transform:rotate(180deg)}
+
+body.map-focus-mode{overflow:hidden}
+.simulator.map-focus-mode{position:fixed;inset:0;z-index:800;grid-template-rows:minmax(0,1fr) auto;background:var(--background)}
+.simulator.map-focus-mode .topbar,.simulator.map-focus-mode .activity-panel,.simulator.map-focus-mode .dashboard-panel{display:none}
+.simulator.map-focus-mode .main-content{display:block;min-height:0;padding:5px}
+.simulator.map-focus-mode #map{width:100%;height:100%;border-radius:8px}
+.simulator.map-focus-mode .control-bar{min-height:52px;padding:5px 10px}
+.simulator.map-focus-mode .control-bar button{min-height:36px;padding:7px 13px}
+.simulator.map-focus-mode .map-focus-toggle{font-size:25px}
+
+/* Keep dashboard and controls compact so the map receives viewport height. */
+.topbar{min-height:0}.dashboard{flex-wrap:nowrap}.control-bar,footer{min-height:54px;padding:6px 10px}.control-bar button,footer button{min-height:38px;padding:8px 13px}
+.reposition-training-mode .topbar{padding-block:6px}.reposition-training-mode .brand-mark{height:30px}.reposition-training-mode .card{padding-block:5px}.reposition-training-mode .control-bar{min-height:50px}
+
+@media(max-width:1050px){
+  .simulator.activity-collapsed .main-content,.simulator.activity-collapsed.config-collapsed .main-content{grid-template-columns:44px minmax(0,1fr) 220px}
+  .simulator.config-collapsed .main-content,.simulator.activity-collapsed.config-collapsed .main-content{grid-template-columns:190px minmax(0,1fr) 44px}
+  .simulator.activity-collapsed.config-collapsed .main-content{grid-template-columns:44px minmax(0,1fr) 44px}
+}
+@media(max-width:900px){
+  body{overflow:hidden}.simulator,.app-shell{height:100vh;min-height:0;overflow:hidden}
+  main,.main-content,.simulator.activity-collapsed .main-content,.simulator.config-collapsed .main-content,.simulator.activity-collapsed.config-collapsed .main-content{position:relative;display:block;min-height:0;height:auto;padding:7px}
+  #map,.map-panel{width:100%;height:100%;min-height:0}
+  .activity-panel,.dashboard-panel{position:absolute;z-index:40;top:7px;bottom:7px;width:min(330px,calc(100% - 64px));max-height:none!important;box-shadow:0 15px 50px #000}
+  .activity-panel{left:7px}.dashboard-panel{right:7px}
+  .activity-collapsed .activity-panel,.config-collapsed .dashboard-panel{display:flex;width:42px;bottom:auto;height:44px;padding:4px}
+  .activity-collapsed .activity-panel{top:58px}.config-collapsed .dashboard-panel{top:58px}
+  .activity-collapsed .activity-panel h2,.config-collapsed .dashboard-panel h2{display:none}
+  .activity-collapsed .activity-panel .side-panel-heading,.config-collapsed .dashboard-panel .side-panel-heading{height:auto}
+  .control-bar{position:relative;bottom:auto;flex-wrap:nowrap;overflow-x:auto;gap:8px}
+  .control-bar button{flex:0 0 auto}.utility-controls{flex:0 0 auto;flex-wrap:nowrap}.process-controls{flex-wrap:nowrap}
+}
