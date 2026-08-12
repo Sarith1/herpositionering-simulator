@@ -38,18 +38,18 @@ test("keyboard shortcut guards input, repeats and intermediate selection phases"
     assert.match(source, /event\.repeat/);
     assert.match(source, /tag === "input"/);
     assert.match(source, /event\.target\?\.isContentEditable/);
-    assert.match(source, /phase !== "idle" && phase !== "ready"/);
+    assert.match(source, /phase !== "idle"/);
     assert.match(source, /event\.key === "Escape"/);
     assert.match(source, /handleManualRepositionAction\(\)/);
     assert.equal(source.match(/addEventListener\?\.\("keydown"/g)?.length, 1);
 });
 
-test("button and ready-state guidance expose H as the shared reposition action", () => {
+test("button and target guidance expose H as the selection action", () => {
     const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
     const ui = readFileSync(new URL("../js/ui.js", import.meta.url), "utf8");
     assert.match(html, /startRepositionBtn[^>]+aria-keyshortcuts="H"/);
-    assert.match(ui, /Klaar om te herpositioneren/);
-    assert.match(ui, /<kbd>H<\/kbd> Start herpositionering/);
+    assert.match(ui, /klik op een gemarkeerd district om direct te herpositioneren/);
+    assert.doesNotMatch(ui, /Herpositionering starten/);
     assert.match(ui, /primary\.innerHTML=.*<kbd>H<\/kbd>/);
 });
 
