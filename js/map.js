@@ -12,6 +12,7 @@ meldingen, gevangenissen en routes.
 import { colors, detentionComplexes, districts, getDetentionComplexPosition, sessionConfig, simulator, vehicles } from "./data.js";
 export { DETENTION_COMPLEX_OFFSET_X } from "./data.js";
 import { getDistrictById, getShortestRoute } from "./routing.js";
+import { getCoverageTargets } from "./engine.js";
 
 const VEHICLE_SCALE = 1.15;
 const BASE_VEHICLE_FONT_SIZE = 24;
@@ -255,12 +256,15 @@ export class MapView {
 
     drawHotzones() {
         const hotzoneIds = new Set(sessionConfig.hotzoneDistrictIds || []);
+        const coverageTargets = getCoverageTargets();
 
         districts.filter(district => hotzoneIds.has(district.id)).forEach(district => {
             const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            group.setAttribute("class", "hotzone-marker");
+            const undercovered = coverageTargets.availableByDistrict[district.id] < coverageTargets.hotzoneMinimum;
+            group.setAttribute("class", `hotzone-marker${undercovered ? " hotzone-marker--undercovered" : ""}`);
             group.dataset.hotzoneDistrictId = district.id;
             group.setAttribute("aria-hidden", "true");
+            group.setAttribute("aria-label", undercovered ? `Hotzone onder gewenste dekking, gewenst minimaal ${coverageTargets.hotzoneMinimum}` : "Hotzone goed gedekt");
 
             const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             halo.setAttribute("class", "hotzone-halo");

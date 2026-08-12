@@ -24,6 +24,7 @@ import {
     simulator,
     vehicles
 } from "./data.js";
+import { getCoverageTargets } from "./engine.js";
 
 export class UI {
 
@@ -368,6 +369,7 @@ export class UI {
         if (!this.statusContainer) return;
 
         this.statusContainer.innerHTML = "";
+        const coverageTargets = getCoverageTargets();
 
         districts.forEach(district => {
 
@@ -380,6 +382,9 @@ export class UI {
             const row = document.createElement("div");
 
             row.className = "district-status";
+            const isHotzone = sessionConfig.hotzoneDistrictIds.includes(district.id);
+            const undercovered = isHotzone && available < coverageTargets.hotzoneMinimum;
+            if (undercovered) row.classList.add("district-status--hotzone-warning");
 
             let icon = "🟢";
 
@@ -394,8 +399,8 @@ export class UI {
 
             row.innerHTML = `
                 <span>${icon}</span>
-                <span>${sessionConfig.operationMode === "repositionTraining" && sessionConfig.hotzoneDistrictIds.includes(district.id) ? "🔥 " : ""}${district.name}</span>
-                <strong>${available}</strong>
+                <span>${isHotzone ? "🔥 " : ""}${district.name}${undercovered ? ` <small>Gewenst: ≥ ${coverageTargets.hotzoneMinimum}</small>` : ""}</span>
+                <strong>${available}${undercovered ? " ⚠" : ""}</strong>
             `;
 
             this.statusContainer.appendChild(row);
