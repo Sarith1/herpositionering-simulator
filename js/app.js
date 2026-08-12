@@ -51,6 +51,7 @@ export class App {
         this.bindButton("startRepositionBtn", () => this.engine.handleManualRepositionAction());
         this.bindButton("cancelRepositionBtn", () => this.engine.cancelManualReposition());
         this.bindButton("autoplayToggleBtn", () => this.engine.toggleAutoplay());
+        this.bindButton("repositionTrainingToggleBtn", () => this.engine.toggleAutoplay());
         this.bindButton("resetBtn", () => this.resetCurrentSession());
         this.bindButton("failureResetBtn", () => this.resetCurrentSession());
         this.bindButton("failureNewSessionBtn", () => this.newSessionSetup());
@@ -84,6 +85,29 @@ export class App {
         document.getElementById("map")?.addEventListener("incident-select", event => {
             const result=this.engine.selectIncident(event.detail.incidentId);this.ui.log(result.message);this.sync();
         });
+        if (!this.keyboardShortcutsRegistered) {
+            this.keyboardShortcutsRegistered = true;
+            document.addEventListener?.("keydown", event => {
+                const tag = event.target?.tagName?.toLowerCase();
+                if (tag === "input" || tag === "textarea" || tag === "select" || event.target?.isContentEditable || event.repeat) return;
+                if (event.key === "Escape" && simulator.manualRepositionState.phase !== "idle") {
+                    const result = this.engine.cancelManualReposition();
+                    this.ui.log(result.message);
+                    this.sync();
+                    return;
+                }
+                if (event.key?.toLowerCase() !== "h") return;
+                const phase = simulator.manualRepositionState.phase;
+                if (!this.engine.getControlState().manualRepositionStart || (phase !== "idle" && phase !== "ready")) {
+                    if (phase === "selectVehicle" || phase === "selectDistrict") this.ui.log("[HERPOSITIONERING] Kies eerst voertuig en doeldistrict.");
+                    return;
+                }
+                const result = this.engine.handleManualRepositionAction();
+                this.ui.log(result.message);
+                (result.events || []).forEach(engineEvent => this.handleEngineEvent(engineEvent));
+                this.sync();
+            });
+        }
     }
 
     bindButton(id, action) {

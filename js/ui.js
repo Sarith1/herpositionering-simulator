@@ -349,17 +349,17 @@ export class UI {
         const waiting = (simulator.incidents || []).filter(i => ["OPEN", "PARTIALLY_ASSIGNED"].includes(i.status)).length;
         document.getElementById("waitingCount").textContent = waiting;
         document.getElementById("repositionCount").textContent = vehicles.filter(v => v.status === "REPOSITIONING").length;
-        document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay"})[sessionConfig.operationMode];
+        document.getElementById("modeCount").textContent = ({automatic:"Automatisch",manualVehicle:"Handmatig",autoplay:"Autoplay",repositionTraining:"Herpositioneringsmodus"})[sessionConfig.operationMode];
         document.getElementById("complexCount").textContent = sessionConfig.availablePrisons.length;
         const occupancy=getTotalDetentionOccupancy(),capacity=getTotalDetentionCapacity(),capacityCount=document.getElementById("detentionCapacityCount");
         if(capacityCount){capacityCount.textContent=`${occupancy} / ${capacity}`;capacityCount.dataset.level=capacity===0||occupancy>=capacity?"full":occupancy/capacity>=.8?"near":"available";}
         document.getElementById("incidentCount").textContent = (simulator.incidents || []).filter(i => i.status !== "COMPLETED").length;
         const status = document.getElementById("autoplayStatus");
-        if (status && sessionConfig.operationMode === "autoplay") {
-            const state=simulator.autoplayState;
-            const seconds = !state.running || state.nextIncidentAt === null ? null : `${Math.ceil(Math.max(0, state.nextIncidentAt-performance.now())/1000)} sec`;
-            status.textContent = state.running ? `Autoplay actief · Volgende melding over: ${seconds}` : "Autoplay gepauzeerd";
-        }
+        const state=simulator.autoplayState;
+        const seconds = !state.running || state.nextIncidentAt === null ? null : `${Math.ceil(Math.max(0, state.nextIncidentAt-performance.now())/1000)} sec`;
+        if (status && sessionConfig.operationMode === "autoplay") status.textContent = state.running ? `Autoplay actief · Volgende melding over: ${seconds}` : "Autoplay gepauzeerd";
+        const trainingStatus=document.getElementById("repositionTrainingStatus");
+        if(trainingStatus&&sessionConfig.operationMode==="repositionTraining")trainingStatus.textContent=state.running?`Oefening actief · Volgende melding over: ${seconds}`:"Oefening gepauzeerd";
 
     }
 
@@ -394,7 +394,7 @@ export class UI {
 
             row.innerHTML = `
                 <span>${icon}</span>
-                <span>${district.name}</span>
+                <span>${sessionConfig.operationMode === "repositionTraining" && sessionConfig.hotzoneDistrictIds.includes(district.id) ? "🔥 " : ""}${district.name}</span>
                 <strong>${available}</strong>
             `;
 
@@ -443,13 +443,19 @@ export class UI {
             { id: "confirmVehicleBtn", enabled: buttonState.confirmVehicle, step: "confirmVehicle" }
         ];
 
-        const automatic = buttonState.mode === "automatic", manual = buttonState.mode === "manualVehicle", autoplay = buttonState.mode === "autoplay";
-        document.getElementById("processControls").hidden = autoplay;
+        const automatic = buttonState.mode === "automatic", manual = buttonState.mode === "manualVehicle", autoplay = buttonState.mode === "autoplay", training = buttonState.mode === "repositionTraining";
+        document.getElementById("processControls").hidden = autoplay || training;
         document.getElementById("dispatchBtn").hidden = !automatic;
         document.getElementById("confirmVehicleBtn").hidden = !manual;
         const confirmVehicleButton=document.getElementById("confirmVehicleBtn");
         if(confirmVehicleButton&&manual){const count=simulator.vehicleSelection.selectedVehicleIds?.length||0;confirmVehicleButton.textContent=count===1?"1 eenheid inzetten":`${count} eenheden inzetten`;}
         document.getElementById("autoplayControls").hidden = !autoplay;
+        document.getElementById("repositionTrainingControls").hidden = !training;
+        const trainingButton=document.getElementById("repositionTrainingToggleBtn");
+        if(trainingButton){trainingButton.disabled=!buttonState.autoplayToggle;trainingButton.textContent=buttonState.autoplayRunning?"⏸ Pauze":"▶ Start oefening";trainingButton.classList.toggle("is-playing",buttonState.autoplayRunning);}
+        const shortcutHint=document.getElementById("repositionShortcutHint");if(shortcutHint)shortcutHint.hidden=!training;
+        document.querySelector(".simulator")?.classList.toggle("reposition-training-mode",training);
+        const rules=document.querySelector(".reposition-rules");if(training&&rules&&!this.trainingRulesOpened){rules.open=true;this.trainingRulesOpened=true;}if(!training)this.trainingRulesOpened=false;
         const autoplayButton=document.getElementById("autoplayToggleBtn");
         if(autoplayButton){autoplayButton.disabled=!buttonState.autoplayToggle;autoplayButton.textContent=buttonState.autoplayRunning?"⏸ Pauze":"▶ Play";autoplayButton.classList.toggle("is-playing",buttonState.autoplayRunning);}
 
@@ -499,6 +505,10 @@ export class UI {
         }
         if (sessionConfig.operationMode === "autoplay") {
             this.stepHintElement.textContent = simulator.autoplayState.running ? "Autoplay verwerkt meldingen automatisch." : "Druk op Play om autoplay te starten.";
+            return;
+        }
+        if (sessionConfig.operationMode === "repositionTraining") {
+            this.stepHintElement.textContent = simulator.autoplayState.running ? "Meldingen en inzet verlopen automatisch. Beheer de gebiedsdekking met H." : "Start de oefening; meldingen en inzet verlopen daarna automatisch.";
             return;
         }
         const labels = {
@@ -658,7 +668,7 @@ export class UI {
     }
     updateModeConfigVisibility() {
         const config=document.getElementById("autoplayIntervalConfig");
-        if(config)config.hidden=this.getOperationMode()!=="autoplay";
+        if(config)config.hidden=!["autoplay","repositionTraining"].includes(this.getOperationMode());
     }
     getAutoplayDelayValues(){return{min:Number(document.getElementById("autoplayMinDelay")?.value||1),max:Number(document.getElementById("autoplayMaxDelay")?.value||20)};}
     setAutoplayDelayValues(min=1,max=20){
