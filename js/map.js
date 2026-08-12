@@ -294,12 +294,6 @@ export class MapView {
         this.clearLayer(this.interactionLayer);
         const state = simulator.manualRepositionState;
 
-        if (state.phase === "ready") {
-            const target = getDistrictById(state.targetDistrictId);
-            if (target) this.interactionLayer.appendChild(this.createRepositionTarget(target, true));
-            return;
-        }
-
         if (state.phase !== "selectDistrict" || !state.selectedVehicleId) return;
         const selectedVehicle = vehicles.find(vehicle => vehicle.id === state.selectedVehicleId);
         if (!selectedVehicle || !getDistrictById(selectedVehicle.district)) return;
@@ -353,7 +347,7 @@ export class MapView {
         prompt.setAttribute("x", district.x);
         prompt.setAttribute("y", district.y + 119);
         prompt.setAttribute("text-anchor", "middle");
-        prompt.textContent = selected ? "Doeldistrict gekozen" : "Kies dit district";
+        prompt.textContent = selected ? "Doeldistrict gekozen" : `Verplaats naar ${district.name}`;
 
         target.append(hit, labelZone, prompt);
         if (selected) return target;

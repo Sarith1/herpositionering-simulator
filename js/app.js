@@ -81,7 +81,7 @@ export class App {
         document.getElementById("map")?.addEventListener("vehicle-select", event => {
             const result=simulator.manualRepositionState.phase!=="idle"?this.engine.selectRepositionVehicle(event.detail.vehicleId):this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
         });
-        document.getElementById("map")?.addEventListener("district-select", event => {const result=this.engine.selectRepositionTarget(event.detail.districtId);this.ui.log(result.message);if(result.repositionPreview)this.ui.showRepositionPreview(result.repositionPreview);this.sync();});
+        document.getElementById("map")?.addEventListener("district-select", event => {const result=this.engine.selectRepositionTarget(event.detail.districtId);this.ui.log(result.message);(result.events||[]).forEach(engineEvent=>this.handleEngineEvent(engineEvent));this.sync();});
         document.getElementById("map")?.addEventListener("incident-select", event => {
             const result=this.engine.selectIncident(event.detail.incidentId);this.ui.log(result.message);this.sync();
         });
@@ -98,7 +98,7 @@ export class App {
                 }
                 if (event.key?.toLowerCase() !== "h") return;
                 const phase = simulator.manualRepositionState.phase;
-                if (!this.engine.getControlState().manualRepositionStart || (phase !== "idle" && phase !== "ready")) {
+                if (!this.engine.getControlState().manualRepositionStart || phase !== "idle") {
                     if (phase === "selectVehicle" || phase === "selectDistrict") this.ui.log("[HERPOSITIONERING] Kies eerst voertuig en doeldistrict.");
                     return;
                 }

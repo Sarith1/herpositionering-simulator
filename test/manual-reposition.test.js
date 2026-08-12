@@ -45,8 +45,9 @@ test("delegated circle and label clicks dispatch their district exactly once", (
       assert.deepEqual(emitted.at(-1).detail,{districtId:target.dataset.districtId});
     }
     assert.equal(engine.selectRepositionTarget(emitted.at(-1).detail.districtId).success,true);
-    assert.equal(simulator.manualRepositionState.targetDistrictId,target.dataset.districtId);
-    assert.equal(engine.getControlState().manualRepositionConfirm,true);
+    assert.equal(simulator.manualRepositionState.phase,"idle");
+    assert.equal(vehicle.status,"REPOSITIONING");
+    assert.equal(engine.activeRepositions.size,1);
   } finally {globalThis.document=originalDocument;globalThis.CustomEvent=originalCustomEvent;}
 });
 
@@ -74,8 +75,8 @@ test("all seven districts can reliably become a reposition target", () => {
     assert.equal(engine.startManualReposition().success,true);
     assert.equal(engine.selectRepositionVehicle(vehicle.id).success,true);
     assert.equal(engine.selectRepositionTarget(target.id).success,true);
-    assert.equal(simulator.manualRepositionState.targetDistrictId,target.id);
-    assert.equal(engine.getControlState().manualRepositionConfirm,true);
+    assert.equal(simulator.manualRepositionState.phase,"idle");
+    assert.equal(vehicle.status,"REPOSITIONING");
   }
 });
 
@@ -88,9 +89,7 @@ test("the stateful primary action completes twenty consecutive manual reposition
     assert.equal(engine.selectRepositionVehicle(vehicle.id).success, true);
     assert.equal(simulator.manualRepositionState.phase, "selectDistrict");
     assert.equal(engine.selectRepositionTarget(target).success, true);
-    assert.equal(simulator.manualRepositionState.phase, "ready");
-    assert.equal(engine.getControlState().manualRepositionConfirm, true);
-    assert.equal(engine.handleManualRepositionAction().success, true);
+    assert.equal(simulator.manualRepositionState.phase, "idle");
     assert.equal(vehicle.status, "REPOSITIONING");
     const movement = [...engine.activeRepositions.values()].find(item => item.vehicleId === vehicle.id); assert.ok(movement);
     engine.updateReposition(movement, movement.phaseStartTime + 100000);
@@ -108,11 +107,26 @@ test("a second manual reposition can start while the first vehicle is still movi
     assert.equal(engine.handleManualRepositionAction().success, true);
     assert.equal(engine.selectRepositionVehicle(vehicle.id).success, true);
     assert.equal(engine.selectRepositionTarget(chooseDifferentDistrict(vehicle)).success, true);
-    assert.equal(engine.handleManualRepositionAction().success, true);
     assert.equal(simulator.manualRepositionState.phase, "idle");
   }
 
   assert.equal(first.status, "REPOSITIONING");
   assert.equal(second.status, "REPOSITIONING");
   assert.equal(engine.activeRepositions.size, 2);
+});
+
+test("five rapid target selections each create exactly one reposition", () => {
+  const engine = new Engine(); engine.reset({ operationMode: "repositionTraining" });
+  const selected = vehicles.filter(vehicle => vehicle.status === "AVAILABLE").slice(0, 5);
+
+  for (const vehicle of selected) {
+    const target = districts.find(district => district.id !== vehicle.district).id;
+    engine.handleManualRepositionAction();
+    engine.selectRepositionVehicle(vehicle.id);
+    assert.equal(engine.selectRepositionTarget(target).success, true);
+    assert.equal(engine.selectRepositionTarget(target).success, false, "duplicate target event is ignored");
+  }
+
+  assert.equal(engine.activeRepositions.size, 5);
+  assert.deepEqual([...engine.activeRepositions.values()].map(item => item.vehicleId).sort(), selected.map(vehicle => vehicle.id).sort());
 });
