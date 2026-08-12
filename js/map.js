@@ -600,13 +600,18 @@ export class MapView {
     }
 
     updateVehicleElement(element, vehicle, x, y) {
+        const hiddenAtDetention = vehicle.status === "BUSY";
         element.setAttribute("transform", `translate(${x} ${y}) rotate(${vehicle.angle || 0})`);
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
+        element.style.display = hiddenAtDetention ? "none" : "";
+        element.style.pointerEvents = hiddenAtDetention ? "none" : "";
+        if (hiddenAtDetention) element.setAttribute("aria-hidden", "true");
+        else element.removeAttribute("aria-hidden");
         element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
-        const selected=(simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id;
+        const selected=!hiddenAtDetention&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
         element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}`);
     }
