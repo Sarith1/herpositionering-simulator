@@ -22,6 +22,32 @@ export const REPOSITION_TARGET_HIT_RADIUS = 95;
 export const REPOSITION_TARGET_LABEL_WIDTH = 190;
 export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
 
+export const repositionRules = [
+    {
+        number: 1,
+        title: "Van binnen naar buiten",
+        description: "Herpositioneer eerst vanuit nabijgelegen districten en werk daarna naar buiten."
+    },
+    {
+        number: 2,
+        title: "Hotzones goed gedekt",
+        description: "Voorkom dat Hotzones door een herpositionering onvoldoende dekking overhouden.",
+        accent: "hotzone"
+    },
+    {
+        number: 3,
+        title: "Nog aan te vullen",
+        description: "",
+        placeholder: true
+    },
+    {
+        number: 4,
+        title: "Meer info",
+        description: "De simulator ondersteunt zowel automatische als handmatige herpositionering. De herpositioneringsregels helpen bij het behouden van een zo evenwichtig mogelijke gebiedsdekking.",
+        expandable: true
+    }
+];
+
 export class MapView {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -49,7 +75,7 @@ export class MapView {
         this.container.innerHTML = "";
         this.createBackground();
         this.createSVG();
-        this.createLegend();
+        this.createMapInformationPanels();
         this.render();
     }
 
@@ -61,7 +87,10 @@ export class MapView {
         this.container.appendChild(image);
     }
 
-    createLegend() {
+    createMapInformationPanels() {
+        const panels = document.createElement("div");
+        panels.className = "map-information-panels";
+
         const legend = document.createElement("details");
         legend.className = "map-legend";
         legend.setAttribute("aria-label", "Legenda");
@@ -74,7 +103,49 @@ export class MapView {
             <span><span class="legend-icon detention-legend-icon" aria-hidden="true">${this.getDetentionComplexLegendSvg(false)}</span> Beschikbaar cellencomplex</span>
             <span><span class="legend-icon detention-legend-icon unavailable" aria-hidden="true">${this.getDetentionComplexLegendSvg(true)}</span> Niet beschikbaar cellencomplex</span></div>
         `;
-        this.container.appendChild(legend);
+        this.syncDetailsExpandedState(legend);
+        panels.appendChild(legend);
+
+        const rulesPanel = document.createElement("details");
+        rulesPanel.className = "map-legend reposition-rules";
+        rulesPanel.setAttribute("aria-label", "Herpositioneringsregels");
+        rulesPanel.innerHTML = `
+            <summary><span class="panel-chevron" aria-hidden="true"></span>Herpositioneringsregels</summary>
+            <ol class="reposition-rules-list">
+                ${repositionRules.map(rule => this.createRepositionRuleMarkup(rule)).join("")}
+            </ol>
+        `;
+        this.syncDetailsExpandedState(rulesPanel);
+        rulesPanel.querySelector(".reposition-rule-more")?.addEventListener("click", event => {
+            const button = event.currentTarget;
+            const description = rulesPanel.querySelector(`#${button.getAttribute("aria-controls")}`);
+            const expanded = button.getAttribute("aria-expanded") === "true";
+            button.setAttribute("aria-expanded", String(!expanded));
+            description.hidden = expanded;
+        });
+        panels.appendChild(rulesPanel);
+        this.container.appendChild(panels);
+    }
+
+    syncDetailsExpandedState(details) {
+        const summary = details.querySelector("summary");
+        const update = () => summary.setAttribute("aria-expanded", String(details.open));
+        details.addEventListener("toggle", update);
+        update();
+    }
+
+    createRepositionRuleMarkup(rule) {
+        const classes = ["reposition-rule"];
+        if (rule.accent) classes.push(`reposition-rule--${rule.accent}`);
+        if (rule.placeholder) classes.push("reposition-rule--placeholder");
+        const descriptionId = `reposition-rule-description-${rule.number}`;
+        const title = rule.expandable
+            ? `<button type="button" class="reposition-rule-more" aria-expanded="false" aria-controls="${descriptionId}">${rule.title}<span aria-hidden="true">+</span></button>`
+            : `<span class="reposition-rule-title">${rule.title}</span>`;
+        const description = rule.description
+            ? `<p id="${descriptionId}"${rule.expandable ? " hidden" : ""}>${rule.description}</p>`
+            : "";
+        return `<li class="${classes.join(" ")}"><span class="rule-number" aria-hidden="true">${rule.number}</span><div>${title}${description}</div></li>`;
     }
 
     getDetentionComplexLegendSvg(unavailable) {
