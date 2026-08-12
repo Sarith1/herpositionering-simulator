@@ -109,6 +109,8 @@ export class UI {
         const percentageInput = document.getElementById("multiUnitIncidentPercentage");
         percentageInput?.addEventListener("input", () => this.updateMultiUnitIncidentLabel());
         this.setMultiUnitIncidentPercentage(sessionConfig.multiUnitIncidentPercentage);
+        document.getElementById("hotzoneIncidentPercentage")?.addEventListener("input", () => this.updateHotzoneIncidentLabel());
+        this.setHotzoneIncidentPercentage(sessionConfig.hotzoneIncidentPercentage);
         this.setAutoplayDelayValues(sessionConfig.autoplayMinDelaySeconds, sessionConfig.autoplayMaxDelaySeconds);
         ["autoplayMinDelay", "autoplayMaxDelay"].forEach(id => document.getElementById(id)?.addEventListener("input", event => this.handleAutoplayDelayInput(event.target)));
         this.updateModeConfigVisibility();
@@ -162,7 +164,7 @@ export class UI {
 
         this.updateConfigTotal();
 
-        this.configContainer.addEventListener("input", () => this.updateConfigTotal());
+        this.configContainer.addEventListener("input", () => { this.updateConfigTotal(); this.updateHotzoneIncidentLabel(); });
 
     }
 
@@ -259,6 +261,24 @@ export class UI {
         this.configContainer.querySelectorAll("[data-hotzone-district-id]").forEach(input => {
             input.checked = selected.has(input.dataset.hotzoneDistrictId);
         });
+        this.updateHotzoneIncidentLabel();
+    }
+
+    getHotzoneIncidentPercentage() {
+        const input=document.getElementById("hotzoneIncidentPercentage");
+        return Math.max(0,Math.min(100,Number(input?.value ?? sessionConfig.hotzoneIncidentPercentage)));
+    }
+
+    setHotzoneIncidentPercentage(value) {
+        const input=document.getElementById("hotzoneIncidentPercentage");
+        if(input)input.value=String(Math.max(0,Math.min(100,Number(value) || 0)));
+        this.updateHotzoneIncidentLabel();
+    }
+
+    updateHotzoneIncidentLabel() {
+        const value=this.getHotzoneIncidentPercentage(),label=document.getElementById("hotzoneIncidentPercentageLabel"),help=document.getElementById("hotzoneIncidentPercentageHelp");
+        if(label)label.textContent=`${value}% van de meldingen wordt bij voorkeur in Hotzones geplaatst.`;
+        if(help)help.hidden=this.getConfiguredHotzones().length>0;
     }
 
     getMultiUnitIncidentPercentage() {

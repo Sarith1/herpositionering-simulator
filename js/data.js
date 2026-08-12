@@ -138,10 +138,15 @@ Voertuigen
 
 export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
+export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 50;
 export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
 export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 20;
 export const DEFAULT_DETENTION_CAPACITY = 10;
 export const MAX_DETENTION_CAPACITY = 50;
+export const DETENTION_COMPLEX_OFFSET_X = 40;
+export const DETENTION_COMPLEX_OFFSET_Y = -62;
+export const DETENTION_COMPLEX_MAP_WIDTH = 1100;
+export const DETENTION_COMPLEX_SAFE_MARGIN = 48;
 
 // Cellencomplexen zijn zelfstandige routenetwerknodes. De centrale locatie ligt
 // bewust iets ten westen van het kaartmidden om labels en voertuigclusters vrij te houden.
@@ -150,6 +155,31 @@ export const detentionComplexes = [
     { id: "CELL_ZHZ", name: "Cellencomplex Zuid-Holland-Zuid", x: 670, y: 438, neighbours: ["ZHZ", "RZ"] },
     { id: "CELL_CENTRAL", name: "Centraal Cellencomplex", x: 410, y: 315, neighbours: ["RS", "RZ", "ZH"] }
 ];
+
+export function getDetentionComplexPosition(complex) {
+    if (!complex) return null;
+    return {
+        x: Math.min(complex.x + DETENTION_COMPLEX_OFFSET_X, DETENTION_COMPLEX_MAP_WIDTH - DETENTION_COMPLEX_SAFE_MARGIN),
+        y: complex.y + DETENTION_COMPLEX_OFFSET_Y
+    };
+}
+
+export function getDetentionComplexPositionById(id) {
+    return getDetentionComplexPosition(detentionComplexes.find(complex => complex.id === id));
+}
+
+const DETENTION_PARKING_OFFSETS = [
+    { x: 0, y: 30 }, { x: 22, y: 25 }, { x: -22, y: 25 },
+    { x: 32, y: 0 }, { x: -32, y: 0 }
+];
+
+export function getDetentionParkingSlot(complexId, vehicleId) {
+    const position = getDetentionComplexPositionById(complexId);
+    if (!position) return null;
+    const slotIndex = [...String(vehicleId)].reduce((hash, character) => hash + character.charCodeAt(0), 0);
+    const offset = DETENTION_PARKING_OFFSETS[slotIndex % DETENTION_PARKING_OFFSETS.length];
+    return { x: position.x + offset.x, y: position.y + offset.y };
+}
 
 export function createDefaultDetentionCapacity() {
     return Object.fromEntries(detentionComplexes.map(complex => [complex.id, DEFAULT_DETENTION_CAPACITY]));
@@ -163,6 +193,7 @@ export const sessionConfig = {
 
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
     hotzoneDistrictIds: [],
+    hotzoneIncidentPercentage: DEFAULT_HOTZONE_INCIDENT_PERCENTAGE,
 
     availablePrisons: getDefaultPrisonDistrictIds(),
     detentionCapacity: createDefaultDetentionCapacity(),
@@ -210,6 +241,7 @@ export function resetSessionConfigDefaults() {
 
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
     sessionConfig.hotzoneDistrictIds = [];
+    sessionConfig.hotzoneIncidentPercentage = DEFAULT_HOTZONE_INCIDENT_PERCENTAGE;
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
     sessionConfig.detentionCapacity = createDefaultDetentionCapacity();
     sessionConfig.operationMode = "automatic";
