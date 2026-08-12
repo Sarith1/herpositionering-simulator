@@ -162,6 +162,7 @@ export function createEmptyDetentionOccupancy() {
 export const sessionConfig = {
 
     vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
+    hotzoneDistrictIds: [],
 
     availablePrisons: getDefaultPrisonDistrictIds(),
     detentionCapacity: createDefaultDetentionCapacity(),
@@ -208,6 +209,7 @@ export function setAvailablePrisons(prisonIds) {
 export function resetSessionConfigDefaults() {
 
     sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
+    sessionConfig.hotzoneDistrictIds = [];
     sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
     sessionConfig.detentionCapacity = createDefaultDetentionCapacity();
     sessionConfig.operationMode = "automatic";
@@ -217,6 +219,12 @@ export function resetSessionConfigDefaults() {
 
     initializeVehicles();
 
+}
+
+export function setHotzoneDistrictIds(districtIds = []) {
+    const validDistrictIds = new Set(districts.map(district => district.id));
+    sessionConfig.hotzoneDistrictIds = [...new Set(districtIds)]
+        .filter(id => validDistrictIds.has(id));
 }
 
 export function setDetentionCapacity(capacityByPrison) {

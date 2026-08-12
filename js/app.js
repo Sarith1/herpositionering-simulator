@@ -67,6 +67,7 @@ export class App {
         this.bindButton("restoreDefaultsBtn", () => {
             const defaults = createDefaultVehiclesPerDistrict();
             this.ui.setConfigValues(defaults);
+            this.ui.setHotzoneConfigValues([]);
             this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
             this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
             this.ui.setOperationConfig("automatic", 5);
@@ -140,6 +141,7 @@ export class App {
         this.ui.hideRepositioningFailure();
         return this.engine.reset({
             vehiclesPerDistrict: this.ui.getConfiguredVehiclesPerDistrict(),
+            hotzoneDistrictIds: this.ui.getConfiguredHotzones(),
             availablePrisons,
             detentionCapacity: this.ui.getConfiguredDetentionCapacity(),
             operationMode: this.ui.getOperationMode(),
@@ -157,6 +159,7 @@ export class App {
     newSessionSetup() {
         this.ui.hideRepositioningFailure();
         this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
+        this.ui.setHotzoneConfigValues([]);
         this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
         this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
         this.ui.setOperationConfig("automatic", 5);

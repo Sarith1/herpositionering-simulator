@@ -36,6 +36,7 @@ export class MapView {
         this.height = 800;
         this.svg = null;
         this.routeLayer = null;
+        this.hotzoneLayer = null;
         this.districtLayer = null;
         this.vehicleLayer = null;
         this.incidentLayer = null;
@@ -71,6 +72,7 @@ export class MapView {
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
+            <span><span class="legend-icon hotzone-legend-icon" aria-hidden="true"></span> Hotzone</span>
             <span><span class="legend-icon detention-legend-icon" aria-hidden="true">${this.getDetentionComplexLegendSvg(false)}</span> Beschikbaar cellencomplex</span>
             <span><span class="legend-icon detention-legend-icon unavailable" aria-hidden="true">${this.getDetentionComplexLegendSvg(true)}</span> Niet beschikbaar cellencomplex</span></div>
         `;
@@ -92,6 +94,7 @@ export class MapView {
         this.container.appendChild(this.svg);
 
         this.routeLayer = this.createLayer("routes");
+        this.hotzoneLayer = this.createLayer("hotzones");
         this.districtLayer = this.createLayer("districts");
         this.prisonLayer = this.createLayer("prisons");
         this.vehicleLayer = this.createLayer("vehicles");
@@ -114,11 +117,13 @@ export class MapView {
 
     render() {
         this.clearLayer(this.routeLayer);
+        this.clearLayer(this.hotzoneLayer);
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.labelLayer);
         this.syncIncident();
 
         this.drawRoutes();
+        this.drawHotzones();
         this.drawDistricts();
         this.syncPrisons();
         this.drawLabels();
@@ -174,6 +179,32 @@ export class MapView {
             group.append(circle, code);
 
             this.districtLayer.appendChild(group);
+        });
+    }
+
+    drawHotzones() {
+        const hotzoneIds = new Set(sessionConfig.hotzoneDistrictIds || []);
+
+        districts.filter(district => hotzoneIds.has(district.id)).forEach(district => {
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            group.setAttribute("class", "hotzone-marker");
+            group.dataset.hotzoneDistrictId = district.id;
+            group.setAttribute("aria-hidden", "true");
+
+            const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            halo.setAttribute("class", "hotzone-halo");
+            halo.setAttribute("cx", district.x);
+            halo.setAttribute("cy", district.y);
+            halo.setAttribute("r", 72);
+
+            const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            ring.setAttribute("class", "hotzone-ring");
+            ring.setAttribute("cx", district.x);
+            ring.setAttribute("cy", district.y);
+            ring.setAttribute("r", 58);
+
+            group.append(halo, ring);
+            this.hotzoneLayer.appendChild(group);
         });
     }
 
