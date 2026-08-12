@@ -1599,7 +1599,6 @@ aside{padding:14px;border-left:1px solid var(--border-subtle);border-right:1px s
 @media(prefers-reduced-motion:reduce){.travel-time-toast.is-visible{animation:travelTimeFade 1.5s ease both}@keyframes travelTimeFade{0%,100%{opacity:0}12%,70%{opacity:1}}*{scroll-behavior:auto!important}}
 
 /* Herpositioneringsmodus */
-.reposition-training-option small{display:block;margin:.3rem 0 0 1.35rem;color:var(--text-muted);line-height:1.35}
 .reposition-shortcut-hint{display:flex;align-items:center;gap:.65rem;color:var(--text-secondary);font-size:.78rem}.reposition-shortcut-hint>strong{color:var(--blue-light);letter-spacing:.08em}.reposition-shortcut-hint small{color:var(--text-muted)}
 kbd{display:inline-flex;min-width:2rem;min-height:2rem;align-items:center;justify-content:center;border:1px solid rgba(132,212,255,.7);border-bottom-width:3px;border-radius:6px;background:#102f48;color:#fff;font:800 .9rem system-ui}
 .reposition-training-mode .manual-reposition-panel{border-width:2px;box-shadow:0 0 20px rgba(39,153,232,.18)}
