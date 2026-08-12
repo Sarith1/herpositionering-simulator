@@ -98,3 +98,21 @@ test("the stateful primary action completes twenty consecutive manual reposition
     assert.deepEqual(simulator.manualRepositionState, { phase: "idle", selectedVehicleId: null, targetDistrictId: null });
   }
 });
+
+test("a second manual reposition can start while the first vehicle is still moving", () => {
+  const engine = new Engine(); engine.reset({ operationMode: "repositionTraining" });
+  const [first, second] = vehicles.filter(vehicle => vehicle.status === "AVAILABLE");
+  const chooseDifferentDistrict = vehicle => districts.find(district => district.id !== vehicle.district).id;
+
+  for (const vehicle of [first, second]) {
+    assert.equal(engine.handleManualRepositionAction().success, true);
+    assert.equal(engine.selectRepositionVehicle(vehicle.id).success, true);
+    assert.equal(engine.selectRepositionTarget(chooseDifferentDistrict(vehicle)).success, true);
+    assert.equal(engine.handleManualRepositionAction().success, true);
+    assert.equal(simulator.manualRepositionState.phase, "idle");
+  }
+
+  assert.equal(first.status, "REPOSITIONING");
+  assert.equal(second.status, "REPOSITIONING");
+  assert.equal(engine.activeRepositions.size, 2);
+});

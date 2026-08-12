@@ -692,12 +692,15 @@ export class UI {
     }
     hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
     updateManualReposition(buttonState){
-        const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),primary=document.getElementById("startRepositionBtn"),cancel=document.getElementById("cancelRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction");
+        const state=simulator.manualRepositionState,panel=document.getElementById("manualRepositionPanel"),primary=document.getElementById("startRepositionBtn"),cancel=document.getElementById("cancelRepositionBtn"),instruction=document.getElementById("manualRepositionInstruction"),shortcutHint=document.getElementById("repositionShortcutHint");
         const active=state.phase!=="idle";
         if(panel)panel.hidden=!active;
-        if(primary){primary.hidden=false;primary.disabled=!buttonState.manualRepositionStart;primary.textContent=state.phase==="idle"?"Herpositioneer voertuig":state.phase==="selectVehicle"?"Kies een voertuig":state.phase==="selectDistrict"?"Kies nu het doeldistrict":"Herpositionering starten";primary.classList.toggle("dispatch-confirm-button",state.phase==="ready");}
+        const actionLabel=state.phase==="idle"?"Herpositioneer voertuig":state.phase==="ready"?"Herpositionering starten":state.phase==="selectVehicle"?"Kies een voertuig op de kaart":"Kies een doeldistrict";
+        const actionable=state.phase==="idle"||state.phase==="ready";
+        if(primary){primary.hidden=false;primary.disabled=!buttonState.manualRepositionStart;primary.innerHTML=`${actionable?"<kbd>H</kbd>":""}<span>${actionLabel}</span>`;primary.classList.toggle("dispatch-confirm-button",state.phase==="ready");}
+        if(shortcutHint){const label=shortcutHint.querySelector("[data-reposition-shortcut-label]");if(label)label.textContent=actionLabel;shortcutHint.hidden=buttonState.mode!=="repositionTraining"||!actionable;shortcutHint.classList.toggle("reposition-shortcut-hint--ready",state.phase==="ready");}
         if(cancel){cancel.hidden=!active;cancel.disabled=!active;}
-        if(instruction&&active)instruction.textContent=state.phase==="selectDistrict"?"Kies een doeldistrict op de kaart — klik op een blauw gemarkeerd district.":state.phase==="selectVehicle"?"Kies een beschikbaar voertuig":"De herpositionering kan met de hoofdknop worden gestart";
+        if(instruction&&active)instruction.innerHTML=state.phase==="selectDistrict"?"Kies een doeldistrict op de kaart — klik op een blauw gemarkeerd district.":state.phase==="selectVehicle"?"Kies een voertuig op de kaart.":"<strong>Klaar om te herpositioneren</strong><span class=\"reposition-ready-action\"><kbd>H</kbd> Start herpositionering</span>";
         const details=document.getElementById("manualRepositionDetails");
         if(details&&(!active||!state.targetDistrictId)){const vehicle=vehicles.find(item=>item.id===state.selectedVehicleId),origin=districts.find(item=>item.id===vehicle?.district);details.innerHTML=vehicle?`<dl><dt>Voertuig</dt><dd><strong>${vehicle.id}</strong></dd><dt>Van</dt><dd>${origin?.name||"—"}</dd><dt>Naar</dt><dd>Nog te kiezen</dd></dl>`:"";}
     }
