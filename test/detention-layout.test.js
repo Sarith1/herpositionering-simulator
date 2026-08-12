@@ -4,6 +4,10 @@ import assert from "node:assert/strict";
 import { detentionComplexes } from "../js/data.js";
 import { DETENTION_COMPLEX_OFFSET_X, MapView } from "../js/map.js";
 
+test("detention complexes use the preferred 40-unit horizontal offset", () => {
+    assert.equal(DETENTION_COMPLEX_OFFSET_X, 40);
+});
+
 test("all detention complexes use the same visual offset without changing their routing coordinates", () => {
     const map = { width: 1100 };
 

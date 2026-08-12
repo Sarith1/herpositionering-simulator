@@ -17,7 +17,7 @@ const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
 const DETENTION_COMPLEX_SCALE = 1.20;
-export const DETENTION_COMPLEX_OFFSET_X = 55;
+export const DETENTION_COMPLEX_OFFSET_X = 40;
 const DETENTION_COMPLEX_OFFSET_Y = -62;
 const DETENTION_COMPLEX_SAFE_MARGIN = 48;
 export const REPOSITION_TARGET_HIT_RADIUS = 95;
@@ -279,10 +279,6 @@ export class MapView {
                 group.querySelector("title").textContent = `Cellencomplex ${district.name}\n${available ? "Beschikbaar" : "Niet beschikbaar"}`;
                 const position = this.getDetentionComplexPosition(district);
                 group.setAttribute("transform", `translate(${position.x} ${position.y})`);
-                group.querySelector(".detention-connector").setAttribute(
-                    "d",
-                    `M0 ${24 * DETENTION_COMPLEX_SCALE}L${district.x - position.x} ${district.y - position.y}`
-                );
             });
 
         this.prisonLayer
@@ -317,9 +313,6 @@ export class MapView {
 
         const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
 
-        const connector = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        connector.setAttribute("class", "detention-connector");
-
         const visual = document.createElementNS("http://www.w3.org/2000/svg", "g");
         visual.setAttribute("class", "prison-visual");
         visual.setAttribute("transform", `scale(${DETENTION_COMPLEX_SCALE})`);
@@ -348,7 +341,7 @@ export class MapView {
         bars.setAttribute("d", "M-14-3v15m7-15v15M-17-3h13m-13 15h13M7-3v15m7-15v15M4-3h13M4 12h13");
 
         visual.append(halo, flashRing, building, roof, badge, bars);
-        group.append(title, connector, visual);
+        group.append(title, visual);
         this.prisonLayer.appendChild(group);
 
         return group;
