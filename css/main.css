@@ -654,6 +654,28 @@ footer button:disabled {
     filter:drop-shadow(0 0 5px rgba(239,68,68,.25));
 }
 
+.hotzone-marker--undercovered .hotzone-halo {
+    fill:rgba(249,115,22,.15);
+    stroke:rgba(251,146,60,.75);
+}
+
+.hotzone-marker--undercovered .hotzone-ring {
+    stroke:#fb7185;
+    stroke-width:5px;
+    filter:drop-shadow(0 0 9px rgba(239,68,68,.7));
+}
+
+.district-status--hotzone-warning {
+    border-color:rgba(251,113,133,.75);
+    box-shadow:inset 3px 0 0 #fb7185;
+}
+
+.district-status small {
+    display:block;
+    color:#fda4af;
+    font-size:10px;
+}
+
 .district-label {
     fill:#fff;
     font-size:15px;
