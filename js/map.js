@@ -459,7 +459,7 @@ export class MapView {
 
     syncIncident() {
         const visible = new Set();
-        (simulator.incidents || []).filter(i => i.status !== "HANDLED").forEach(incident => {
+        (simulator.incidents || []).filter(i => i.status !== "HANDLED" && i.markerVisible !== false).forEach(incident => {
             visible.add(incident.id);
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
@@ -610,7 +610,9 @@ export class MapView {
 
     updateVehicleElement(element, vehicle, x, y) {
         const hiddenAtDetention = vehicle.status === "BUSY";
-        element.setAttribute("transform", `translate(${x} ${y}) rotate(${vehicle.angle || 0})`);
+        // Position is the only movement transform: the icon, callsign and
+        // selection styling must remain upright regardless of travel direction.
+        element.setAttribute("transform", `translate(${x} ${y})`);
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
         element.style.display = hiddenAtDetention ? "none" : "";
