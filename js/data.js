@@ -150,6 +150,9 @@ export const SPECIAL_VEHICLE_CALLSIGNS = new Set([
     "RT1101",
     "RT5103"
 ]);
+export function isSpecialVehicle(vehicle) {
+    return Boolean(vehicle && SPECIAL_VEHICLE_CALLSIGNS.has(vehicle.id));
+}
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
 export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 50;
 export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;

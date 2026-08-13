@@ -1,4 +1,4 @@
-import { createEmptyDetentionOccupancy, detentionComplexes, districts, getDetentionComplexPositionById, getDetentionParkingSlot, getTotalDetentionCapacity, getTotalDetentionOccupancy, initializeVehicles, resetSessionConfigDefaults, repositioningFailureConfig, sessionConfig, setAvailablePrisons, setDetentionCapacity, setHotzoneDistrictIds, setVehiclesPerDistrict, simulator, vehicles } from "./data.js";
+import { createEmptyDetentionOccupancy, detentionComplexes, districts, getDetentionComplexPositionById, getDetentionParkingSlot, getTotalDetentionCapacity, getTotalDetentionOccupancy, initializeVehicles, isSpecialVehicle, resetSessionConfigDefaults, repositioningFailureConfig, sessionConfig, setAvailablePrisons, setDetentionCapacity, setHotzoneDistrictIds, setVehiclesPerDistrict, simulator, vehicles } from "./data.js";
 import { calculateTravelTime, findNearestAvailableVehicle, getDistrictById, getPrisonDistricts, getRouteDistance, getShortestRoute } from "./routing.js";
 
 const STATUS = { AVAILABLE:"AVAILABLE", TO_INCIDENT:"TO_INCIDENT", TO_PRISON:"TO_PRISON", BUSY:"BUSY", RETURNING:"RETURNING", REPOSITIONING:"REPOSITIONING" };
@@ -127,7 +127,8 @@ export class Engine {
   const incident=this.requireInputIncident("DISPATCH"),result=this.assignIncident(incident);this.resetInputCycle();return result;
  }
  assertSuccessfulDispatch(){}
- availableVehiclesByDistance(incident){return vehicles.filter(v=>v.status===STATUS.AVAILABLE&&!v.incident&&!incident.assignedVehicleIds.includes(v.id)).map(vehicle=>({vehicle,distance:getRouteDistance(getShortestRoute(vehicle.district,incident.district))})).sort((a,b)=>a.distance-b.distance).map(x=>x.vehicle);}
+ rankVehiclesForDispatch(candidates,incident){return candidates.map(vehicle=>({vehicle,distance:getRouteDistance(getShortestRoute(vehicle.district,incident.district))})).sort((a,b)=>Number(isSpecialVehicle(a.vehicle))-Number(isSpecialVehicle(b.vehicle))||a.distance-b.distance).map(item=>item.vehicle);}
+ availableVehiclesByDistance(incident){return this.rankVehiclesForDispatch(vehicles.filter(v=>v.status===STATUS.AVAILABLE&&!v.incident&&!incident.assignedVehicleIds.includes(v.id)),incident);}
  assignIncident(incident,vehicleId=null){
   if(!incident?.prisonId)this.prepareIncident(incident);const needed=incident.requiredUnits-incident.assignedVehicleIds.length,candidates=vehicleId?[vehicles.find(v=>v.id===vehicleId)].filter(Boolean):this.availableVehiclesByDistance(incident).slice(0,needed);const events=[];let assigned=0,firstVehicle=null;
   for(const vehicle of candidates){const result=this.startDispatch({incidentId:incident.id,vehicleId:vehicle.id,prisonId:incident.prisonId});if(result.success){assigned++;firstVehicle??=vehicle;events.push(...(result.events||[]),{type:"log",message:`[DISPATCH] ${vehicle.id} ingezet voor ${getDistrictById(incident.district)?.name} (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`});}}
@@ -231,13 +232,14 @@ export class Engine {
   ];
  }
  evaluateRepositioningFailure(now=performance.now()){return this.evaluateCoverageFailure(now);}
- startAutomaticReposition(donor,target){const candidates=vehicles.filter(x=>x.district===donor.id&&x.status===STATUS.AVAILABLE).sort((a,b)=>Number(a.homeDistrict!==donor.id)-Number(b.homeDistrict!==donor.id));const v=candidates[0],route=getShortestRoute(donor.id,target.id);if(!v||!route.length)return null;const id=`REP-${++this.repositionSequence}`,r={id,type:"automatic",originDistrictId:donor.id,sourceDistrictId:donor.id,vehicleId:v.id,targetDistrictId:target.id,route,phaseStartTime:performance.now(),fromX:v.x,fromY:v.y,toX:target.x,toY:target.y};v.status=STATUS.REPOSITIONING;this.activeRepositions.set(id,r);simulator.activeRoutes.push({id,route,type:"reposition"});return{type:"repositionStarted",vehicle:v,district:target,origin:donor};}
+ rankVehiclesForReposition(candidates,donorId){return [...candidates].sort((a,b)=>Number(isSpecialVehicle(a))-Number(isSpecialVehicle(b))||Number(a.homeDistrict!==donorId)-Number(b.homeDistrict!==donorId));}
+ startAutomaticReposition(donor,target){const candidates=this.rankVehiclesForReposition(vehicles.filter(x=>x.district===donor.id&&x.status===STATUS.AVAILABLE),donor.id);const v=candidates[0],route=getShortestRoute(donor.id,target.id);if(!v||!route.length)return null;const id=`REP-${++this.repositionSequence}`,r={id,type:"automatic",originDistrictId:donor.id,sourceDistrictId:donor.id,vehicleId:v.id,targetDistrictId:target.id,route,phaseStartTime:performance.now(),fromX:v.x,fromY:v.y,toX:target.x,toY:target.y};v.status=STATUS.REPOSITIONING;this.activeRepositions.set(id,r);simulator.activeRoutes.push({id,route,type:"reposition"});return{type:"repositionStarted",vehicle:v,district:target,origin:donor};}
  evaluateHomeReturns(now=performance.now()){
   if(simulator.gameOver)return[];
   const movements=[...this.activeRepositions.values()];
   const blockedDistricts=new Set(movements.flatMap(item=>[item.originDistrictId,item.targetDistrictId]));
   const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
-  const vehicle=vehicles.find(item=>item.status===STATUS.AVAILABLE&&!item.incident&&item.district!==item.homeDistrict&&now-(item.lastRepositionedAt??-Infinity)>=REPOSITION_COOLDOWN_MS&&!blockedDistricts.has(item.district)&&!blockedDistricts.has(item.homeDistrict)&&this.availableCount(item.district)-1>=(hotzones.has(item.district)?targets.hotzoneMinimum:1));
+  const vehicle=vehicles.filter(item=>item.status===STATUS.AVAILABLE&&!item.incident&&item.district!==item.homeDistrict&&now-(item.lastRepositionedAt??-Infinity)>=REPOSITION_COOLDOWN_MS&&!blockedDistricts.has(item.district)&&!blockedDistricts.has(item.homeDistrict)&&this.availableCount(item.district)-1>=(hotzones.has(item.district)?targets.hotzoneMinimum:1)).sort((a,b)=>Number(isSpecialVehicle(b))-Number(isSpecialVehicle(a)))[0];
   if(!vehicle)return[];
   const origin=getDistrictById(vehicle.district),target=getDistrictById(vehicle.homeDistrict),route=getShortestRoute(origin.id,target.id);
   if(!origin||!target||!route.length)return[];

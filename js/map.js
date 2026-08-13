@@ -9,7 +9,7 @@ meldingen, gevangenissen en routes.
 ==========================================================
 */
 
-import { colors, detentionComplexes, districts, getDetentionComplexPosition, SPECIAL_VEHICLE_CALLSIGNS, sessionConfig, simulator, vehicles } from "./data.js";
+import { colors, detentionComplexes, districts, getDetentionComplexPosition, isSpecialVehicle, sessionConfig, simulator, vehicles } from "./data.js";
 export { DETENTION_COMPLEX_OFFSET_X } from "./data.js";
 import { getDistrictById, getShortestRoute } from "./routing.js";
 import { getCoverageTargets } from "./engine.js";
@@ -100,7 +100,7 @@ export class MapView {
         legend.innerHTML = `
             <summary>Legenda</summary><div class="legend-details">
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
-            <span><span class="legend-special-callsign">RT</span> groen roepnummer = speciaal voertuig</span>
+            <span><span class="legend-special-callsign">RT</span> Groen roepnummer = bij voorkeur in eigen district houden</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
             <span><span class="legend-icon hotzone-legend-icon" aria-hidden="true"></span> Hotzone</span>
@@ -619,13 +619,14 @@ export class MapView {
         const callsign = element.querySelector(".vehicle-callsign");
         if (callsign) {
             callsign.textContent = vehicle.callsign || vehicle.id;
-            callsign.classList.toggle("vehicle-callsign--special", SPECIAL_VEHICLE_CALLSIGNS.has(vehicle.callsign || vehicle.id));
+            callsign.classList.toggle("vehicle-callsign--special", isSpecialVehicle(vehicle));
         }
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=!hiddenAtDetention&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
-        element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}`);
+        const specialHint=isSpecialVehicle(vehicle)?` Speciaal voertuig; bij voorkeur in ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict} behouden.`:"";
+        element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}.${specialHint}`);
     }
 
     clamp(value, min, max) {
