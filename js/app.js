@@ -80,7 +80,7 @@ export class App {
         });
         document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
         document.getElementById("map")?.addEventListener("vehicle-select", event => {
-            const result=simulator.manualRepositionState.phase!=="idle"?this.engine.selectRepositionVehicle(event.detail.vehicleId):this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); if(result.selection)this.ui.showVehicleSelection(result.selection); this.sync();
+            const result=simulator.manualRepositionState.phase!=="idle"?this.engine.selectRepositionVehicle(event.detail.vehicleId):this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); (result.events||[]).forEach(engineEvent=>this.handleEngineEvent(engineEvent)); if(result.selection&&simulator.vehicleSelection.active)this.ui.showVehicleSelection(result.selection);else if(!simulator.vehicleSelection.active)this.ui.hideVehicleSelection();this.sync();
         });
         document.getElementById("map")?.addEventListener("district-select", event => {const result=this.engine.selectRepositionTarget(event.detail.districtId);this.ui.log(result.message);(result.events||[]).forEach(engineEvent=>this.handleEngineEvent(engineEvent));this.sync();});
         document.getElementById("map")?.addEventListener("incident-select", event => {
@@ -182,6 +182,7 @@ export class App {
         if (event.type === "capacityWarning") { this.ui.log(event.message); this.ui.showTravelTime(event.incident.travelTime, true); }
         if (event.type === "returning") this.ui.log(`[TERUGRIT] ${event.vehicle.id} rijdt terug naar de standplaats.`);
         if (event.type === "vehicleReturned") this.ui.vehicleReturned(event.vehicle.id);
+        if (event.type === "vehicleAvailableAway") this.ui.log(`[BESCHIKBAAR] ${event.vehicle.id} blijft in ${event.district.name}; verplaats handmatig met H.`);
         if (event.type === "repositionStarted") this.ui.log(`[HERPOSITIONERING] ${event.vehicle.id} rijdt naar ${event.district.name}.`);
         if (event.type === "repositionComplete") this.ui.log(event.repositionType==="manual"?`[AANKOMST] ${event.vehicle.id} is beschikbaar in ${event.district.name}.`:`[BESCHIKBAAR] ${event.vehicle.id} dekt nu ${event.district.name}.`);
         if (event.type === "repositioningFailure") this.ui.showRepositioningFailure(event.failure);

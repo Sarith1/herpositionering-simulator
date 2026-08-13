@@ -982,6 +982,17 @@ footer button.reset-button:focus-visible {
     opacity:.75;
 }
 
+/* Keep active movements legible without overpowering the district map. */
+.reposition-training-mode .route-line {
+    stroke-width: 5;
+    opacity: .82;
+    filter: drop-shadow(0 0 3px rgba(56, 189, 248, .35));
+}
+.reposition-training-mode .vehicle.busy,
+.reposition-training-mode .vehicle.repositioning {
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, .75));
+}
+
 .vehicle.repositioning {
     filter:drop-shadow(0 0 8px #22c55e);
 }

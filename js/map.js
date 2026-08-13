@@ -464,7 +464,7 @@ export class MapView {
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
             element.classList.toggle("waiting", ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status));
-            const selectable = sessionConfig.operationMode === "manualVehicle" && !simulator.gameOver && ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status);
+            const selectable = ["manualVehicle", "repositionTraining"].includes(sessionConfig.operationMode) && simulator.manualRepositionState.phase === "idle" && !simulator.gameOver && ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status);
             element.classList.toggle("incident--selectable", selectable);
             element.classList.toggle("incident--selected", simulator.vehicleSelection.incidentId === incident.id || simulator.activeIncident?.id === incident.id);
             element.setAttribute("tabindex", selectable ? "0" : "-1");
@@ -622,7 +622,7 @@ export class MapView {
             callsign.classList.toggle("vehicle-callsign--special", isSpecialVehicle(vehicle));
         }
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
-        const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
+        const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((["manualVehicle", "repositionTraining"].includes(sessionConfig.operationMode) && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=!hiddenAtDetention&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
         const specialHint=isSpecialVehicle(vehicle)?` Speciaal voertuig; bij voorkeur in ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict} behouden.`:"";

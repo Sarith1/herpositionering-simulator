@@ -361,7 +361,7 @@ export class UI {
         const seconds = !state.running || state.nextIncidentAt === null ? null : `${Math.ceil(Math.max(0, state.nextIncidentAt-performance.now())/1000)} sec`;
         if (status && sessionConfig.operationMode === "autoplay") status.textContent = state.running ? `Autoplay actief · Volgende melding over: ${seconds}` : "Autoplay gepauzeerd";
         const trainingStatus=document.getElementById("repositionTrainingStatus");
-        if(trainingStatus&&sessionConfig.operationMode==="repositionTraining")trainingStatus.textContent=state.running?`Oefening actief · Volgende melding over: ${seconds}`:"Oefening gepauzeerd";
+        if(trainingStatus&&sessionConfig.operationMode==="repositionTraining")trainingStatus.textContent=waiting?`${waiting===1?"Melding wacht":`${waiting} meldingen wachten`} op voertuigkeuze · Volgende melding over: ${seconds}`:state.running?`Oefening actief · Volgende melding over: ${seconds}`:"Oefening gepauzeerd";
 
     }
 
@@ -514,7 +514,8 @@ export class UI {
             return;
         }
         if (sessionConfig.operationMode === "repositionTraining") {
-            this.stepHintElement.textContent = simulator.autoplayState.running ? "Meldingen en inzet verlopen automatisch. Beheer de gebiedsdekking met H." : "Start de oefening; meldingen en inzet verlopen daarna automatisch.";
+            const waiting=(simulator.incidents||[]).filter(i=>["OPEN","PARTIALLY_ASSIGNED"].includes(i.status)).length;
+            this.stepHintElement.textContent = waiting ? (simulator.vehicleSelection.active ? "Kies een voertuig voor de melding." : `${waiting} meldingen wachten op inzet — kies eerst een melding.`) : simulator.autoplayState.running ? "Wacht op een melding of druk H om handmatig te herpositioneren." : "Start de oefening; meldingen ontstaan daarna automatisch.";
             return;
         }
         const labels = {
@@ -696,8 +697,8 @@ export class UI {
         const incident=simulator.incidents.find(item=>item.id===simulator.vehicleSelection.incidentId);
         const ids=simulator.vehicleSelection.selectedVehicleIds||[];
         if(!incident){details.innerHTML="<p>Kies een open melding.</p>";return;}
-        const required=incident.requiredUnits||1, missing=Math.max(0,required-ids.length);
-        panel.hidden=false;details.innerHTML=`<dl><dt>Incident</dt><dd>${districts.find(d=>d.id===incident.district)?.name||incident.district}</dd><dt>Benodigde eenheden</dt><dd>${required}</dd><dt>Geselecteerd</dt><dd><strong>${ids.length} / ${required}</strong></dd><dt>Voertuigen</dt><dd>${ids.length?ids.join(", "):"Nog geen"}</dd><dt>Nog nodig</dt><dd>${missing}</dd></dl><p>${missing?"Klik op gemarkeerde voertuigen om de selectie compleet te maken.":"De inzet is gereed voor bevestiging."}</p>`;
+        const required=incident.requiredUnits||1, missing=Math.max(0,required-ids.length),training=sessionConfig.operationMode==="repositionTraining";
+        panel.hidden=false;details.innerHTML=`<dl><dt>Incident</dt><dd>${districts.find(d=>d.id===incident.district)?.name||incident.district}</dd><dt>Benodigde eenheden</dt><dd>${required}</dd><dt>Geselecteerd</dt><dd><strong>${ids.length} / ${required}</strong></dd><dt>Voertuigen</dt><dd>${ids.length?ids.join(", "):"Nog geen"}</dd><dt>Nog nodig</dt><dd>${missing}</dd></dl><p>${missing?"Klik op gemarkeerde voertuigen om de selectie compleet te maken.":training?"De inzet start direct.":"De inzet is gereed voor bevestiging."}</p>`;
     }
     hideVehicleSelection(){const p=document.getElementById("manualDispatchPanel");if(p)p.hidden=true;}
     updateManualReposition(buttonState){
