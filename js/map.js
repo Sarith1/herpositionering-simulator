@@ -9,7 +9,7 @@ meldingen, gevangenissen en routes.
 ==========================================================
 */
 
-import { colors, detentionComplexes, districts, getDetentionComplexPosition, sessionConfig, simulator, vehicles } from "./data.js";
+import { colors, detentionComplexes, districts, getDetentionComplexPosition, SPECIAL_VEHICLE_CALLSIGNS, sessionConfig, simulator, vehicles } from "./data.js";
 export { DETENTION_COMPLEX_OFFSET_X } from "./data.js";
 import { getDistrictById, getShortestRoute } from "./routing.js";
 import { getCoverageTargets } from "./engine.js";
@@ -100,6 +100,7 @@ export class MapView {
         legend.innerHTML = `
             <summary>Legenda</summary><div class="legend-details">
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
+            <span><span class="legend-special-callsign">RT</span> groen roepnummer = speciaal voertuig</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
             <span><span class="legend-icon hotzone-legend-icon" aria-hidden="true"></span> Hotzone</span>
@@ -592,9 +593,13 @@ export class MapView {
         text.setAttribute("dominant-baseline", "central");
         text.setAttribute("class", "vehicle-symbol");
         text.textContent = "🚔";
+        const callsign = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        callsign.setAttribute("text-anchor", "middle");
+        callsign.setAttribute("class", "vehicle-callsign");
+        callsign.setAttribute("y", "23");
         group.addEventListener("click", () => { if (group.classList.contains("vehicle--selectable")) this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: group.dataset.vehicleId } })); });
         group.addEventListener("keydown", event => { if (group.classList.contains("vehicle--selectable") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); group.dispatchEvent(new MouseEvent("click")); } });
-        group.append(hitbox, text); this.vehicleLayer.appendChild(group);
+        group.append(hitbox, text, callsign); this.vehicleLayer.appendChild(group);
 
         return group;
     }
@@ -609,6 +614,11 @@ export class MapView {
         if (hiddenAtDetention) element.setAttribute("aria-hidden", "true");
         else element.removeAttribute("aria-hidden");
         element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
+        const callsign = element.querySelector(".vehicle-callsign");
+        if (callsign) {
+            callsign.textContent = vehicle.callsign || vehicle.id;
+            callsign.classList.toggle("vehicle-callsign--special", SPECIAL_VEHICLE_CALLSIGNS.has(vehicle.callsign || vehicle.id));
+        }
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((sessionConfig.operationMode === "manualVehicle" && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=!hiddenAtDetention&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);

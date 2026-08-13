@@ -137,6 +137,16 @@ Voertuigen
 */
 
 export const DEFAULT_VEHICLES_PER_DISTRICT = 3;
+export const VEHICLE_CALLSIGNS = Object.freeze({
+    RN: Object.freeze(["RT1101", "RT1201", "RT1301", "RT1303", "RT1102", "RT1202", "RT1302", "RT1309"]),
+    RS: Object.freeze(["RT2201", "RT2202", "RT2291"]),
+    RO: Object.freeze(["RT3201", "RT3202", "RT3204", "RT3203", "RT3209"]),
+    RZ: Object.freeze(["RT4101", "RT4201", "RT4301", "RT4102", "RT4202", "RT4302", "RT4309"]),
+    RZW: Object.freeze(["RT5103", "RT5101", "RT5201", "RT5301", "RT5102", "RT5202", "RT5303", "RT5309"]),
+    ZHZ: Object.freeze(["RT6101", "RT6201", "RT6301", "RT6401", "RT6102", "RT6202", "RT6302", "RT6402", "RT6209", "RT6309", "RT6409"]),
+    ZH: Object.freeze(["RT7202", "RT7101", "RT7201", "RT7109"])
+});
+export const SPECIAL_VEHICLE_CALLSIGNS = new Set(["RT7202", "RT4302", "RT3203", "RT3102"]);
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
 export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 50;
 export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
@@ -276,10 +286,11 @@ export function getTotalDetentionOccupancy() {
 
 export function setVehiclesPerDistrict(vehiclesPerDistrict) {
 
-    sessionConfig.vehiclesPerDistrict = {
-        ...createDefaultVehiclesPerDistrict(),
-        ...vehiclesPerDistrict
-    };
+    sessionConfig.vehiclesPerDistrict = Object.fromEntries(districts.map(district => {
+        const requested = Number.parseInt(vehiclesPerDistrict?.[district.id], 10);
+        const count = Number.isFinite(requested) ? requested : DEFAULT_VEHICLES_PER_DISTRICT;
+        return [district.id, Math.max(0, Math.min(VEHICLE_CALLSIGNS[district.id].length, count))];
+    }));
 
     initializeVehicles();
 
@@ -291,17 +302,18 @@ export function initializeVehicles() {
 
     districts.forEach(district => {
 
-        const vehicleCount = Math.max(0, Number(sessionConfig.vehiclesPerDistrict[district.id]) || 0);
+        const callsigns = VEHICLE_CALLSIGNS[district.id];
+        const vehicleCount = Math.max(0, Math.min(callsigns.length, Number(sessionConfig.vehiclesPerDistrict[district.id]) || 0));
 
-        for (let i = 1; i <= vehicleCount; i++) {
+        for (let i = 0; i < vehicleCount; i++) {
 
-            vehicles.push({
+            const vehicle = {
 
-                id: `${district.id}-${String(i).padStart(2, "0")}`,
+                id: callsigns[i],
+
+                callsign: callsigns[i],
 
                 district: district.id,
-
-                homeDistrict: district.id,
 
                 status: "AVAILABLE",
 
@@ -321,7 +333,14 @@ export function initializeVehicles() {
 
                 angle: 0
 
+            };
+            Object.defineProperty(vehicle, "homeDistrict", {
+                value: district.id,
+                enumerable: true,
+                writable: false,
+                configurable: false
             });
+            vehicles.push(vehicle);
 
         }
 
