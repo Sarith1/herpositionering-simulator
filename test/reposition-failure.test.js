@@ -1,65 +1,81 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine } from "../js/engine.js";
+import { COVERAGE_GRACE_PERIOD_MS, Engine } from "../js/engine.js";
 import { districts, simulator, vehicles } from "../js/data.js";
 
 const fleet = counts => Object.fromEntries(districts.map((district,index)=>[district.id,counts[index]??0]));
+const uncoveredFleet = () => fleet([0,1,1,1,1,1,1]);
 
-test("an uncovered district with no valid donor triggers the existing failure flow",()=>{
- const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",vehiclesPerDistrict:fleet([0,1,1,1,1,1,1])});
- assert.equal(engine.hasCriticalCoverageFailure(),true);
- assert.equal(engine.canAnyRepositionStillImproveCoverage(),false);
- const events=engine.ensureCoverage();
+test("coverage failure starts once and fires after exactly two seconds",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",vehiclesPerDistrict:uncoveredFleet()});
+ assert.deepEqual(engine.evaluateCoverageFailure(1000),[]);
+ assert.equal(engine.coverageLossStartedAt.get(districts[0].id),1000);
+ assert.deepEqual(engine.evaluateCoverageFailure(2999),[]);
+ assert.equal(engine.coverageLossStartedAt.get(districts[0].id),1000);
+ const events=engine.evaluateCoverageFailure(1000+COVERAGE_GRACE_PERIOD_MS);
  assert.equal(events.at(-1)?.type,"repositioningFailure");
  assert.equal(simulator.gameOver,true);
- assert.equal(simulator.failureInspectionMode,false);
- assert.equal(simulator.autoplayState.running,false);
- assert.equal(simulator.autoplayState.nextIncidentAt,null);
+ assert.match(simulator.repositioningFailure.explanation,/langer dan 2 seconden/);
 });
 
-test("an incoming reposition prevents failure and duplicate coverage moves",()=>{
- const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",vehiclesPerDistrict:fleet([0,2,1,1,1,1,1])});
- const event=engine.startAutomaticReposition(districts[1],districts[0]);
- assert.equal(event.type,"repositionStarted");
- const repositionCount=engine.activeRepositions.size;
- assert.equal(engine.getIncomingRepositions(districts[0].id),1);
- assert.equal(engine.getEffectiveCoverage(districts[0].id),1);
- assert.equal(engine.ensureCoverage().some(item=>item.type==="repositioningFailure"),false);
- assert.equal(engine.activeRepositions.size,repositionCount);
+test("an available arrival within the grace period clears the timer",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:uncoveredFleet()});
+ engine.evaluateCoverageFailure(1000);
+ const returning=vehicles.find(vehicle=>vehicle.district===districts[1].id);
+ returning.status="AVAILABLE";returning.district=districts[0].id;
+ assert.deepEqual(engine.evaluateCoverageFailure(2500),[]);
+ assert.equal(engine.coverageLossStartedAt.has(districts[0].id),false);
  assert.equal(simulator.gameOver,false);
 });
 
-test("a returning lifecycle does not cause premature failure",()=>{
- const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",vehiclesPerDistrict:fleet([0,1,1,1,1,1,1])});
+test("a late returning vehicle does not count as available coverage",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:uncoveredFleet()});
  vehicles.find(vehicle=>vehicle.district===districts[1].id).status="RETURNING";
- assert.equal(engine.canAnyRepositionStillImproveCoverage(),false);
- assert.equal(engine.ensureCoverage().some(item=>item.type==="repositioningFailure"),false);
+ engine.evaluateCoverageFailure(1000);
+ engine.evaluateCoverageFailure(3000);
+ assert.equal(simulator.gameOver,true);
+});
+
+test("an incoming reposition only prevents failure once it has arrived",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:fleet([0,2,1,1,1,1,1])});
+ const move=engine.startAutomaticReposition(districts[1],districts[0]);
+ engine.evaluateCoverageFailure(1000);
+ assert.equal(engine.getIncomingRepositions(districts[0].id),1);
+ assert.deepEqual(engine.evaluateCoverageFailure(2999),[]);
+ assert.equal(simulator.gameOver,false);
+ engine.evaluateCoverageFailure(3000);
+ assert.equal(move.type,"repositionStarted");
+ assert.equal(simulator.gameOver,true);
+});
+
+test("restored coverage gets a fresh grace period after a later loss",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:fleet([0,2,1,1,1,1,1])});
+ engine.evaluateCoverageFailure(1000);
+ const vehicle=vehicles.find(item=>item.district===districts[1].id);vehicle.district=districts[0].id;
+ engine.evaluateCoverageFailure(2000);
+ vehicle.status="RETURNING";
+ engine.evaluateCoverageFailure(5000);
+ assert.equal(engine.coverageLossStartedAt.get(districts[0].id),5000);
+ assert.deepEqual(engine.evaluateCoverageFailure(6999),[]);
  assert.equal(simulator.gameOver,false);
 });
 
-test("hotzone optimization without critical coverage never ends the session",()=>{
+for(const mode of ["automatic","manualVehicle","autoplay","repositionTraining"]){
+ test(`${mode} uses the central two-second coverage rule`,()=>{
+  const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:mode,vehiclesPerDistrict:uncoveredFleet()});
+  if(mode==="autoplay")engine.toggleAutoplay();
+  engine.evaluateCoverageFailure(10);
+  const events=engine.evaluateCoverageFailure(2010);
+  assert.equal(events.at(-1)?.type,"repositioningFailure");
+  assert.equal(simulator.gameOver,true);
+  assert.equal(simulator.autoplayState.running,false);
+  assert.equal(engine.createIncident({autoplayGenerated:true}).success,false);
+ });
+}
+
+test("hotzone optimization without missing available coverage never ends the session",()=>{
  const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:[districts[0].id],vehiclesPerDistrict:fleet([2,3,2,2,2,2,2])});
- assert.equal(engine.hasCriticalCoverageFailure(),false);
  engine.ensureCoverage();
+ engine.evaluateCoverageFailure(5000);
  assert.equal(simulator.gameOver,false);
-});
-
-test("reposition training detects failure without starting an automatic move",()=>{
- const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"repositionTraining",vehiclesPerDistrict:fleet([0,1,1,1,1,1,1])});
- const events=engine.ensureCoverage();
- assert.equal(engine.activeRepositions.size,0);
- assert.equal(events.some(item=>item.type==="repositionStarted"),false);
- assert.equal(events.some(item=>item.type==="repositioningFailure"),true);
- assert.equal(simulator.gameOver,true);
- assert.equal(engine.startManualReposition().success,false);
-});
-
-test("autoplay failure stops incident scheduling",()=>{
- const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"autoplay",vehiclesPerDistrict:fleet([0,1,1,1,1,1,1])});
- engine.toggleAutoplay();
- assert.equal(simulator.autoplayState.running,true);
- engine.ensureCoverage();
- assert.equal(simulator.gameOver,true);
- assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
- assert.equal(engine.createIncident({autoplayGenerated:true}).success,false);
 });
