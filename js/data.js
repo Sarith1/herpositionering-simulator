@@ -146,7 +146,10 @@ export const VEHICLE_CALLSIGNS = Object.freeze({
     ZHZ: Object.freeze(["RT6101", "RT6201", "RT6301", "RT6401", "RT6102", "RT6202", "RT6302", "RT6402", "RT6209", "RT6309", "RT6409"]),
     ZH: Object.freeze(["RT7202", "RT7101", "RT7201", "RT7109"])
 });
-export const SPECIAL_VEHICLE_CALLSIGNS = new Set(["RT7202", "RT4302", "RT3203", "RT3102"]);
+export const SPECIAL_VEHICLE_CALLSIGNS = new Set([
+    "RT1101",
+    "RT5103"
+]);
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
 export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 50;
 export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;

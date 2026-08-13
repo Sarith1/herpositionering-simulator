@@ -20,7 +20,8 @@ test("every district uses its ordered operational pool and clamps configuration 
 test("callsigns are vehicle ids, home districts are immutable, and only pooled special vehicles exist", () => {
   setVehiclesPerDistrict(Object.fromEntries(districts.map(district => [district.id, VEHICLE_CALLSIGNS[district.id].length])));
   assert.ok(vehicles.every(vehicle => vehicle.id === vehicle.callsign));
-  assert.deepEqual(vehicles.filter(vehicle => SPECIAL_VEHICLE_CALLSIGNS.has(vehicle.id)).map(vehicle => vehicle.id).sort(), ["RT3203", "RT4302", "RT7202"]);
+  assert.deepEqual([...SPECIAL_VEHICLE_CALLSIGNS].sort(), ["RT1101", "RT5103"]);
+  assert.deepEqual(vehicles.filter(vehicle => SPECIAL_VEHICLE_CALLSIGNS.has(vehicle.id)).map(vehicle => vehicle.id).sort(), ["RT1101", "RT5103"]);
   assert.equal(vehicles.some(vehicle => vehicle.id === "RT3102"), false);
   const vehicle = vehicles[0], home = vehicle.homeDistrict;
   assert.throws(() => { vehicle.homeDistrict = "RZ"; }, TypeError);
