@@ -170,9 +170,11 @@ export class MapView {
         this.hotzoneLayer = this.createLayer("hotzones");
         this.districtLayer = this.createLayer("districts");
         this.prisonLayer = this.createLayer("prisons");
+        // SVG uses document order for stacking: labels stay below the complete
+        // vehicle group, while incidents and interaction targets stay above it.
+        this.labelLayer = this.createLayer("labels");
         this.vehicleLayer = this.createLayer("vehicles");
         this.incidentLayer = this.createLayer("incidents");
-        this.labelLayer = this.createLayer("labels");
         // Keep interaction targets last so visual map objects can never cover them.
         this.interactionLayer = this.createLayer("interaction");
         this.interactionLayer.addEventListener("click", event => this.handleRepositionTargetSelection(event));
