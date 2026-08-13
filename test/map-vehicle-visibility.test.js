@@ -43,6 +43,19 @@ test("only RT1101 and RT5103 receive the special callsign style", () => {
     }
 });
 
+test("vehicle icon, callsign and selection group stay upright while moving", () => {
+    const engine = new Engine();
+    engine.reset();
+    const vehicle = vehicles[0];
+    const element = new FakeVehicleElement();
+
+    vehicle.angle = 137;
+    MapView.prototype.updateVehicleElement(element, vehicle, 321, 456);
+
+    assert.equal(element.attributes.transform, "translate(321 456)");
+    assert.doesNotMatch(element.attributes.transform, /rotate/);
+});
+
 test("SVG layers render complete vehicles above district labels and below incidents", () => {
     const originalDocument = globalThis.document;
     const layerIds = [];
