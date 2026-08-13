@@ -464,6 +464,8 @@ export class MapView {
             const element = this.incidentLayer.querySelector(`[data-incident-id="${CSS.escape(incident.id)}"]`) || this.createIncidentElement(incident);
             element.setAttribute("transform", `translate(${incident.x} ${incident.y})`);
             element.classList.toggle("waiting", ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status));
+            element.classList.toggle("incident--onscene", incident.type === "onscene");
+            element.classList.toggle("incident--detention", incident.type !== "onscene");
             const selectable = ["manualVehicle", "repositionTraining"].includes(sessionConfig.operationMode) && simulator.manualRepositionState.phase === "idle" && !simulator.gameOver && ["OPEN", "PARTIALLY_ASSIGNED"].includes(incident.status);
             element.classList.toggle("incident--selectable", selectable);
             element.classList.toggle("incident--selected", simulator.vehicleSelection.incidentId === incident.id || simulator.activeIncident?.id === incident.id);
@@ -477,7 +479,7 @@ export class MapView {
     createIncidentElement(incident) {
         const positionGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         positionGroup.dataset.incidentId = incident.id;
-        positionGroup.setAttribute("class", "incident-position");
+        positionGroup.setAttribute("class", `incident-position incident--${incident.type || "detention"}`);
         const chooseIncident = () => this.container.dispatchEvent(new CustomEvent("incident-select", { detail: { incidentId: positionGroup.dataset.incidentId } }));
         positionGroup.addEventListener("click", chooseIncident);
         positionGroup.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); chooseIncident(); } });
@@ -498,7 +500,7 @@ export class MapView {
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "central");
         text.setAttribute("class", "incident");
-        text.textContent = "🦹";
+        text.textContent = incident.type === "onscene" ? "🫯" : "🦹";
 
         visualGroup.append(ring, text);
         if (incident.requiredUnits > 1) {

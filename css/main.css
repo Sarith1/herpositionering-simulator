@@ -816,6 +816,10 @@ footer button:disabled {
     transform-origin:center;
 }
 
+.incident--onscene .incident-visual { filter:drop-shadow(0 0 8px rgba(245,158,11,.75)); }
+.incident--onscene .incident-ring { fill:rgba(245,158,11,.18);stroke:#f59e0b; }
+.incident--onscene .incident-marker--active { filter:drop-shadow(0 0 5px rgba(245,158,11,.6));animation-duration:2.2s; }
+
 .incident-marker--intro {
     animation:incidentIntroPulse 1.8s ease-in-out;
 }

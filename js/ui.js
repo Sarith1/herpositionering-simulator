@@ -111,6 +111,8 @@ export class UI {
         const percentageInput = document.getElementById("multiUnitIncidentPercentage");
         percentageInput?.addEventListener("input", () => this.updateMultiUnitIncidentLabel());
         this.setMultiUnitIncidentPercentage(sessionConfig.multiUnitIncidentPercentage);
+        document.getElementById("onSceneIncidentPercentage")?.addEventListener("input", () => this.updateOnSceneIncidentLabel());
+        this.setOnSceneIncidentPercentage(sessionConfig.onSceneIncidentPercentage);
         document.getElementById("hotzoneIncidentPercentage")?.addEventListener("input", () => this.updateHotzoneIncidentLabel());
         this.setHotzoneIncidentPercentage(sessionConfig.hotzoneIncidentPercentage);
         this.setAutoplayDelayValues(sessionConfig.autoplayMinDelaySeconds, sessionConfig.autoplayMaxDelaySeconds);
@@ -297,6 +299,22 @@ export class UI {
     updateMultiUnitIncidentLabel() {
         const label = document.getElementById("multiUnitIncidentPercentageLabel");
         if (label) label.textContent = `${this.getMultiUnitIncidentPercentage()}% van de meldingen vraagt meerdere eenheden`;
+    }
+
+    getOnSceneIncidentPercentage() {
+        const input=document.getElementById("onSceneIncidentPercentage");
+        return Math.max(0,Math.min(100,Number(input?.value ?? sessionConfig.onSceneIncidentPercentage)));
+    }
+
+    setOnSceneIncidentPercentage(value) {
+        const input=document.getElementById("onSceneIncidentPercentage");
+        if(input)input.value=String(Math.max(0,Math.min(100,Number(value)||0)));
+        this.updateOnSceneIncidentLabel();
+    }
+
+    updateOnSceneIncidentLabel() {
+        const label=document.getElementById("onSceneIncidentPercentageLabel");
+        if(label)label.textContent=`${this.getOnSceneIncidentPercentage()}% van de meldingen wordt ter plaatse afgehandeld`;
     }
 
     setConfigValues(vehiclesPerDistrict) {

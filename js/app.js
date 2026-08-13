@@ -75,6 +75,7 @@ export class App {
             this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
             this.ui.setOperationConfig("automatic", 5);
             this.ui.setMultiUnitIncidentPercentage(20);
+            this.ui.setOnSceneIncidentPercentage(30);
             this.ui.setAutoplayDelayValues(1, 20);
             return this.engine.reset({ restoreDefaults: true });
         });
@@ -176,6 +177,8 @@ export class App {
     handleEngineEvent(event) {
         if (!event) return;
         if (event.type === "incidentCleared") this.ui.log(`[AANKOMST] ${event.vehicle.id} is aangekomen bij de melding.`);
+        if (event.type === "onSceneStarted") this.ui.log(`[TER PLAATSE] ${event.vehicle.id} is ter plaatse en blijft ${event.seconds} seconden bezet.`);
+        if (event.type === "onSceneComplete") this.ui.log(`[AFGEROND] Melding afgehandeld. ${event.vehicle.id} keert terug naar ${event.district.name}.`);
         if (event.type === "transport") this.ui.log(`[TRANSPORT] ${event.vehicle.id} rijdt naar de cel in ${event.district.name}.`);
         if (event.type === "prisonReached") this.ui.log(`[CAPACITEIT] ${event.prison.name}: ${event.occupancy}/${event.capacity} bezet.`);
         if (event.type === "prisonReleased") this.ui.log(`[CEL] 1 plek vrijgekomen in ${event.prison.name}.`);
@@ -204,6 +207,7 @@ export class App {
             detentionCapacity: this.ui.getConfiguredDetentionCapacity(),
             operationMode: mode,
             multiUnitIncidentPercentage: this.ui.getMultiUnitIncidentPercentage()
+            ,onSceneIncidentPercentage: this.ui.getOnSceneIncidentPercentage()
             ,autoplayMinDelaySeconds: this.ui.getAutoplayDelayValues().min
             ,autoplayMaxDelaySeconds: this.ui.getAutoplayDelayValues().max
         });
@@ -228,6 +232,7 @@ export class App {
         this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
         this.ui.setOperationConfig("automatic", 5);
         this.ui.setMultiUnitIncidentPercentage(20);
+        this.ui.setOnSceneIncidentPercentage(30);
         this.ui.setAutoplayDelayValues(1, 20);
         return this.engine.reset({ restoreDefaults: true });
     }
