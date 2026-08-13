@@ -3,7 +3,9 @@ import { calculateTravelTime, findNearestAvailableVehicle, getDistrictById, getP
 
 const STATUS = { AVAILABLE:"AVAILABLE", TO_INCIDENT:"TO_INCIDENT", TO_PRISON:"TO_PRISON", BUSY:"BUSY", RETURNING:"RETURNING", REPOSITIONING:"REPOSITIONING" };
 const STEPS = { INCIDENT:"INCIDENT", PRISON:"PRISON", TRAVEL_TIME:"TRAVEL_TIME", DISPATCH:"DISPATCH" };
-const DRIVE_MS_PER_EDGE = 1400;
+// Visual pacing only. Operational travel times are calculated separately.
+export const DRIVE_MS_PER_EDGE = 1400;
+export const REPOSITION_TRAINING_DRIVE_MS_PER_EDGE = 2600;
 export const REPOSITION_COOLDOWN_MS = 2000;
 export const COVERAGE_GRACE_PERIOD_MS = 2000;
 export const MULTI_UNIT_TWO_UNIT_CHANCE = 0.80;
@@ -59,14 +61,16 @@ export class Engine {
  createIncident(options={}) {
   if(simulator.gameOver) return this.result(false,"[FOUT] De oefening is geblokkeerd.");
   const isAutoplay=["autoplay","repositionTraining"].includes(sessionConfig.operationMode);
-  const shouldAutoDispatch=isAutoplay&&options.autoplayGenerated===true;
-  if(!shouldAutoDispatch&&this.step!==STEPS.INCIDENT)return this.result(false,"[FOUT] Maak eerst de huidige knopcyclus af.");
+  const training=sessionConfig.operationMode==="repositionTraining";
+  const shouldAutoDispatch=sessionConfig.operationMode==="autoplay"&&options.autoplayGenerated===true;
+  if(!isAutoplay&&this.step!==STEPS.INCIDENT)return this.result(false,"[FOUT] Maak eerst de huidige knopcyclus af.");
   const position=this.createIncidentPosition(),district=this.nearestDistrict(position),requiredUnits=options.requiredUnits??determineRequiredUnits();
   const incident={id:`INC-${Date.now()}-${++this.sequence}`,district:district.id,districtId:district.id,x:position.x,y:position.y,status:"OPEN",createdAt:performance.now(),prisonId:null,baseTravelTime:null,travelTime:null,capacityExceeded:false,requiredUnits,assignedVehicleIds:[],arrivedVehicleIds:[],transportVehicleId:null,vehicleId:null};
   simulator.incidents.push(incident); simulator.activeIncident=incident;Object.assign(simulator.inputCycleState,{incidentId:incident.id,prisonId:null,travelTime:null,selectedVehicleId:null,selectedVehicleIds:[]});
-  let dispatchResult=null;if(shouldAutoDispatch){this.prepareIncident(incident);dispatchResult=this.assignIncident(incident);this.resetInputCycle();}else this.setStep(STEPS.PRISON);
-  const description=requiredUnits>1?`Groter incident in ${district.name} — ${requiredUnits} eenheden nodig.`:`Nieuwe ${sessionConfig.operationMode==="repositionTraining"&&shouldAutoDispatch?"automatische ":shouldAutoDispatch?"autoplay-":""}melding in ${district.name}.`;
-  return this.result(true,`[MELDING] ${description}`,{district,incident,events:dispatchResult?.events||[],followup:dispatchResult?.message});
+  let dispatchResult=null;if(shouldAutoDispatch){this.prepareIncident(incident);dispatchResult=this.assignIncident(incident);this.resetInputCycle();}else if(training){this.prepareIncident(incident);this.setStep(STEPS.INCIDENT);this.activateTrainingIncidentIfUnambiguous();const selected=simulator.incidents.find(i=>i.id===simulator.vehicleSelection.incidentId);simulator.activeIncident=selected||null;}else this.setStep(STEPS.PRISON);
+  const description=requiredUnits>1?`Groter incident in ${district.name} — ${requiredUnits} eenheden nodig.`:`Nieuwe ${training?"automatische ":shouldAutoDispatch?"autoplay-":""}melding in ${district.name}.`;
+  const waiting=simulator.incidents.filter(i=>["OPEN","PARTIALLY_ASSIGNED"].includes(i.status)).length;
+  return this.result(true,`[MELDING] ${description}`,{district,incident,events:dispatchResult?.events||[],followup:dispatchResult?.message||(training?(waiting===1?`[SELECTIE] Kies een voertuig voor ${district.name}.`:`[SELECTIE] ${waiting} meldingen wachten op inzet; klik een melding.`):null)});
  }
  prepareIncident(incident){
   const prisons=getPrisonDistricts(); if(!prisons.length) return;
@@ -94,22 +98,34 @@ export class Engine {
  requireInputIncident(stage){const state=simulator.inputCycleState,incident=simulator.incidents.find(item=>item.id===state.incidentId);let valid=!!state.incidentId&&!!incident;if(stage==="PRISON"||stage==="DISPATCH")valid&&=["OPEN","PARTIALLY_ASSIGNED"].includes(incident.status);if(stage==="TRAVEL_TIME"||stage==="DISPATCH")valid&&=!!state.prisonId&&incident.prisonId===state.prisonId;if(stage==="DISPATCH")valid&&=Number.isFinite(state.travelTime);if(!valid){const error=new Error(`[INVARIANT ${stage}] Ongeldige automatische invoercyclus`);console.error(error.message,this.inputSnapshot());throw error;}return incident;}
  recoverInvalidInputCycle(reason){console.error("input cycle failed",{reason,inputCycleState:{...simulator.inputCycleState}});this.resetInputCycle();return this.result(false,`[FOUT] ${reason}. De invoercyclus is hersteld.`);}
  startVehicleSelection(){
-  if(sessionConfig.operationMode!=="manualVehicle"||simulator.gameOver||this.step!==STEPS.DISPATCH)return this.result(false,"[FOUT] Handmatige voertuigkeuze is niet beschikbaar.");
+  if(!["manualVehicle","repositionTraining"].includes(sessionConfig.operationMode)||simulator.gameOver||(sessionConfig.operationMode==="manualVehicle"&&this.step!==STEPS.DISPATCH))return this.result(false,"[FOUT] Handmatige voertuigkeuze is niet beschikbaar.");
   const incident=this.getInputCycleIncident();if(!incident)return this.result(false,"[FOUT] Er is geen open melding.");
   Object.assign(simulator.vehicleSelection,{active:true,incidentId:incident.id,selectedVehicleId:null,selectedVehicleIds:[],confirming:false});Object.assign(simulator,{selectedVehicleId:null,selectedVehicleIds:[],activeIncident:incident});Object.assign(simulator.inputCycleState,{incidentId:incident.id,selectedVehicleId:null,selectedVehicleIds:[]});
   return this.result(true,`[SELECTIE] Kies ${incident.requiredUnits} beschikbare voertuigen op de kaart.`);
  }
+ activateTrainingIncidentIfUnambiguous(){
+  if(sessionConfig.operationMode!=="repositionTraining"||simulator.manualRepositionState.phase!=="idle")return;
+  const open=simulator.incidents.filter(i=>["OPEN","PARTIALLY_ASSIGNED"].includes(i.status));
+  if(open.length===1){simulator.inputCycleState.incidentId=open[0].id;this.startVehicleSelection();}
+ }
  selectIncident(incidentId){
-  if(sessionConfig.operationMode!=="manualVehicle"||simulator.gameOver)return this.result(false,"[FOUT] Meldingselectie is niet beschikbaar.");
+  if(!["manualVehicle","repositionTraining"].includes(sessionConfig.operationMode)||simulator.gameOver||simulator.manualRepositionState.phase!=="idle")return this.result(false,"[FOUT] Meldingselectie is niet beschikbaar.");
   const incident=simulator.incidents.find(i=>i.id===incidentId&&["OPEN","PARTIALLY_ASSIGNED"].includes(i.status));if(!incident)return this.result(false,"[FOUT] Deze melding is niet meer open.");
-  simulator.activeIncident=incident;simulator.inputCycleState.incidentId=incident.id;if(simulator.vehicleSelection.active)Object.assign(simulator.vehicleSelection,{incidentId:incident.id,selectedVehicleId:null,selectedVehicleIds:[]});Object.assign(simulator,{selectedVehicleId:null,selectedVehicleIds:[]});return this.result(true,`[SELECTIE] Melding ${getDistrictById(incident.district)?.name} geselecteerd.`);
+  simulator.activeIncident=incident;simulator.inputCycleState.incidentId=incident.id;if(simulator.vehicleSelection.active)Object.assign(simulator.vehicleSelection,{incidentId:incident.id,selectedVehicleId:null,selectedVehicleIds:[]});else if(sessionConfig.operationMode==="repositionTraining")this.startVehicleSelection();Object.assign(simulator,{selectedVehicleId:null,selectedVehicleIds:[]});return this.result(true,`[SELECTIE] Melding ${getDistrictById(incident.district)?.name} geselecteerd. Kies een voertuig voor de melding.`);
  }
  selectVehicle(vehicleId){
-  const selection=simulator.vehicleSelection;if(sessionConfig.operationMode!=="manualVehicle"||!selection.active||simulator.gameOver)return this.result(false,"[FOUT] Bereken eerst de reistijd.");
+  const selection=simulator.vehicleSelection,training=sessionConfig.operationMode==="repositionTraining";if(!["manualVehicle","repositionTraining"].includes(sessionConfig.operationMode)||!selection.active||simulator.gameOver)return this.result(false,"[FOUT] Kies eerst een open melding.");
   const vehicle=vehicles.find(v=>v.id===vehicleId),incident=simulator.incidents.find(i=>i.id===selection.incidentId&&["OPEN","PARTIALLY_ASSIGNED"].includes(i.status));if(!vehicle||vehicle.status!==STATUS.AVAILABLE||vehicle.incident)return this.result(false,`[FOUT] ${vehicleId} is niet inzetbaar.`);if(!incident)return this.result(false,"[FOUT] De gekozen melding is niet meer open.");
   const ids=selection.selectedVehicleIds||[];const index=ids.indexOf(vehicle.id);if(index>=0)ids.splice(index,1);else if(ids.length<incident.requiredUnits)ids.push(vehicle.id);else if(incident.requiredUnits===1)ids.splice(0,1,vehicle.id);else return this.result(false,`[SELECTIE] Er zijn al ${incident.requiredUnits} voertuigen geselecteerd.`);
   selection.selectedVehicleId=ids.at(-1)||null;simulator.selectedVehicleId=selection.selectedVehicleId;simulator.selectedVehicleIds=[...ids];simulator.inputCycleState.selectedVehicleId=selection.selectedVehicleId;simulator.inputCycleState.selectedVehicleIds=[...ids];simulator.activeIncident=incident;
+  if(training&&ids.length===incident.requiredUnits)return this.dispatchTrainingSelection(incident,[...ids]);
   return this.result(true,`[SELECTIE] ${ids.length}/${incident.requiredUnits} voertuigen geselecteerd.`,{selection:{vehicleIds:[...ids]}});
+ }
+ dispatchTrainingSelection(incident,ids){
+  const events=[];for(const id of ids){const result=this.startDispatch({incidentId:incident.id,vehicleId:id,prisonId:incident.prisonId});if(!result.success)return result;events.push(...(result.events||[]));}
+  const district=getDistrictById(incident.district),message=`[DISPATCH] ${ids.join(", ")} handmatig ingezet naar ${district?.name} (${ids.length}/${incident.requiredUnits}).`;
+  this.clearVehicleSelection();simulator.activeIncident=null;this.activateTrainingIncidentIfUnambiguous();events.push(...this.ensureCoverage());
+  return this.result(true,message,{events,vehicle:vehicles.find(v=>v.id===ids[0]),district,selection:{vehicleIds:[]}});
  }
  cancelVehicleSelection(){this.clearVehicleSelection();return this.result(true,"[SELECTIE] Voertuigkeuze geannuleerd.");}
  clearVehicleSelection(){Object.assign(simulator.vehicleSelection,{active:false,incidentId:null,selectedVehicleId:null,selectedVehicleIds:[],confirming:false});Object.assign(simulator.inputCycleState,{selectedVehicleId:null,selectedVehicleIds:[]});Object.assign(simulator,{selectedVehicleId:null,selectedVehicleIds:[]});this.removeRoute("vehicle-selection-preview");}
@@ -163,16 +179,16 @@ export class Engine {
   events.push(...this.evaluateCoverageFailure(now));
   if(simulator.gameOver)return events;
   const autoplay=simulator.autoplayState;if(["autoplay","repositionTraining"].includes(sessionConfig.operationMode)&&autoplay.running&&autoplay.nextIncidentAt!==null&&now>=autoplay.nextIncidentAt){const r=this.createIncident({autoplayGenerated:true});events.push({type:"log",message:r.message});if(r.followup)events.push({type:"log",message:r.followup});events.push(...(r.events||[]));if(!simulator.gameOver)this.scheduleNextIncident(now);}
-  events.push(...this.assignMissingUnits());
-  if(!simulator.gameOver&&["autoplay","repositionTraining"].includes(sessionConfig.operationMode)){const waiting=this.oldestOpen();if(waiting&&vehicles.some(v=>v.status===STATUS.AVAILABLE)){const result=this.assignIncident(waiting);events.push({type:"log",message:result.message},...(result.events||[]));}}
-  events.push(...this.evaluateHomeReturns(now));
+  if(sessionConfig.operationMode!=="repositionTraining")events.push(...this.assignMissingUnits());
+  if(!simulator.gameOver&&sessionConfig.operationMode==="autoplay"){const waiting=this.oldestOpen();if(waiting&&vehicles.some(v=>v.status===STATUS.AVAILABLE)){const result=this.assignIncident(waiting);events.push({type:"log",message:result.message},...(result.events||[]));}}
+  if(sessionConfig.operationMode!=="repositionTraining")events.push(...this.evaluateHomeReturns(now));
   return events;
  }
  updateDispatch(d,now){
   const v=vehicles.find(x=>x.id===d.vehicleId);if(!v)return[];
-  if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}this.phase(d,STATUS.RETURNING,now,d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.prisonReturnRoute,type:"return"});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
+  if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}if(sessionConfig.operationMode==="repositionTraining"){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.prisonDistrictId;this.place(v);this.activeDispatches.delete(d.id);return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"vehicleAvailableAway",vehicle:v,district:getDistrictById(v.district)},...this.ensureCoverage()];}this.phase(d,STATUS.RETURNING,now,d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.prisonReturnRoute,type:"return"});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
   if(d.phase==="WAITING_AT_INCIDENT")return[];
-  const route=d.phase===STATUS.TO_INCIDENT?d.routeToIncident:d.phase===STATUS.TO_PRISON?d.routeToPrison:d.returnRoute,progress=Math.min(1,(now-d.phaseStartTime)/Math.max(900,getRouteDistance(route)*DRIVE_MS_PER_EDGE));this.move(v,route,progress,d);if(progress<1)return[];
+  const route=d.phase===STATUS.TO_INCIDENT?d.routeToIncident:d.phase===STATUS.TO_PRISON?d.routeToPrison:d.returnRoute,progress=Math.min(1,(now-d.phaseStartTime)/Math.max(900,getRouteDistance(route)*this.getDriveMsPerEdge()));this.move(v,route,progress,d);if(progress<1)return[];
   if(d.phase===STATUS.TO_INCIDENT){
    const incident=simulator.incidents.find(i=>i.id===d.incidentId);this.removeRoute(`${d.id}-to-incident`);v.district=d.incidentDistrictId;if(!incident)return[];if(!incident.arrivedVehicleIds.includes(v.id))incident.arrivedVehicleIds.push(v.id);
    const arrival={type:"log",message:`[AANKOMST] ${incident.arrivedVehicleIds.length}/${incident.requiredUnits} eenheden aanwezig.`};
@@ -182,13 +198,15 @@ export class Engine {
    for(const related of [...this.activeDispatches.values()].filter(item=>item.incidentId===incident.id)){
     const unit=vehicles.find(item=>item.id===related.vehicleId);if(!unit)continue;
     if(unit.id===incident.transportVehicleId){unit.status=STATUS.TO_PRISON;const prisonTarget={x:related.prisonX,y:related.prisonY};this.phase(related,STATUS.TO_PRISON,now,related.routeToPrison,prisonTarget);simulator.activeRoutes.push({id:`${related.id}-to-prison`,route:related.routeToPrison,type:"dispatch",destination:prisonTarget});events.push({type:"transport",vehicle:unit,district:getDistrictById(related.prisonDistrictId)});
+    }else if(sessionConfig.operationMode==="repositionTraining"){unit.status=STATUS.AVAILABLE;unit.incident=null;unit.prison=null;unit.district=incident.district;this.place(unit);this.activeDispatches.delete(related.id);events.push({type:"vehicleAvailableAway",vehicle:unit,district:getDistrictById(unit.district)});
     }else{unit.status=STATUS.RETURNING;this.phase(related,STATUS.RETURNING,now,related.returnRoute,getDistrictById(related.returnTargetDistrictId));simulator.activeRoutes.push({id:`${related.id}-return`,route:related.returnRoute,type:"return"});events.push({type:"returning",vehicle:unit});}
    }return events;
   }
   if(d.phase===STATUS.TO_PRISON){v.status=STATUS.BUSY;this.removeRoute(`${d.id}-to-prison`);d.phase=STATUS.BUSY;d.phaseStartTime=now;if(!d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=(simulator.detentionOccupancy[d.prisonDistrictId]||0)+1;d.occupancyClaimed=true;}return[{type:"prisonReached",vehicle:v,prison:getDistrictById(d.prisonDistrictId),occupancy:simulator.detentionOccupancy[d.prisonDistrictId],capacity:sessionConfig.detentionCapacity[d.prisonDistrictId],seconds:d.busySeconds}];}
   v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.returnTargetDistrictId;this.place(v);this.removeRoute(`${d.id}-return`);this.activeDispatches.delete(d.id);return[{type:"vehicleReturned",vehicle:v},...this.ensureCoverage()];
  }
- updateReposition(r,now){const v=vehicles.find(x=>x.id===r.vehicleId);if(!v)return[];const p=Math.min(1,(now-r.phaseStartTime)/Math.max(900,getRouteDistance(r.route)*DRIVE_MS_PER_EDGE));this.move(v,r.route,p,r);if(p<1)return[];v.district=r.targetDistrictId;v.status=STATUS.AVAILABLE;v.lastRepositionedAt=performance.now();this.place(v);this.activeRepositions.delete(r.id);this.removeRoute(r.id);return[{type:"repositionComplete",repositionType:r.type,vehicle:v,district:getDistrictById(v.district),origin:getDistrictById(r.originDistrictId)},...this.ensureCoverage()];}
+ getDriveMsPerEdge(){return sessionConfig.operationMode==="repositionTraining"?REPOSITION_TRAINING_DRIVE_MS_PER_EDGE:DRIVE_MS_PER_EDGE;}
+ updateReposition(r,now){const v=vehicles.find(x=>x.id===r.vehicleId);if(!v)return[];const p=Math.min(1,(now-r.phaseStartTime)/Math.max(900,getRouteDistance(r.route)*this.getDriveMsPerEdge()));this.move(v,r.route,p,r);if(p<1)return[];v.district=r.targetDistrictId;v.status=STATUS.AVAILABLE;v.lastRepositionedAt=performance.now();this.place(v);this.activeRepositions.delete(r.id);this.removeRoute(r.id);return[{type:"repositionComplete",repositionType:r.type,vehicle:v,district:getDistrictById(v.district),origin:getDistrictById(r.originDistrictId)},...this.ensureCoverage()];}
  getIncomingRepositions(districtId){return[...this.activeRepositions.values()].filter(r=>r.targetDistrictId===districtId).length;}
  getEffectiveCoverage(districtId){return this.availableCount(districtId)+this.getIncomingRepositions(districtId);}
  getCoverageTargets(){return getCoverageTargets([...this.activeRepositions.values()]);}
@@ -249,7 +267,7 @@ export class Engine {
   if(simulator.gameOver)return[];const events=[],mode=sessionConfig.operationMode;
   if(mode==="repositionTraining"){
    for(const target of this.getCriticalCoverageDistricts())events.push({type:"log",message:`[DEKKING] ${target.name} heeft 0 beschikbare voertuigen. Herpositioneer handmatig met H.`});
-   events.push(...this.evaluateHomeReturns(),...this.evaluateCoverageFailure());return events;
+   events.push(...this.evaluateCoverageFailure());return events;
   }
   const hotzoneAutomation=["automatic","autoplay"].includes(mode)&&(sessionConfig.hotzoneDistrictIds||[]).length>0;
   if(hotzoneAutomation){for(let attempts=0;attempts<vehicles.length;attempts++){const targets=this.getCoverageTargets(),target=this.getMostUndercoveredHotzone(targets);if(!target)break;const current=targets.effectiveByDistrict[target.id],needsMinimum=current<targets.hotzoneMinimum,needsParity=targets.maxNonHotzoneAvailable!==null&&current<targets.maxNonHotzoneAvailable;if(!needsMinimum&&!needsParity)break;const donor=this.findCoverageDonor(target,targets,true);if(!donor)break;const event=this.startAutomaticReposition(donor,target);if(!event)break;events.push(event);}}
@@ -259,10 +277,11 @@ export class Engine {
  startManualReposition(){
   if(simulator.gameOver)return this.result(false,"[FOUT] Herpositioneren is niet meer mogelijk.");
   if(!["autoplay","repositionTraining"].includes(sessionConfig.operationMode)&&(this.step!==STEPS.INCIDENT||simulator.vehicleSelection.active))return this.result(false,"[FOUT] Maak eerst de huidige melding af.");
+  if(sessionConfig.operationMode==="repositionTraining")this.clearVehicleSelection();
   Object.assign(simulator.manualRepositionState,{phase:"selectVehicle",selectedVehicleId:null,targetDistrictId:null});
   return this.result(true,"[DEKKING] Handmatige herpositioneringsmodus gestart. Kies eerst een beschikbaar voertuig.");
  }
- cancelManualReposition(){this.clearManualReposition();return this.result(true,"[DEKKING] Handmatige herpositionering geannuleerd.");}
+ cancelManualReposition(){this.clearManualReposition();this.activateTrainingIncidentIfUnambiguous();return this.result(true,"[DEKKING] Handmatige herpositionering geannuleerd.");}
  clearManualReposition(){Object.assign(simulator.manualRepositionState,{phase:"idle",selectedVehicleId:null,targetDistrictId:null});this.removeRoute("manual-reposition-preview");}
  handleManualRepositionAction(){return simulator.manualRepositionState.phase==="idle"?this.startManualReposition():this.result(false,"[DEKKING] Kies eerst een beschikbaar voertuig en een doeldistrict.");}
  selectRepositionVehicle(vehicleId){
@@ -294,12 +313,12 @@ export class Engine {
   const origin=getDistrictById(vehicle.district),id=`REP-${++this.repositionSequence}`;vehicle.status=STATUS.REPOSITIONING;
   const reposition={id,type:"manual",originDistrictId:origin.id,vehicleId:vehicle.id,targetDistrictId:target.id,route,phaseStartTime:performance.now(),fromX:vehicle.x,fromY:vehicle.y,toX:target.x,toY:target.y};
   this.activeRepositions.set(id,reposition);this.removeRoute("manual-reposition-preview");simulator.activeRoutes.push({id,route,type:"reposition"});this.clearManualReposition();
-  return this.result(true,`[HANDMATIGE HERPOSITIONERING] ${vehicle.id} vertrekt van ${origin.name} naar ${target.name}.`,{events:[{type:"manualRepositionStarted",vehicle,district:target,origin},...this.ensureCoverage()]});
+  this.activateTrainingIncidentIfUnambiguous();return this.result(true,`[HANDMATIGE HERPOSITIONERING] ${vehicle.id} vertrekt van ${origin.name} naar ${target.name}.`,{events:[{type:"manualRepositionStarted",vehicle,district:target,origin},...this.ensureCoverage()]});
  }
  confirmManualReposition(){return this.result(false,"[FOUT] Kies een doeldistrict om de herpositionering direct te starten.");}
  scheduleNextIncident(now=performance.now()){const delay=getRandomIncidentDelaySeconds();Object.assign(simulator.autoplayState,{nextDelaySeconds:delay,nextIncidentAt:now+delay*1000});return delay;}
  toggleAutoplay(){const training=sessionConfig.operationMode==="repositionTraining";if(!["autoplay","repositionTraining"].includes(sessionConfig.operationMode)||simulator.gameOver)return this.result(false,"[FOUT] Automatische meldingen zijn niet actief.");const state=simulator.autoplayState;state.running=!state.running;if(state.running)this.scheduleNextIncident();else Object.assign(state,{nextIncidentAt:null,nextDelaySeconds:null});return this.result(true,training?`[MODUS] Herpositioneringsmodus ${state.running?"gestart":"gepauzeerd"}. ${state.running?"Beheer de dekking met H.":"Lopende opdrachten rijden door."}`:`[MODUS] Autoplay ${state.running?"gestart":"gepauzeerd"}. Lopende opdrachten rijden door.`);}
- getControlState(){const blocked=simulator.gameOver,mode=sessionConfig.operationMode,autoplay=["autoplay","repositionTraining"].includes(mode),manual=mode==="manualVehicle",selecting=simulator.vehicleSelection.active,repositionState=simulator.manualRepositionState,repositioning=repositionState.phase!=="idle";return{incident:!blocked&&!autoplay&&this.step===STEPS.INCIDENT,prison:!blocked&&!autoplay&&this.step===STEPS.PRISON,travelTime:!blocked&&!autoplay&&this.step===STEPS.TRAVEL_TIME,dispatch:!blocked&&mode==="automatic"&&this.step===STEPS.DISPATCH,confirmVehicle:!blocked&&manual&&selecting&&(simulator.vehicleSelection.selectedVehicleIds||[]).length>0&&!simulator.vehicleSelection.confirming,autoplayToggle:!blocked&&autoplay,reset:true,currentStep:this.step,gameOver:simulator.gameOver,mode,autoplayRunning:simulator.autoplayState.running,vehicleSelectionActive:selecting,manualRepositionActive:repositioning,manualRepositionPhase:repositionState.phase,manualRepositionStart:!blocked&&repositionState.phase==="idle"&&(autoplay||this.step===STEPS.INCIDENT)&&!selecting,manualRepositionConfirm:false};}
+ getControlState(){const blocked=simulator.gameOver,mode=sessionConfig.operationMode,autoplay=["autoplay","repositionTraining"].includes(mode),manual=mode==="manualVehicle",selecting=simulator.vehicleSelection.active,repositionState=simulator.manualRepositionState,repositioning=repositionState.phase!=="idle";return{incident:!blocked&&!autoplay&&this.step===STEPS.INCIDENT,prison:!blocked&&!autoplay&&this.step===STEPS.PRISON,travelTime:!blocked&&!autoplay&&this.step===STEPS.TRAVEL_TIME,dispatch:!blocked&&mode==="automatic"&&this.step===STEPS.DISPATCH,confirmVehicle:!blocked&&manual&&selecting&&(simulator.vehicleSelection.selectedVehicleIds||[]).length>0&&!simulator.vehicleSelection.confirming,autoplayToggle:!blocked&&autoplay,reset:true,currentStep:this.step,gameOver:simulator.gameOver,mode,autoplayRunning:simulator.autoplayState.running,vehicleSelectionActive:selecting,manualRepositionActive:repositioning,manualRepositionPhase:repositionState.phase,manualRepositionStart:!blocked&&repositionState.phase==="idle"&&(autoplay||this.step===STEPS.INCIDENT)&&(mode==="repositionTraining"||!selecting),manualRepositionConfirm:false};}
  reset(o={}){Object.assign(simulator,{activeIncident:null,selectedPrison:null,travelTime:null,detentionOccupancy:createEmptyDetentionOccupancy(),incidentsHandled:0,gameOver:false,failureInspectionMode:false,activeRoute:[],activeRoutes:[],incidentHistory:[],repositioningFailure:null,incidents:[],selectedVehicleId:null,selectedVehicleIds:[],vehicleSelection:{active:false,incidentId:null,selectedVehicleId:null,selectedVehicleIds:[],confirming:false},inputCycleState:{step:STEPS.INCIDENT,incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null,selectedVehicleIds:[]},manualRepositionState:{phase:"idle",selectedVehicleId:null,targetDistrictId:null},autoplayState:{running:false,nextIncidentAt:null,nextDelaySeconds:null}});if(o.restoreDefaults)resetSessionConfigDefaults();if(o.availablePrisons)setAvailablePrisons(o.availablePrisons);if(o.detentionCapacity)setDetentionCapacity(o.detentionCapacity);if(o.vehiclesPerDistrict)setVehiclesPerDistrict(o.vehiclesPerDistrict);if(o.hotzoneDistrictIds!==undefined)setHotzoneDistrictIds(o.hotzoneDistrictIds);if(o.hotzoneIncidentPercentage!==undefined)sessionConfig.hotzoneIncidentPercentage=Math.max(0,Math.min(100,Number(o.hotzoneIncidentPercentage)));if(o.operationMode)sessionConfig.operationMode=o.operationMode;if(o.multiUnitIncidentPercentage!==undefined)sessionConfig.multiUnitIncidentPercentage=Math.max(0,Math.min(100,Number(o.multiUnitIncidentPercentage)));if(o.autoplayMinDelaySeconds!==undefined)sessionConfig.autoplayMinDelaySeconds=Math.max(1,Math.min(60,Number(o.autoplayMinDelaySeconds)));if(o.autoplayMaxDelaySeconds!==undefined)sessionConfig.autoplayMaxDelaySeconds=Math.max(sessionConfig.autoplayMinDelaySeconds,Math.min(60,Number(o.autoplayMaxDelaySeconds)));initializeVehicles();this.activeDispatches.clear();this.activeRepositions.clear();this.coverageLossStartedAt.clear();return this.result(true,sessionConfig.operationMode==="autoplay"?"[MODUS] Autoplay klaar — druk op Play.":sessionConfig.operationMode==="repositionTraining"?"[MODUS] Herpositioneringsmodus klaar — start de oefening en beheer de dekking met H.":"[RESET] Nieuwe oefening gestart.");}
  triggerRepositioningFailure(d){this.clearVehicleSelection();this.clearManualReposition();simulator.gameOver=true;simulator.failureInspectionMode=false;Object.assign(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});simulator.repositioningFailure={districtName:d.name,coveragePercentage:this.calculateCoveragePercentage(),availableVehicles:vehicles.filter(v=>v.status===STATUS.AVAILABLE).length,title:repositioningFailureConfig.title,explanation:`${d.name} had langer dan 2 seconden geen beschikbare eenheid.`};return{type:"repositioningFailure",failure:simulator.repositioningFailure};}
  cancelCorruptDispatch(d){
