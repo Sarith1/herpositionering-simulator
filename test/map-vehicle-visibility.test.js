@@ -10,12 +10,38 @@ class FakeVehicleElement {
         this.attributes = {};
         this.style = {};
         this.symbol = { style: {} };
+        this.callsign = {
+            classList: {
+                special: false,
+                toggle(_className, enabled) { this.special = enabled; }
+            },
+            textContent: ""
+        };
     }
 
     setAttribute(name, value) { this.attributes[name] = String(value); }
     removeAttribute(name) { delete this.attributes[name]; }
-    querySelector(selector) { return selector === ".vehicle-symbol" ? this.symbol : null; }
+    querySelector(selector) {
+        if (selector === ".vehicle-symbol") return this.symbol;
+        if (selector === ".vehicle-callsign") return this.callsign;
+        return null;
+    }
 }
+
+test("only RT1101 and RT5103 receive the special callsign style", () => {
+    const engine = new Engine();
+    engine.reset({ vehiclesPerDistrict: { RN: 8, RS: 3, RO: 5, RZ: 7, RZW: 8, ZHZ: 11, ZH: 4 } });
+
+    for (const vehicle of vehicles) {
+        const element = new FakeVehicleElement();
+        MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y);
+        assert.equal(
+            element.callsign.classList.special,
+            vehicle.id === "RT1101" || vehicle.id === "RT5103",
+            `${vehicle.id} has the expected callsign style`
+        );
+    }
+});
 
 test("SVG layers render complete vehicles above district labels and below incidents", () => {
     const originalDocument = globalThis.document;
