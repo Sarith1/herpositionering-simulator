@@ -215,6 +215,7 @@ export const sessionConfig = {
     detentionCapacity: createDefaultDetentionCapacity(),
     operationMode: "automatic",
     multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE,
+    onSceneIncidentPercentage: 30,
     autoplayMinDelaySeconds: DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS,
     autoplayMaxDelaySeconds: DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS
 
@@ -262,6 +263,7 @@ export function resetSessionConfigDefaults() {
     sessionConfig.detentionCapacity = createDefaultDetentionCapacity();
     sessionConfig.operationMode = "automatic";
     sessionConfig.multiUnitIncidentPercentage = DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE;
+    sessionConfig.onSceneIncidentPercentage = 30;
     sessionConfig.autoplayMinDelaySeconds = DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS;
     sessionConfig.autoplayMaxDelaySeconds = DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS;
 
