@@ -560,6 +560,9 @@ main{
 /* Stable SVG vehicle groups: only these classes enable primary dispatch input. */
 .vehicle { cursor:default; outline:none; }
 .vehicle-symbol { pointer-events:none; transition:filter .18s ease, transform .18s ease, opacity .18s ease; transform-box:fill-box; transform-origin:center; }
+.vehicle-callsign{pointer-events:none;fill:#d9f2ff;font-size:9px;font-weight:800;letter-spacing:.25px;paint-order:stroke;stroke:#071421;stroke-width:2px;stroke-linejoin:round}
+.vehicle-callsign--special{fill:#4ade80;filter:drop-shadow(0 0 4px rgba(74,222,128,.6))}
+.legend-special-callsign{margin-right:7px;color:#4ade80;font-weight:900;filter:drop-shadow(0 0 4px rgba(74,222,128,.6))}
 .vehicle-hitbox { fill:transparent; pointer-events:all; }
 .vehicle.busy .vehicle-symbol { opacity:.58; filter:grayscale(.35); }
 .vehicle--selectable { cursor:pointer; }

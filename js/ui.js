@@ -19,6 +19,7 @@ import {
     getTotalDetentionCapacity,
     getTotalDetentionOccupancy,
     DEFAULT_VEHICLES_PER_DISTRICT,
+    VEHICLE_CALLSIGNS,
     sessionConfig,
     repositioningFailureConfig,
     simulator,
@@ -149,7 +150,7 @@ export class UI {
                 <span class="vehicle-config-name">${district.name}</span>
                 <label class="vehicle-count" for="vehicle-count-${district.id}">
                     <span class="visually-hidden">Voertuigen in ${district.name}</span>
-                    <input id="vehicle-count-${district.id}" type="number" min="0" max="9" step="1" value="${sessionConfig.vehiclesPerDistrict[district.id] ?? DEFAULT_VEHICLES_PER_DISTRICT}" data-district-id="${district.id}">
+                    <input id="vehicle-count-${district.id}" type="number" min="0" max="${VEHICLE_CALLSIGNS[district.id].length}" step="1" value="${sessionConfig.vehiclesPerDistrict[district.id] ?? DEFAULT_VEHICLES_PER_DISTRICT}" data-district-id="${district.id}">
                 </label>
                 <label class="hotzone-config" for="hotzone-${district.id}">
                     <input id="hotzone-${district.id}" type="checkbox" data-hotzone-district-id="${district.id}">
@@ -242,7 +243,7 @@ export class UI {
         return Object.fromEntries(
             [...this.configContainer.querySelectorAll("input[data-district-id]")].map(input => [
                 input.dataset.districtId,
-                Math.max(0, Number.parseInt(input.value, 10) || 0)
+                Math.max(0, Math.min(VEHICLE_CALLSIGNS[input.dataset.districtId].length, Number.parseInt(input.value, 10) || 0))
             ])
         );
 
