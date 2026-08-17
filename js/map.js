@@ -10,7 +10,6 @@ meldingen, gevangenissen en routes.
 */
 
 import { colors, detentionComplexes, districts, getDetentionComplexPosition, isSpecialVehicle, sessionConfig, simulator, vehicles } from "./data.js";
-export { DETENTION_COMPLEX_OFFSET_X } from "./data.js";
 import { getDistrictById, getShortestRoute } from "./routing.js";
 import { getCoverageTargets } from "./engine.js";
 
@@ -19,6 +18,7 @@ const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
 const DETENTION_COMPLEX_SCALE = 1.20;
+export const DETENTION_LABEL_OFFSET_Y = 39;
 export const REPOSITION_TARGET_HIT_RADIUS = 95;
 export const REPOSITION_TARGET_LABEL_WIDTH = 190;
 export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
@@ -177,6 +177,7 @@ export class MapView {
         this.hotzoneLayer = this.createLayer("hotzones");
         this.districtLayer = this.createLayer("districts");
         this.prisonLayer = this.createLayer("prisons");
+        this.detentionLabelLayer = this.createLayer("detention-labels");
         // SVG uses document order for stacking: labels stay below the complete
         // vehicle group, while incidents and interaction targets stay above it.
         this.labelLayer = this.createLayer("labels");
@@ -202,12 +203,14 @@ export class MapView {
         this.clearLayer(this.hotzoneLayer);
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.labelLayer);
+        this.clearLayer(this.detentionLabelLayer);
         this.syncIncident();
 
         this.drawRoutes();
         this.drawHotzones();
         this.drawDistricts();
         this.syncPrisons();
+        this.drawDetentionLabels();
         this.drawLabels();
         this.syncVehicles();
         this.syncInteractionLayer();
@@ -303,14 +306,14 @@ export class MapView {
 
     getInteractionSignature() {
         const { phase, selectedVehicleId, targetDistrictId } = simulator.manualRepositionState;
-        return `${phase}:${selectedVehicleId || ""}:${targetDistrictId || ""}`;
+        return `${simulator.gameOver}:${phase}:${selectedVehicleId || ""}:${targetDistrictId || ""}`;
     }
 
     rebuildInteractionLayer() {
         this.clearLayer(this.interactionLayer);
         const state = simulator.manualRepositionState;
 
-        if (state.phase !== "selectDistrict" || !state.selectedVehicleId) return;
+        if (simulator.gameOver || state.phase !== "selectDistrict" || !state.selectedVehicleId) return;
         const selectedVehicle = vehicles.find(vehicle => vehicle.id === state.selectedVehicleId);
         if (!selectedVehicle || !getDistrictById(selectedVehicle.district)) return;
 
@@ -461,6 +464,19 @@ export class MapView {
             label.textContent = district.name;
 
             this.labelLayer.appendChild(label);
+        });
+    }
+
+    drawDetentionLabels() {
+        detentionComplexes.forEach(complex => {
+            const position = getDetentionComplexPosition(complex);
+            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", position.x);
+            label.setAttribute("y", position.y + DETENTION_LABEL_OFFSET_Y);
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute("class", "detention-label");
+            label.textContent = complex.name;
+            this.detentionLabelLayer.appendChild(label);
         });
     }
 

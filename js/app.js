@@ -92,6 +92,7 @@ export class App {
             document.addEventListener?.("keydown", event => {
                 const tag = event.target?.tagName?.toLowerCase();
                 if (tag === "input" || tag === "textarea" || tag === "select" || event.target?.isContentEditable || event.repeat) return;
+                if (simulator.gameOver) return;
                 if (event.key === "Escape" && simulator.manualRepositionState.phase !== "idle") {
                     const result = this.engine.cancelManualReposition();
                     this.ui.log(result.message);

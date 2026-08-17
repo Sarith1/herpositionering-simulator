@@ -1,30 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { detentionComplexes } from "../js/data.js";
-import { DETENTION_COMPLEX_OFFSET_X, MapView } from "../js/map.js";
+import { detentionComplexes, districts, getDetentionComplexPosition } from "../js/data.js";
+import { MapView } from "../js/map.js";
 
-test("detention complexes use the preferred 40-unit horizontal offset", () => {
-    assert.equal(DETENTION_COMPLEX_OFFSET_X, 40);
+test("detention complexes have fixed public names", () => {
+    assert.deepEqual(detentionComplexes.map(complex => complex.name), ["Zuidplein", "Marconiplein", "Dordrecht"]);
 });
 
-test("all detention complexes use the same visual offset without changing their routing coordinates", () => {
-    const map = { width: 1100 };
-
+test("visual and routing destinations share official complex coordinates", () => {
     detentionComplexes.forEach(complex => {
-        const routingCoordinates = { x: complex.x, y: complex.y };
-        const position = MapView.prototype.getDetentionComplexPosition.call(map, complex);
-
-        assert.deepEqual(position, {
-            x: complex.x + DETENTION_COMPLEX_OFFSET_X,
-            y: complex.y - 62
-        });
-        assert.deepEqual(
-            { x: complex.x, y: complex.y },
-            routingCoordinates,
-            `${complex.name} must retain its operational coordinates`
-        );
+        assert.deepEqual(MapView.prototype.getDetentionComplexPosition.call({}, complex), { x: complex.x, y: complex.y });
     });
+});
+
+test("Zuidplein is positioned between Rotterdam-Stad and Marconiplein", () => {
+    const rotterdam = districts.find(district => district.id === "RS");
+    const zuidplein = getDetentionComplexPosition(detentionComplexes[0]);
+    const marconiplein = getDetentionComplexPosition(detentionComplexes[1]);
+    const expected = { x: rotterdam.x * .55 + marconiplein.x * .45, y: rotterdam.y * .55 + marconiplein.y * .45 };
+    assert.ok(Math.hypot(zuidplein.x - expected.x, zuidplein.y - expected.y) < 2);
 });
 
 test("detention complex visuals are clamped inside the right map boundary", () => {
@@ -33,5 +28,5 @@ test("detention complex visuals are clamped inside the right map boundary", () =
         { x: 1080, y: 200 }
     );
 
-    assert.deepEqual(position, { x: 1052, y: 138 });
+    assert.deepEqual(position, { x: 1052, y: 200 });
 });

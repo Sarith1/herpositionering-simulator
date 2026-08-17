@@ -173,6 +173,8 @@ export class Engine {
   const dispatch={id,vehicleId:vehicle.id,incidentId:incident.id,phase:STATUS.TO_INCIDENT,originDistrictId:origin,returnTargetDistrictId,incidentDistrictId:incident.district,incidentX:incident.x,incidentY:incident.y,prisonDistrictId:prison?.id||null,prisonPosition,prisonX:parkingPosition?.x,prisonY:parkingPosition?.y,routeToIncident,routeToPrison,returnRoute:getShortestRoute(incident.district,returnTargetDistrictId),prisonReturnRoute:prison?getShortestRoute(prison.id,returnTargetDistrictId):[],phaseStartTime:performance.now(),busySeconds:incident.type==="onscene"?incident.sceneBusyDurationSeconds:incident.travelTime,fromX:vehicle.x,fromY:vehicle.y,toX:incident.x,toY:incident.y};this.activeDispatches.set(id,dispatch);simulator.activeRoutes.push({id:`${id}-to-incident`,route:routeToIncident,type:"dispatch",destination:{x:incident.x,y:incident.y}});return this.result(true,`[DISPATCH] ${vehicle.id} ingezet (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`,{vehicle,district:getDistrictById(incident.district),events:capacityEvents});
  }
  update(now=performance.now()){
+  // Failure freezes the exact operational snapshot, including movement and timers.
+  if(simulator.gameOver)return[];
   const events=[];
   for(const d of [...this.activeDispatches.values()]){
    try{events.push(...this.updateDispatch(d,now));}

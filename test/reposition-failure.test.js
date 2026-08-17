@@ -79,3 +79,19 @@ test("hotzone optimization without missing available coverage never ends the ses
  engine.evaluateCoverageFailure(5000);
  assert.equal(simulator.gameOver,false);
 });
+
+test("engine update preserves every operational status, position and timer after game over",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:fleet([1,1,1,1,1,1,1])});
+ const statuses=["TO_INCIDENT","RETURNING","REPOSITIONING","ON_SCENE","BUSY"];
+ vehicles.slice(0,statuses.length).forEach((vehicle,index)=>Object.assign(vehicle,{status:statuses[index],x:100+index*17,y:200+index*13}));
+ simulator.incidents.push({id:"FROZEN",status:"OPEN"});
+ Object.assign(simulator.autoplayState,{running:true,nextIncidentAt:1,nextDelaySeconds:1});
+ simulator.gameOver=true;
+ const before=vehicles.map(({id,status,x,y})=>({id,status,x,y}));
+ const incidents=simulator.incidents.length;
+ assert.deepEqual(engine.update(100000),[]);
+ assert.deepEqual(engine.update(110000),[]);
+ assert.deepEqual(vehicles.map(({id,status,x,y})=>({id,status,x,y})),before);
+ assert.equal(simulator.incidents.length,incidents);
+ assert.equal(simulator.autoplayState.nextIncidentAt,1);
+});

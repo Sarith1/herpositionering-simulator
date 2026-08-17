@@ -159,24 +159,21 @@ export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
 export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 20;
 export const DEFAULT_DETENTION_CAPACITY = 10;
 export const MAX_DETENTION_CAPACITY = 50;
-export const DETENTION_COMPLEX_OFFSET_X = 40;
-export const DETENTION_COMPLEX_OFFSET_Y = -62;
 export const DETENTION_COMPLEX_MAP_WIDTH = 1100;
 export const DETENTION_COMPLEX_SAFE_MARGIN = 48;
 
-// Cellencomplexen zijn zelfstandige routenetwerknodes. De centrale locatie ligt
-// bewust iets ten westen van het kaartmidden om labels en voertuigclusters vrij te houden.
+// Deze coordinaten zijn de officiele locatie voor weergave, routering en parkeren.
 export const detentionComplexes = [
-    { id: "CELL_RS", name: "Cellencomplex Rotterdam-Stad", x: 590, y: 223, neighbours: ["RS", "RN"] },
-    { id: "CELL_ZHZ", name: "Cellencomplex Zuid-Holland-Zuid", x: 670, y: 438, neighbours: ["ZHZ", "RZ"] },
-    { id: "CELL_CENTRAL", name: "Centraal Cellencomplex", x: 410, y: 315, neighbours: ["RS", "RZ", "ZH"] }
+    { id: "CELL_RS", name: "Zuidplein", x: 527, y: 271, neighbours: ["RS", "RN"] },
+    { id: "CELL_CENTRAL", name: "Marconiplein", x: 450, y: 253, neighbours: ["RS", "RZ", "ZH"] },
+    { id: "CELL_ZHZ", name: "Dordrecht", x: 710, y: 376, neighbours: ["ZHZ", "RZ"] }
 ];
 
 export function getDetentionComplexPosition(complex) {
     if (!complex) return null;
     return {
-        x: Math.min(complex.x + DETENTION_COMPLEX_OFFSET_X, DETENTION_COMPLEX_MAP_WIDTH - DETENTION_COMPLEX_SAFE_MARGIN),
-        y: complex.y + DETENTION_COMPLEX_OFFSET_Y
+        x: Math.min(complex.x, DETENTION_COMPLEX_MAP_WIDTH - DETENTION_COMPLEX_SAFE_MARGIN),
+        y: complex.y
     };
 }
 
