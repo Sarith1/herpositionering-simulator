@@ -645,6 +645,7 @@ export class UI {
 
         if (this.failureOverlay) this.failureOverlay.hidden = true;
         document.querySelector(".simulator")?.classList.remove("failure-active");
+        document.querySelector(".simulator")?.classList.remove("failure-inspection");
         const button=document.getElementById("failureReturnBtn");
         if(button)button.hidden=true;
         simulator.failureInspectionMode=false;
@@ -655,12 +656,14 @@ export class UI {
     hideRepositioningFailureForInspection() {
         if (this.failureOverlay) this.failureOverlay.hidden = true;
         document.querySelector(".simulator")?.classList.remove("failure-active");
+        document.querySelector(".simulator")?.classList.add("failure-inspection");
         const button=document.getElementById("failureReturnBtn");
         if(button)button.hidden=false;
     }
 
     showRepositioningFailureScreen() {
         simulator.failureInspectionMode=false;
+        document.querySelector(".simulator")?.classList.remove("failure-inspection");
         const button=document.getElementById("failureReturnBtn");
         if(button)button.hidden=true;
         this.showRepositioningFailure(simulator.repositioningFailure);
