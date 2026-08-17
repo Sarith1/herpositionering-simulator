@@ -17,6 +17,7 @@ class FakeVehicleElement {
             },
             textContent: ""
         };
+        this.badge = { attributes: {}, textContent: "", setAttribute(name, value) { this.attributes[name] = value; } };
     }
 
     setAttribute(name, value) { this.attributes[name] = String(value); }
@@ -24,6 +25,7 @@ class FakeVehicleElement {
     querySelector(selector) {
         if (selector === ".vehicle-symbol") return this.symbol;
         if (selector === ".vehicle-callsign") return this.callsign;
+        if (selector === ".vehicle-status-badge") return this.badge;
         return null;
     }
 }
@@ -54,6 +56,27 @@ test("vehicle icon, callsign and selection group stay upright while moving", () 
 
     assert.equal(element.attributes.transform, "translate(321 456)");
     assert.doesNotMatch(element.attributes.transform, /rotate/);
+});
+
+test("vehicles show textual CEL and TERUG direction badges without changing callsigns", () => {
+    const engine = new Engine();
+    engine.reset();
+    const vehicle = vehicles[0];
+    const element = new FakeVehicleElement();
+
+    vehicle.status = "TO_PRISON";
+    MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y);
+    assert.equal(element.badge.textContent, "CEL");
+    assert.match(element.badge.attributes.class, /vehicle-status-badge--cel/);
+
+    vehicle.status = "RETURNING";
+    MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y);
+    assert.equal(element.badge.textContent, "TERUG");
+    assert.match(element.badge.attributes.class, /vehicle-status-badge--terug/);
+
+    vehicle.status = "AVAILABLE";
+    MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y);
+    assert.equal(element.badge.textContent, "");
 });
 
 test("SVG layers render complete vehicles above district labels and below incidents", () => {

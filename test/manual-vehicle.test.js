@@ -40,6 +40,16 @@ test("automatic and autoplay retain automatic dispatch",()=>{
   assert.equal(result.success,true);assert.ok(vehicles.some(v=>v.status==="TO_INCIDENT"));assert.equal(simulator.vehicleSelection.active,false);
 });
 
+test("autoplay emits a visual travel-time event only for detention incidents",()=>{
+  const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});
+  const detention=engine.createIncident({autoplayGenerated:true,type:"detention"});
+  const travelEvent=detention.events.find(event=>event.type==="travelTimeCalculated");
+  assert.equal(travelEvent.incident,detention.incident);assert.ok(Number.isFinite(travelEvent.incident.travelTime));
+  engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});
+  const onscene=engine.createIncident({autoplayGenerated:true,type:"onscene"});
+  assert.equal(onscene.events.some(event=>event.type==="travelTimeCalculated"),false);
+});
+
 test("selection remains bound to its incident",()=>{
   const engine=preparedEngine();const first=simulator.activeIncident;engine.startVehicleSelection();
   const second={...first,id:"INC-SECOND",createdAt:first.createdAt+1,status:"OPEN",x:first.x+5};simulator.incidents.push(second);
