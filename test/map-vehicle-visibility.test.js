@@ -94,7 +94,6 @@ test("SVG layers render complete vehicles above district labels and below incide
         "hotzones",
         "districts",
         "prisons",
-        "detention-labels",
         "labels",
         "vehicles",
         "incidents",

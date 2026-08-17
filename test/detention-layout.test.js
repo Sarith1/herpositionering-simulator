@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { detentionComplexes, districts, getDetentionComplexPosition } from "../js/data.js";
-import { MapView } from "../js/map.js";
+import { DETENTION_LABEL_CENTER_Y, MapView } from "../js/map.js";
 
 test("detention complexes have fixed public names", () => {
     assert.deepEqual(detentionComplexes.map(complex => complex.name), ["Zuidplein", "Marconiplein", "Dordrecht"]);
@@ -29,4 +29,8 @@ test("detention complex visuals are clamped inside the right map boundary", () =
     );
 
     assert.deepEqual(position, { x: 1052, y: 200 });
+});
+
+test("detention labels share the scaled vertical centre of the building body", () => {
+    assert.equal(DETENTION_LABEL_CENTER_Y, 6);
 });

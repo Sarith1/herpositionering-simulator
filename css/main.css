@@ -561,7 +561,7 @@ main{
 .vehicle { cursor:default; outline:none; }
 .vehicle-symbol { pointer-events:none; transition:filter .18s ease, transform .18s ease, opacity .18s ease; transform-box:fill-box; transform-origin:center; }
 .vehicle-callsign{pointer-events:none;fill:#d9f2ff;font-size:9px;font-weight:800;letter-spacing:.25px;paint-order:stroke;stroke:#071421;stroke-width:2px;stroke-linejoin:round}
-.detention-label{pointer-events:none;fill:#d9f2ff;font-family:inherit;font-size:8px;font-weight:700;letter-spacing:.2px;paint-order:stroke;stroke:#071421;stroke-width:2px;stroke-linejoin:round}
+.detention-label{pointer-events:none;fill:#e6f6ff;font-family:inherit;font-size:8.5px;font-weight:700;letter-spacing:.15px;paint-order:stroke fill;stroke:rgba(0,0,0,.68);stroke-width:2px;stroke-linejoin:round}
 .simulator.failure-inspection .session-config input,.simulator.failure-inspection .session-config button,.simulator.failure-inspection .process-controls button,.simulator.failure-inspection .autoplay-toggle-button{pointer-events:none;opacity:.42}
 .vehicle-callsign--special{fill:#4ade80;filter:drop-shadow(0 0 4px rgba(74,222,128,.6))}
 .legend-special-callsign{margin-right:7px;color:#4ade80;font-weight:900;filter:drop-shadow(0 0 4px rgba(74,222,128,.6))}
