@@ -191,8 +191,10 @@ export class Engine {
   const v=vehicles.find(x=>x.id===d.vehicleId);if(!v)return[];
   if(d.phase===STATUS.ON_SCENE){
    if((now-d.phaseStartTime)/1000<d.busySeconds)return[];
-   const incident=simulator.incidents.find(i=>i.id===d.incidentId);if(incident&&incident.status!=="HANDLED"){this.handleIncident(incident.id,now);simulator.incidentsHandled++;}
-   this.phase(d,STATUS.RETURNING,now,d.returnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.returnRoute,type:"return"});
+   const incident=simulator.incidents.find(i=>i.id===d.incidentId);
+   this.phase(d,STATUS.RETURNING,now,d.returnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;delete v.onSceneArrivedAt;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.returnRoute,type:"return"});
+   const related=[...this.activeDispatches.values()].filter(item=>item.incidentId===d.incidentId);
+   if(incident&&incident.status!=="HANDLED"&&related.every(item=>item.phase===STATUS.RETURNING)){this.handleIncident(incident.id,now);simulator.incidentsHandled++;}
    return[{type:"onSceneComplete",vehicle:v,incident,district:getDistrictById(d.returnTargetDistrictId)}];
   }
   if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}if(sessionConfig.operationMode==="repositionTraining"){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.prisonDistrictId;this.place(v);this.activeDispatches.delete(d.id);return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"vehicleAvailableAway",vehicle:v,district:getDistrictById(v.district)},...this.ensureCoverage()];}this.phase(d,STATUS.RETURNING,now,d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.prisonReturnRoute,type:"return"});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
@@ -201,12 +203,12 @@ export class Engine {
   if(d.phase===STATUS.TO_INCIDENT){
    const incident=simulator.incidents.find(i=>i.id===d.incidentId);this.removeRoute(`${d.id}-to-incident`);v.district=d.incidentDistrictId;if(!incident)return[];if(!incident.arrivedVehicleIds.includes(v.id))incident.arrivedVehicleIds.push(v.id);if(incident.type==="onscene"&&incident.arrivedVehicleIds.length>=1)incident.markerVisible=false;
    const arrival={type:"log",message:`[AANKOMST] ${incident.arrivedVehicleIds.length}/${incident.requiredUnits} eenheden aanwezig.`};
-   if(incident.arrivedVehicleIds.length<incident.requiredUnits){d.phase="WAITING_AT_INCIDENT";v.status=STATUS.TO_INCIDENT;v.x=incident.x;v.y=incident.y;return[arrival];}
    if(incident.type==="onscene"){
-    incident.status="ON_SCENE";const events=[arrival];
-    for(const related of [...this.activeDispatches.values()].filter(item=>item.incidentId===incident.id)){const unit=vehicles.find(item=>item.id===related.vehicleId);if(!unit)continue;unit.status=STATUS.ON_SCENE;related.phase=STATUS.ON_SCENE;related.phaseStartTime=now;const index=incident.assignedVehicleIds.indexOf(unit.id),angle=index*Math.PI*2/incident.assignedVehicleIds.length;unit.x=incident.x+Math.cos(angle)*18;unit.y=incident.y+Math.sin(angle)*18;events.push({type:"onSceneStarted",vehicle:unit,incident,seconds:incident.sceneBusyDurationSeconds});}
-    return events;
+    incident.status="ON_SCENE";v.status=STATUS.ON_SCENE;v.onSceneArrivedAt=now;d.phase=STATUS.ON_SCENE;d.phaseStartTime=now;d.onSceneArrivedAt=now;
+    const index=incident.assignedVehicleIds.indexOf(v.id),angle=index*Math.PI*2/incident.assignedVehicleIds.length;v.x=incident.x+Math.cos(angle)*18;v.y=incident.y+Math.sin(angle)*18;
+    return[arrival,{type:"onSceneStarted",vehicle:v,incident,seconds:incident.sceneBusyDurationSeconds}];
    }
+   if(incident.arrivedVehicleIds.length<incident.requiredUnits){d.phase="WAITING_AT_INCIDENT";v.status=STATUS.TO_INCIDENT;v.x=incident.x;v.y=incident.y;return[arrival];}
    this.handleIncident(incident.id,now);simulator.incidentsHandled++;
    const events=[arrival,{type:"incidentCleared",vehicle:v,incidentId:d.incidentId}];
    for(const related of [...this.activeDispatches.values()].filter(item=>item.incidentId===incident.id)){

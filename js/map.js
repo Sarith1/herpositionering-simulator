@@ -22,6 +22,13 @@ const DETENTION_COMPLEX_SCALE = 1.20;
 export const REPOSITION_TARGET_HIT_RADIUS = 95;
 export const REPOSITION_TARGET_LABEL_WIDTH = 190;
 export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
+export const ON_SCENE_VISIBLE_MS = 2000;
+
+export function isVehicleVisible(vehicle, now = performance.now()) {
+    if (vehicle.status === "BUSY") return false;
+    if (vehicle.status !== "ON_SCENE") return true;
+    return Number.isFinite(vehicle.onSceneArrivedAt) && now - vehicle.onSceneArrivedAt < ON_SCENE_VISIBLE_MS;
+}
 
 export const repositionRules = [
     {
@@ -494,15 +501,19 @@ export class MapView {
         ring.setAttribute("cy", 0);
         ring.setAttribute("r", 27);
 
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute("x", 0);
-        text.setAttribute("y", 0);
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("dominant-baseline", "central");
-        text.setAttribute("class", "incident");
-        text.textContent = incident.type === "onscene" ? "🫯" : "🦹";
-
-        visualGroup.append(ring, text);
+        visualGroup.appendChild(ring);
+        if (incident.type === "onscene") {
+            const disc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            disc.setAttribute("class", "onscene-marker-disc");disc.setAttribute("r", "18");
+            const assistance = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            assistance.setAttribute("class", "onscene-marker-symbol");
+            assistance.setAttribute("d", "M-4-12h8v8h8v8H4v8h-8V4h-8v-8h8z");
+            visualGroup.append(disc, assistance);
+        } else {
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("x", 0);text.setAttribute("y", 0);text.setAttribute("text-anchor", "middle");text.setAttribute("dominant-baseline", "central");text.setAttribute("class", "incident");text.textContent = "🦹";
+            visualGroup.appendChild(text);
+        }
         if (incident.requiredUnits > 1) {
             const badge=document.createElementNS("http://www.w3.org/2000/svg","circle");badge.setAttribute("class","incident-unit-badge");badge.setAttribute("cx","23");badge.setAttribute("cy","-22");badge.setAttribute("r","14");
             const badgeText=document.createElementNS("http://www.w3.org/2000/svg","text");badgeText.setAttribute("class","incident-unit-badge-text");badgeText.setAttribute("x","23");badgeText.setAttribute("y","-18");badgeText.setAttribute("text-anchor","middle");badgeText.textContent=`${incident.requiredUnits}x`;visualGroup.append(badge,badgeText);
@@ -608,16 +619,16 @@ export class MapView {
         return group;
     }
 
-    updateVehicleElement(element, vehicle, x, y) {
-        const hiddenAtDetention = vehicle.status === "BUSY";
+    updateVehicleElement(element, vehicle, x, y, now = performance.now()) {
+        const hidden = !isVehicleVisible(vehicle, now);
         // Position is the only movement transform: the icon, callsign and
         // selection styling must remain upright regardless of travel direction.
         element.setAttribute("transform", `translate(${x} ${y})`);
         element.setAttribute("x", 0);
         element.setAttribute("y", 0);
-        element.style.display = hiddenAtDetention ? "none" : "";
-        element.style.pointerEvents = hiddenAtDetention ? "none" : "";
-        if (hiddenAtDetention) element.setAttribute("aria-hidden", "true");
+        element.style.display = hidden ? "none" : "";
+        element.style.pointerEvents = hidden ? "none" : "";
+        if (hidden) element.setAttribute("aria-hidden", "true");
         else element.removeAttribute("aria-hidden");
         element.querySelector(".vehicle-symbol").style.fontSize = `${BASE_VEHICLE_FONT_SIZE * VEHICLE_SCALE}px`;
         const callsign = element.querySelector(".vehicle-callsign");
@@ -627,7 +638,7 @@ export class MapView {
         }
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((["manualVehicle", "repositionTraining"].includes(sessionConfig.operationMode) && simulator.vehicleSelection.active)||repositionSelectable);
-        const selected=!hiddenAtDetention&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
+        const selected=!hidden&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
         const specialHint=isSpecialVehicle(vehicle)?` Speciaal voertuig; bij voorkeur in ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict} behouden.`:"";
         element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}.${specialHint}`);
