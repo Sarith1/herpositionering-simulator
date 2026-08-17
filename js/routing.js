@@ -16,6 +16,18 @@ export function getDistrictById(districtId) {
     return getNodes().find(node => node.id === districtId) || null;
 }
 
+// The route graph is the single source of truth for district adjacency.  Some
+// older data is one-directional, so expose it as the undirected graph used by
+// shortest-route calculations as well.
+export function getAdjacentDistrictIds(districtId) {
+    const district = getDistrictById(districtId);
+    if (!district) return [];
+    const reverseNeighbours = getNodes()
+        .filter(node => node.neighbours?.includes(districtId))
+        .map(node => node.id);
+    return [...new Set([...(district.neighbours || []), ...reverseNeighbours])];
+}
+
 export function getPrisonDistricts() {
     return detentionComplexes.filter(complex => sessionConfig.availablePrisons.includes(complex.id));
 }
@@ -32,8 +44,7 @@ export function getShortestRoute(startDistrictId, endDistrictId) {
 
         if (!currentDistrict) continue;
 
-        const reverseNeighbours = getNodes().filter(node => node.neighbours?.includes(currentDistrict.id)).map(node => node.id);
-        for (const neighbourId of [...new Set([...(currentDistrict.neighbours || []), ...reverseNeighbours])]) {
+        for (const neighbourId of getAdjacentDistrictIds(currentDistrict.id)) {
             if (visited.has(neighbourId)) continue;
 
             const nextRoute = [...route, neighbourId];
