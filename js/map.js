@@ -18,7 +18,9 @@ const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
 const DETENTION_COMPLEX_SCALE = 1.20;
-export const DETENTION_LABEL_OFFSET_Y = 39;
+// The building body runs from -10 to 20 in the scaled icon. Keep every
+// complex name on that shared visual centre line.
+export const DETENTION_LABEL_CENTER_Y = 5 * DETENTION_COMPLEX_SCALE;
 export const REPOSITION_TARGET_HIT_RADIUS = 95;
 export const REPOSITION_TARGET_LABEL_WIDTH = 190;
 export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
@@ -177,7 +179,6 @@ export class MapView {
         this.hotzoneLayer = this.createLayer("hotzones");
         this.districtLayer = this.createLayer("districts");
         this.prisonLayer = this.createLayer("prisons");
-        this.detentionLabelLayer = this.createLayer("detention-labels");
         // SVG uses document order for stacking: labels stay below the complete
         // vehicle group, while incidents and interaction targets stay above it.
         this.labelLayer = this.createLayer("labels");
@@ -203,14 +204,12 @@ export class MapView {
         this.clearLayer(this.hotzoneLayer);
         this.clearLayer(this.districtLayer);
         this.clearLayer(this.labelLayer);
-        this.clearLayer(this.detentionLabelLayer);
         this.syncIncident();
 
         this.drawRoutes();
         this.drawHotzones();
         this.drawDistricts();
         this.syncPrisons();
-        this.drawDetentionLabels();
         this.drawLabels();
         this.syncVehicles();
         this.syncInteractionLayer();
@@ -384,7 +383,7 @@ export class MapView {
             .forEach(district => {
                 visiblePrisonIds.add(district.id);
 
-                const group = this.getOrCreatePrisonElement(district.id);
+                const group = this.getOrCreatePrisonElement(district);
                 const available = availablePrisonIds.has(district.id);
                 const selected = available && simulator.selectedPrison === district.id;
                 group.setAttribute("class", `prison-marker ${available ? "available" : "unavailable"}${selected ? " selected" : ""}`);
@@ -407,7 +406,11 @@ export class MapView {
         return getDetentionComplexPosition(complex);
     }
 
-    getOrCreatePrisonElement(districtId) {
+    getOrCreatePrisonElement(complex) {
+        const district = typeof complex === "string"
+            ? detentionComplexes.find(candidate => candidate.id === complex)
+            : complex;
+        const districtId = district.id;
         const selector = `[data-prison-district-id="${CSS.escape(districtId)}"]`;
         const existingElement = this.prisonLayer.querySelector(selector);
 
@@ -447,8 +450,19 @@ export class MapView {
         bars.setAttribute("class", "detention-bars");
         bars.setAttribute("d", "M-14-3v15m7-15v15M-17-3h13m-13 15h13M7-3v15m7-15v15M4-3h13M4 12h13");
 
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("class", "detention-label");
+        label.setAttribute("x", 0);
+        label.setAttribute("y", DETENTION_LABEL_CENTER_Y);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("dominant-baseline", "middle");
+        label.setAttribute("pointer-events", "none");
+        label.textContent = district.name;
+
         visual.append(halo, flashRing, building, roof, badge, bars);
-        group.append(title, visual);
+        // Keep the label in the translated marker, but after the scaled visual
+        // so it remains crisp and is painted over every building detail.
+        group.append(title, visual, label);
         this.prisonLayer.appendChild(group);
 
         return group;
@@ -464,19 +478,6 @@ export class MapView {
             label.textContent = district.name;
 
             this.labelLayer.appendChild(label);
-        });
-    }
-
-    drawDetentionLabels() {
-        detentionComplexes.forEach(complex => {
-            const position = getDetentionComplexPosition(complex);
-            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            label.setAttribute("x", position.x);
-            label.setAttribute("y", position.y + DETENTION_LABEL_OFFSET_Y);
-            label.setAttribute("text-anchor", "middle");
-            label.setAttribute("class", "detention-label");
-            label.textContent = complex.name;
-            this.detentionLabelLayer.appendChild(label);
         });
     }
 
