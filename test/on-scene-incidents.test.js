@@ -32,7 +32,11 @@ test("on-scene marker hides on first arrival while multi-unit incident remains a
  assert.equal(incident.arrivedVehicleIds.length,1);
  assert.notEqual(incident.status,"HANDLED");
  assert.equal(simulator.incidents.includes(incident),true);
+ assert.equal(dispatches[0].phase,"ON_SCENE");
+ assert.equal(dispatches[1].phase,"TO_INCIDENT");
  engine.updateDispatch(dispatches[1],Infinity);
+ assert.equal(dispatches[1].phase,"ON_SCENE");
+ assert.equal(dispatches[2].phase,"TO_INCIDENT");
  engine.updateDispatch(dispatches[2],Infinity);
  assert.equal(incident.status,"ON_SCENE");
  assert.equal(incident.arrivedVehicleIds.length,3);

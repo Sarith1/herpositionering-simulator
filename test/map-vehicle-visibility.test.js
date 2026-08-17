@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { Engine } from "../js/engine.js";
 import { simulator, vehicles } from "../js/data.js";
-import { MapView } from "../js/map.js";
+import { isVehicleVisible, MapView, ON_SCENE_VISIBLE_MS } from "../js/map.js";
 
 class FakeVehicleElement {
     constructor() {
@@ -126,4 +126,27 @@ test("BUSY vehicles are non-rendered and non-interactive until RETURNING", () =>
     assert.equal(element.attributes["aria-hidden"], undefined);
     assert.match(element.attributes.class, /returning/);
     assert.deepEqual({ x: vehicle.x, y: vehicle.y }, detentionPosition);
+});
+
+test("ON_SCENE vehicles disappear two seconds after their own arrival and reappear when returning", () => {
+    const engine = new Engine();
+    engine.reset();
+    const vehicle = vehicles[0];
+    const element = new FakeVehicleElement();
+    vehicle.status = "ON_SCENE";
+    vehicle.onSceneArrivedAt = 1000;
+
+    assert.equal(isVehicleVisible(vehicle, 1000 + ON_SCENE_VISIBLE_MS - 1), true);
+    MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y, 1000 + ON_SCENE_VISIBLE_MS);
+    assert.equal(element.style.display, "none");
+    assert.equal(element.style.pointerEvents, "none");
+    assert.equal(element.attributes["aria-hidden"], "true");
+    assert.equal(element.attributes.tabindex, "-1");
+
+    vehicle.status = "RETURNING";
+    delete vehicle.onSceneArrivedAt;
+    MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y, 5000);
+    assert.equal(element.style.display, "");
+    assert.equal(element.style.pointerEvents, "");
+    assert.equal(element.attributes["aria-hidden"], undefined);
 });
