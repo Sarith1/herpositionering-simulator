@@ -181,9 +181,10 @@ export class App {
         if (event.type === "onSceneStarted") this.ui.log(`[TER PLAATSE] ${event.vehicle.id} is ter plaatse en blijft ${event.seconds} seconden bezet.`);
         if (event.type === "onSceneComplete") this.ui.log(`[AFGEROND] Melding afgehandeld. ${event.vehicle.id} keert terug naar ${event.district.name}.`);
         if (event.type === "transport") this.ui.log(`[TRANSPORT] ${event.vehicle.id} rijdt naar de cel in ${event.district.name}.`);
+        if (event.type === "travelTimeCalculated" && event.incident?.type === "detention") this.ui.showTravelTime(event.incident.travelTime, event.incident.capacityExceeded);
         if (event.type === "prisonReached") this.ui.log(`[CAPACITEIT] ${event.prison.name}: ${event.occupancy}/${event.capacity} bezet.`);
         if (event.type === "prisonReleased") this.ui.log(`[CEL] 1 plek vrijgekomen in ${event.prison.name}.`);
-        if (event.type === "capacityWarning") { this.ui.log(event.message); this.ui.showTravelTime(event.incident.travelTime, true); }
+        if (event.type === "capacityWarning") { this.ui.log(event.message); if (sessionConfig.operationMode !== "autoplay") this.ui.showTravelTime(event.incident.travelTime, true); }
         if (event.type === "returning") this.ui.log(`[TERUGRIT] ${event.vehicle.id} rijdt terug naar de standplaats.`);
         if (event.type === "vehicleReturned") this.ui.vehicleReturned(event.vehicle.id);
         if (event.type === "vehicleAvailableAway") this.ui.log(`[BESCHIKBAAR] ${event.vehicle.id} blijft in ${event.district.name}; verplaats handmatig met H.`);

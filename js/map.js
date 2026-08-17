@@ -234,7 +234,8 @@ export class MapView {
             if (!points) return;
             const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
             line.setAttribute("points", points);
-            line.setAttribute("class", `route-line ${routeInfo.type || "dispatch"}`);
+            const routeClass = { dispatch: "route--incident", return: "route--returning", reposition: "route--repositioning", "to-prison": "route--to-prison" }[routeInfo.type] || "route--incident";
+            line.setAttribute("class", `route-line ${routeInfo.type || "dispatch"} ${routeClass}`);
             this.routeLayer.appendChild(line);
         });
     }
@@ -629,9 +630,13 @@ export class MapView {
         callsign.setAttribute("text-anchor", "middle");
         callsign.setAttribute("class", "vehicle-callsign");
         callsign.setAttribute("y", "23");
+        const statusBadge = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        statusBadge.setAttribute("text-anchor", "middle");
+        statusBadge.setAttribute("class", "vehicle-status-badge");
+        statusBadge.setAttribute("y", "34");
         group.addEventListener("click", () => { if (group.classList.contains("vehicle--selectable")) this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: group.dataset.vehicleId } })); });
         group.addEventListener("keydown", event => { if (group.classList.contains("vehicle--selectable") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); group.dispatchEvent(new MouseEvent("click")); } });
-        group.append(hitbox, text, callsign); this.vehicleLayer.appendChild(group);
+        group.append(hitbox, text, callsign, statusBadge); this.vehicleLayer.appendChild(group);
 
         return group;
     }
@@ -653,12 +658,19 @@ export class MapView {
             callsign.textContent = vehicle.callsign || vehicle.id;
             callsign.classList.toggle("vehicle-callsign--special", isSpecialVehicle(vehicle));
         }
+        const statusBadge = element.querySelector?.(".vehicle-status-badge");
+        if (statusBadge) {
+            const badge = vehicle.status === "TO_PRISON" ? "CEL" : vehicle.status === "RETURNING" ? "TERUG" : "";
+            statusBadge.textContent = badge;
+            statusBadge.setAttribute("class", `vehicle-status-badge${badge ? ` vehicle-status-badge--${badge.toLowerCase()}` : ""}`);
+        }
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((["manualVehicle", "repositionTraining"].includes(sessionConfig.operationMode) && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=!hidden&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
         element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
         const specialHint=isSpecialVehicle(vehicle)?` Speciaal voertuig; bij voorkeur in ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict} behouden.`:"";
-        element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : vehicle.status}.${specialHint}`);
+        const statusDescription=vehicle.status==="TO_PRISON"?`Naar cellencomplex ${districts.find(d=>d.id===vehicle.prison)?.name||vehicle.prison}`:vehicle.status==="RETURNING"?`Terug naar ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict}`:vehicle.status;
+        element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : statusDescription}.${specialHint}`);
     }
 
     clamp(value, min, max) {
