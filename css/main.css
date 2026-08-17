@@ -1430,9 +1430,9 @@ footer button {
     filter:drop-shadow(0 0 8px rgba(125,211,255,.75));
 }
 
-.vehicle.repositioning,
+.vehicle.repositioning .vehicle-symbol,
 .vehicle-repositioning-sample {
-    animation:repositionPulse 1s ease-in-out infinite;
+    animation:repositionPulse 1.2s ease-in-out infinite;
 }
 
 .vehicle.repositioning {
@@ -1448,6 +1448,15 @@ footer button {
     50% {
         opacity:.65;
         filter:drop-shadow(0 0 8px rgba(59,130,246,.95));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vehicle.repositioning .vehicle-symbol,
+    .vehicle-repositioning-sample {
+        animation:none;
+        opacity:1;
+        filter:drop-shadow(0 0 7px rgba(34,197,94,.95));
     }
 }
 
