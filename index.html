@@ -87,21 +87,21 @@
 
             <section class="session-config" aria-label="Sessieconfiguratie">
                 <div class="panel-heading"><span>Configuratie</span><small>Sessie-instellingen</small></div>
-                <div class="config-section"><h3>Sessie</h3><p class="config-help">Voertuigen per district</p>
+                <div class="config-section"><h3>Sessie</h3><p class="config-help config-label">Voertuigen per district <span data-config-help="vehicles"></span></p>
                 <div id="vehicleConfig" class="vehicle-config"></div>
                 <div class="config-summary">Totaal <strong id="vehicleConfigTotal">21</strong></div></div>
-                <div class="config-section"><h3>Hotzones</h3>
+                <div class="config-section"><h3>Hotzones <span data-config-help="hotzone"></span></h3>
                 <label class="multi-unit-config" for="hotzoneIncidentPercentage">
-                    <strong>Percentage meldingen in Hotzones</strong>
+                    <strong class="config-label">Percentage meldingen in Hotzones <span data-config-help="hotzoneIncidents"></span></strong>
                     <input id="hotzoneIncidentPercentage" type="range" min="0" max="100" step="5" value="50">
                     <span id="hotzoneIncidentPercentageLabel">50% van de meldingen wordt bij voorkeur in Hotzones geplaatst.</span>
                     <small id="hotzoneIncidentPercentageHelp" class="config-help">Selecteer minimaal één Hotzone om deze instelling toe te passen.</small>
                 </label></div>
-                <div class="config-section"><h3>Cellencomplexen</h3>
+                <div class="config-section"><h3>Cellencomplexen <span data-config-help="detentionAvailability"></span></h3>
                 <p class="config-help">Selecteer minimaal één complex voor celritten.</p>
                 <div id="prisonConfig" class="prison-config"></div></div>
                 <p id="detentionCapacityWarning" class="capacity-warning" role="status" hidden>Let op: totale beschikbare cellencapaciteit is 0. Alle celritten duren dubbel zo lang.</p>
-                <div class="config-section"><h3>Werkwijze</h3>
+                <div class="config-section"><h3>Werkwijze <span data-config-help="operationMode"></span></h3>
                 <div id="operationModeConfig" class="mode-config">
                     <label><input type="radio" name="operationMode" value="automatic" checked> Automatisch</label>
                     <label><input type="radio" name="operationMode" value="manualVehicle"> Handmatig voertuig kiezen</label>
@@ -110,17 +110,17 @@
                 </div></div>
                 <div id="autoplayIntervalConfig" class="config-section autoplay-interval" hidden>
                     <h3>Automatische meldingen</h3><p class="config-help">Interval meldingen voor Autoplay en Herpositioneringsmodus</p>
-                    <label for="autoplayMinDelay"><span>Minimum interval</span><output id="autoplayMinDelayLabel">1 sec</output></label>
+                    <label for="autoplayMinDelay"><span class="config-label">Minimum interval <span data-config-help="autoplayMin"></span></span><output id="autoplayMinDelayLabel">1 sec</output></label>
                     <input id="autoplayMinDelay" type="range" min="1" max="60" value="1">
-                    <label for="autoplayMaxDelay"><span>Maximum interval</span><output id="autoplayMaxDelayLabel">20 sec</output></label>
+                    <label for="autoplayMaxDelay"><span class="config-label">Maximum interval <span data-config-help="autoplayMax"></span></span><output id="autoplayMaxDelayLabel">20 sec</output></label>
                     <input id="autoplayMaxDelay" type="range" min="1" max="60" value="20">
                 </div>
                 <div class="config-section"><h3>Meldingen</h3><label class="multi-unit-config" for="multiUnitIncidentPercentage">
-                    <strong>Percentage grotere incidenten</strong>
+                    <strong class="config-label">Percentage grotere incidenten <span data-config-help="multiUnit"></span></strong>
                     <input id="multiUnitIncidentPercentage" type="range" min="0" max="100" step="5" value="20">
                     <span id="multiUnitIncidentPercentageLabel">20% van de meldingen vraagt meerdere eenheden</span>
                 </label><label class="multi-unit-config" for="onSceneIncidentPercentage">
-                    <strong>Percentage meldingen zonder arrestantentransport</strong>
+                    <strong class="config-label">Percentage meldingen zonder arrestantentransport <span data-config-help="onScene"></span></strong>
                     <input id="onSceneIncidentPercentage" type="range" min="0" max="100" step="5" value="30">
                     <span id="onSceneIncidentPercentageLabel">30% van de meldingen wordt ter plaatse afgehandeld</span>
                 </label></div>

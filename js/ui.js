@@ -27,6 +27,19 @@ import {
 } from "./data.js";
 import { getCoverageTargets } from "./engine.js";
 
+export const CONFIG_HELP = Object.freeze({
+    vehicles:{title:"Voertuigen per district",text:"Bepaalt hoeveel eenheden bij de start van de sessie in dit district beschikbaar zijn."},
+    hotzone:{title:"Hotzone",text:"Hotzones krijgen in Automatic en Autoplay prioriteit bij dekkingsverdeling."},
+    hotzoneIncidents:{title:"Meldingen in Hotzones",text:"Bepaalt welk percentage van nieuwe meldingen bij voorkeur in een Hotzone ontstaat."},
+    multiUnit:{title:"Grotere incidenten",text:"Bepaalt welk percentage van de meldingen 2 of 3 eenheden nodig heeft."},
+    onScene:{title:"Ter-plaatse meldingen",text:"Deze meldingen worden op locatie afgehandeld en leiden niet tot een cellencomplex."},
+    autoplayMin:{title:"Minimuminterval",text:"Bepaalt de minimale willekeurige tijd tussen automatisch gegenereerde meldingen."},
+    autoplayMax:{title:"Maximuminterval",text:"Bepaalt de maximale willekeurige tijd tussen automatisch gegenereerde meldingen."},
+    detentionAvailability:{title:"Cellencomplex beschikbaarheid",text:"Bepaalt welke cellencomplexen beschikbaar zijn voor arrestantentransport."},
+    detentionCapacity:{title:"Cellencapaciteit",text:"Bepaalt hoeveel arrestanten tegelijk in dit cellencomplex kunnen worden verwerkt."},
+    operationMode:{title:"Werkwijze",text:"Bepaalt welke delen van de simulatie automatisch en welke handmatig worden uitgevoerd."}
+});
+
 export class UI {
 
     constructor() {
@@ -108,6 +121,7 @@ export class UI {
             document.getElementById("repositioningFailureOverlay");
 
         this.renderSessionConfig();
+        this.initializeConfigHelp();
         const percentageInput = document.getElementById("multiUnitIncidentPercentage");
         percentageInput?.addEventListener("input", () => this.updateMultiUnitIncidentLabel());
         this.setMultiUnitIncidentPercentage(sessionConfig.multiUnitIncidentPercentage);
@@ -119,6 +133,17 @@ export class UI {
         ["autoplayMinDelay", "autoplayMaxDelay"].forEach(id => document.getElementById(id)?.addEventListener("input", event => this.handleAutoplayDelayInput(event.target)));
         this.updateModeConfigVisibility();
 
+    }
+
+    helpIcon(key){return `<span class="config-info" data-config-help="${key}" tabindex="0" role="button" aria-label="Meer informatie" aria-expanded="false"></span>`;}
+
+    initializeConfigHelp() {
+        const root=document.querySelector(".session-config");if(!root)return;
+        root.querySelectorAll("[data-config-help]").forEach(host=>{const help=CONFIG_HELP[host.dataset.configHelp];if(!help)return;if(!host.classList.contains("config-info")){host.className="config-info";host.tabIndex=0;host.setAttribute("role","button");host.setAttribute("aria-label",`Meer informatie over ${help.title}`);host.setAttribute("aria-expanded","false");}host.innerHTML=`<span aria-hidden="true">i</span><span class="config-tooltip" role="tooltip"><strong>${help.title}</strong><span>${help.text}</span></span>`;});
+        const close=except=>root.querySelectorAll(".config-info.is-open").forEach(icon=>{if(icon!==except){icon.classList.remove("is-open");icon.setAttribute("aria-expanded","false");}});
+        root.addEventListener("click",event=>{const icon=event.target.closest?.(".config-info");if(!icon){close();return;}event.preventDefault();event.stopPropagation();const open=!icon.classList.contains("is-open");close(icon);icon.classList.toggle("is-open",open);icon.setAttribute("aria-expanded",String(open));});
+        root.addEventListener("keydown",event=>{const icon=event.target.closest?.(".config-info");if(event.key==="Escape"){close();icon?.blur();}else if(icon&&(event.key==="Enter"||event.key===" ")){event.preventDefault();icon.click();}});
+        document.addEventListener("click",()=>close());
     }
 
     refresh(buttonState = null) {
@@ -156,7 +181,7 @@ export class UI {
                 </label>
                 <label class="hotzone-config" for="hotzone-${district.id}">
                     <input id="hotzone-${district.id}" type="checkbox" data-hotzone-district-id="${district.id}">
-                    <span>Hotzone</span>
+                    <span>Hotzone ${this.helpIcon("hotzone")}</span>
                 </label>
             `;
             this.configContainer.appendChild(row);
@@ -184,8 +209,8 @@ export class UI {
             label.className = "prison-config-row";
             const checked = sessionConfig.availablePrisons.includes(district.id) ? "checked" : "";
             label.innerHTML = `
-                <label class="prison-availability"><input type="checkbox" value="${district.id}" data-prison-id="${district.id}" ${checked}> <span>${district.name}</span></label>
-                <label class="prison-capacity">Aantal plekken <input type="number" min="0" max="50" step="1" value="${sessionConfig.detentionCapacity[district.id]}" data-prison-capacity-id="${district.id}" ${checked ? "" : "disabled"}></label>
+                <label class="prison-availability"><input type="checkbox" value="${district.id}" data-prison-id="${district.id}" ${checked}> <span>${district.name} ${this.helpIcon("detentionAvailability")}</span></label>
+                <label class="prison-capacity">Aantal plekken ${this.helpIcon("detentionCapacity")} <input type="number" min="0" max="50" step="1" value="${sessionConfig.detentionCapacity[district.id]}" data-prison-capacity-id="${district.id}" ${checked ? "" : "disabled"}></label>
             `;
             this.prisonConfigContainer.appendChild(label);
         });
