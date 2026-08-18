@@ -7,6 +7,7 @@ const STEPS = { INCIDENT:"INCIDENT", PRISON:"PRISON", TRAVEL_TIME:"TRAVEL_TIME",
 // One visual movement pace for every drive type. This does not affect the
 // calculated incident travel time or any operational timer.
 export const DRIVE_MS_PER_EDGE = 1800;
+export const DISPATCH_DEPARTURE_DELAY_MS = 2000;
 export const REPOSITION_TRAINING_DRIVE_MS_PER_EDGE = DRIVE_MS_PER_EDGE;
 export const REPOSITION_COOLDOWN_MS = 2000;
 export const COVERAGE_GRACE_PERIOD_MS = 2000;
@@ -175,7 +176,8 @@ export class Engine {
   const capacityEvents=[];if(["autoplay","repositionTraining"].includes(sessionConfig.operationMode)&&incident.capacityExceeded&&!incident.capacityWarningLogged){incident.capacityWarningLogged=true;capacityEvents.push({type:"capacityWarning",incident,message:"[WAARSCHUWING] Totale cellencapaciteit bereikt. Reistijd verdubbeld."});}
   const prisonPosition=prison?getDetentionComplexPositionById(prison.id):null,parkingPosition=prison?(getDetentionParkingSlot(prison.id,vehicle.id)||prisonPosition):null;
   const origin=vehicle.district,returnTargetDistrictId=vehicle.homeDistrict;this.awaitingIncidentArrivals.add(incident.id);
-  const dispatch={id,vehicleId:vehicle.id,incidentId:incident.id,phase:STATUS.TO_INCIDENT,originDistrictId:origin,returnTargetDistrictId,incidentDistrictId:incident.district,incidentX:incident.x,incidentY:incident.y,prisonDistrictId:prison?.id||null,prisonPosition,prisonX:parkingPosition?.x,prisonY:parkingPosition?.y,routeToIncident,routeToPrison,returnRoute:getShortestRoute(incident.district,returnTargetDistrictId),prisonReturnRoute:prison?getShortestRoute(prison.id,returnTargetDistrictId):[],phaseStartTime:performance.now(),busySeconds:incident.type==="onscene"?incident.sceneBusyDurationSeconds:incident.travelTime,fromX:vehicle.x,fromY:vehicle.y,toX:incident.x,toY:incident.y};this.activeDispatches.set(id,dispatch);simulator.activeRoutes.push({id:`${id}-to-incident`,route:routeToIncident,type:"dispatch",destination:{x:incident.x,y:incident.y}});return this.result(true,`[DISPATCH] ${vehicle.id} ingezet (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`,{vehicle,district:getDistrictById(incident.district),events:capacityEvents});
+  const phaseStartTime=performance.now();
+  const dispatch={id,vehicleId:vehicle.id,incidentId:incident.id,phase:STATUS.TO_INCIDENT,originDistrictId:origin,returnTargetDistrictId,incidentDistrictId:incident.district,incidentX:incident.x,incidentY:incident.y,prisonDistrictId:prison?.id||null,prisonPosition,prisonX:parkingPosition?.x,prisonY:parkingPosition?.y,routeToIncident,routeToPrison,returnRoute:getShortestRoute(incident.district,returnTargetDistrictId),prisonReturnRoute:prison?getShortestRoute(prison.id,returnTargetDistrictId):[],phaseStartTime,departureAt:phaseStartTime+DISPATCH_DEPARTURE_DELAY_MS,busySeconds:incident.type==="onscene"?incident.sceneBusyDurationSeconds:incident.travelTime,fromX:vehicle.x,fromY:vehicle.y,toX:incident.x,toY:incident.y};this.activeDispatches.set(id,dispatch);simulator.activeRoutes.push({id:`${id}-to-incident`,route:routeToIncident,type:"dispatch",destination:{x:incident.x,y:incident.y}});return this.result(true,`[DISPATCH] ${vehicle.id} ingezet (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`,{vehicle,district:getDistrictById(incident.district),events:capacityEvents});
  }
  update(now=performance.now()){
   // Failure freezes the exact operational snapshot, including movement and timers.
@@ -207,7 +209,9 @@ export class Engine {
   }
   if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}if(sessionConfig.operationMode==="repositionTraining"){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.prisonDistrictId;this.place(v);this.activeDispatches.delete(d.id);return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"vehicleAvailableAway",vehicle:v,district:getDistrictById(v.district)},...this.ensureCoverage()];}this.phase(d,STATUS.RETURNING,now,d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.prisonReturnRoute,type:"return"});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
   if(d.phase==="WAITING_AT_INCIDENT")return[];
-  const route=d.phase===STATUS.TO_INCIDENT?d.routeToIncident:d.phase===STATUS.TO_PRISON?d.routeToPrison:d.returnRoute,progress=Math.min(1,(now-d.phaseStartTime)/Math.max(900,getRouteDistance(route)*this.getDriveMsPerEdge()));this.move(v,route,progress,d);if(progress<1)return[];
+  const route=d.phase===STATUS.TO_INCIDENT?d.routeToIncident:d.phase===STATUS.TO_PRISON?d.routeToPrison:d.returnRoute;
+  const movementStartTime=d.phase===STATUS.TO_INCIDENT?(d.departureAt??d.phaseStartTime):d.phaseStartTime;
+  const progress=Math.min(1,Math.max(0,now-movementStartTime)/Math.max(900,getRouteDistance(route)*this.getDriveMsPerEdge()));this.move(v,route,progress,d);if(progress<1)return[];
   if(d.phase===STATUS.TO_INCIDENT){
    const incident=simulator.incidents.find(i=>i.id===d.incidentId);this.removeRoute(`${d.id}-to-incident`);v.district=d.incidentDistrictId;if(!incident)return[];if(!incident.arrivedVehicleIds.includes(v.id))incident.arrivedVehicleIds.push(v.id);if(incident.type==="onscene"&&incident.arrivedVehicleIds.length>=1)incident.markerVisible=false;
    const arrival={type:"log",message:`[AANKOMST] ${incident.arrivedVehicleIds.length}/${incident.requiredUnits} eenheden aanwezig.`};
