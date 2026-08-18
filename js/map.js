@@ -25,6 +25,12 @@ export const REPOSITION_TARGET_HIT_RADIUS = 95;
 export const REPOSITION_TARGET_LABEL_WIDTH = 190;
 export const REPOSITION_TARGET_LABEL_HEIGHT = 55;
 export const ON_SCENE_VISIBLE_MS = 2000;
+export const VEHICLE_VISUAL_STATUS = Object.freeze({
+    TO_INCIDENT: { label: "MELDING", className: "status-incident", routeClass: "route--incident" },
+    TO_PRISON: { label: "CEL", className: "status-prison", routeClass: "route--prison" },
+    REPOSITIONING: { label: "HERPOS", className: "status-reposition", routeClass: "route--reposition" },
+    RETURNING: { label: "TERUG", className: "status-return", routeClass: "route--return" }
+});
 
 export function isVehicleVisible(vehicle, now = performance.now()) {
     if (vehicle.status === "BUSY") return false;
@@ -111,6 +117,10 @@ export class MapView {
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
             <span><span class="legend-special-callsign">RT</span> Groen roepnummer = bij voorkeur in eigen district houden</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
+            <span><span class="legend-route route--incident"></span> Melding</span>
+            <span><span class="legend-route route--prison"></span> Naar cel</span>
+            <span><span class="legend-route route--return"></span> Terug</span>
+            <span><span class="legend-route route--reposition"></span> Herpositionering</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
             <span><span class="legend-icon hotzone-legend-icon" aria-hidden="true"></span> Hotzone</span>
             <span><span class="legend-icon detention-legend-icon" aria-hidden="true">${this.getDetentionComplexLegendSvg(false)}</span> Beschikbaar cellencomplex</span>
@@ -224,17 +234,15 @@ export class MapView {
         if (simulator.activeRoute?.length > 1) routes.push({ id: "preview", route: simulator.activeRoute, type: "preview" });
 
         routes.forEach(routeInfo => {
-            if (!routeInfo.route || (routeInfo.route.length < 2 && !routeInfo.destination)) return;
-            const points = routeInfo.route
-                .map(getDistrictById)
-                .filter(Boolean)
-                .concat(routeInfo.destination || [])
-                .map(district => `${district.x},${district.y}`)
+            const pathPoints = routeInfo.pathPoints || routeInfo.route?.map(getDistrictById).filter(Boolean);
+            if (!pathPoints || pathPoints.length < 2) return;
+            const points = pathPoints
+                .map(point => `${point.x},${point.y}`)
                 .join(" ");
             if (!points) return;
             const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
             line.setAttribute("points", points);
-            const routeClass = { dispatch: "route--incident", return: "route--returning", reposition: "route--repositioning", "to-prison": "route--to-prison" }[routeInfo.type] || "route--incident";
+            const routeClass = { dispatch: VEHICLE_VISUAL_STATUS.TO_INCIDENT.routeClass, return: VEHICLE_VISUAL_STATUS.RETURNING.routeClass, reposition: VEHICLE_VISUAL_STATUS.REPOSITIONING.routeClass, "to-prison": VEHICLE_VISUAL_STATUS.TO_PRISON.routeClass }[routeInfo.type] || "route--incident";
             line.setAttribute("class", `route-line ${routeInfo.type || "dispatch"} ${routeClass}`);
             this.routeLayer.appendChild(line);
         });
@@ -660,14 +668,15 @@ export class MapView {
         }
         const statusBadge = element.querySelector?.(".vehicle-status-badge");
         if (statusBadge) {
-            const badge = vehicle.status === "TO_PRISON" ? "CEL" : vehicle.status === "RETURNING" ? "TERUG" : "";
-            statusBadge.textContent = badge;
-            statusBadge.setAttribute("class", `vehicle-status-badge${badge ? ` vehicle-status-badge--${badge.toLowerCase()}` : ""}`);
+            const visualStatus = VEHICLE_VISUAL_STATUS[vehicle.status];
+            statusBadge.textContent = visualStatus?.label || "";
+            statusBadge.setAttribute("class", `vehicle-status-badge${visualStatus ? ` vehicle-status-badge--${visualStatus.label.toLowerCase()} ${visualStatus.className}` : ""}`);
         }
         const reposition=simulator.manualRepositionState,repositionSelectable=reposition.phase==="selectVehicle";
         const selectable = !simulator.gameOver && vehicle.status === "AVAILABLE" && !vehicle.incident && ((["manualVehicle", "repositionTraining"].includes(sessionConfig.operationMode) && simulator.vehicleSelection.active)||repositionSelectable);
         const selected=!hidden&&((simulator.vehicleSelection.selectedVehicleIds||[]).includes(vehicle.id)||reposition.selectedVehicleId===vehicle.id);
-        element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
+        const visualClass = VEHICLE_VISUAL_STATUS[vehicle.status]?.className || "";
+        element.setAttribute("class", `vehicle ${vehicle.status === "AVAILABLE" ? "available" : `busy ${String(vehicle.status).toLowerCase()}`}${visualClass ? ` ${visualClass}` : ""}${selectable ? " vehicle--selectable" : ""}${selected ? " vehicle--selected" : ""}`);
         const specialHint=isSpecialVehicle(vehicle)?` Speciaal voertuig; bij voorkeur in ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict} behouden.`:"";
         const statusDescription=vehicle.status==="TO_PRISON"?`Naar cellencomplex ${districts.find(d=>d.id===vehicle.prison)?.name||vehicle.prison}`:vehicle.status==="RETURNING"?`Terug naar ${districts.find(d=>d.id===vehicle.homeDistrict)?.name||vehicle.homeDistrict}`:vehicle.status;
         element.setAttribute("tabindex", selectable ? "0" : "-1");element.setAttribute("role", selectable ? "button" : "img");element.setAttribute("aria-label", `${vehicle.id}: ${selectable ? "beschikbaar om te selecteren" : statusDescription}.${specialHint}`);

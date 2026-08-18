@@ -36,6 +36,12 @@ export function getRandomIncidentDelaySeconds(){
 export function dedupePathPoints(points,epsilon=1e-6){
  return points.filter((point,index,path)=>index===0||Math.abs(point.x-path[index-1].x)>=epsilon||Math.abs(point.y-path[index-1].y)>=epsilon);
 }
+// Graph nodes describe navigation only. The physical endpoints always come
+// from the vehicle and its exact destination (incident, parking slot, etc.).
+export function buildMovementPath({fromX,fromY,routeDistrictIds=[],toX,toY}){
+ const graphPoints=routeDistrictIds.map(getDistrictById).filter(Boolean).map(({x,y})=>({x,y}));
+ return dedupePathPoints([{x:fromX,y:fromY},...graphPoints.slice(1,-1),{x:toX,y:toY}]);
+}
 export const INCIDENT_SPAWN_POLYGON = [
  {x:95,y:365},{x:155,y:185},{x:285,y:125},{x:455,y:120},{x:610,y:78},
  {x:680,y:275},{x:845,y:235},{x:1020,y:205},{x:1025,y:365},{x:875,y:405},
@@ -174,7 +180,7 @@ export class Engine {
   const capacityEvents=[];if(["autoplay","repositionTraining"].includes(sessionConfig.operationMode)&&incident.capacityExceeded&&!incident.capacityWarningLogged){incident.capacityWarningLogged=true;capacityEvents.push({type:"capacityWarning",incident,message:"[WAARSCHUWING] Totale cellencapaciteit bereikt. Reistijd verdubbeld."});}
   const prisonPosition=prison?getDetentionComplexPositionById(prison.id):null,parkingPosition=prison?(getDetentionParkingSlot(prison.id,vehicle.id)||prisonPosition):null;
   const origin=vehicle.district,returnTargetDistrictId=vehicle.homeDistrict;
-  const now=performance.now(),dispatch={id,vehicleId:vehicle.id,incidentId:incident.id,phase:STATUS.TO_INCIDENT,departureAt:now+DISPATCH_DEPARTURE_DELAY_MS,originDistrictId:origin,returnTargetDistrictId,incidentDistrictId:incident.district,incidentX:incident.x,incidentY:incident.y,prisonDistrictId:prison?.id||null,prisonPosition,prisonX:parkingPosition?.x,prisonY:parkingPosition?.y,routeToIncident,routeToPrison,returnRoute:getShortestRoute(incident.district,returnTargetDistrictId),prisonReturnRoute:prison?getShortestRoute(prison.id,returnTargetDistrictId):[],phaseStartTime:now+DISPATCH_DEPARTURE_DELAY_MS,busySeconds:incident.type==="onscene"?incident.sceneBusyDurationSeconds:incident.travelTime,fromX:vehicle.x,fromY:vehicle.y,toX:incident.x,toY:incident.y};this.activeDispatches.set(id,dispatch);simulator.activeRoutes.push({id:`${id}-to-incident`,route:routeToIncident,type:"dispatch",destination:{x:incident.x,y:incident.y}});return this.result(true,`[DISPATCH] ${vehicle.id} aangestuurd; vertrek over circa 2 seconden (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`,{vehicle,district:getDistrictById(incident.district),events:capacityEvents});
+  const now=performance.now(),dispatch={id,vehicleId:vehicle.id,incidentId:incident.id,phase:STATUS.TO_INCIDENT,departureAt:now+DISPATCH_DEPARTURE_DELAY_MS,originDistrictId:origin,returnTargetDistrictId,incidentDistrictId:incident.district,incidentX:incident.x,incidentY:incident.y,prisonDistrictId:prison?.id||null,prisonPosition,prisonX:parkingPosition?.x,prisonY:parkingPosition?.y,routeToIncident,routeToPrison,returnRoute:getShortestRoute(incident.district,returnTargetDistrictId),prisonReturnRoute:prison?getShortestRoute(prison.id,returnTargetDistrictId):[],phaseStartTime:now+DISPATCH_DEPARTURE_DELAY_MS,busySeconds:incident.type==="onscene"?incident.sceneBusyDurationSeconds:incident.travelTime,fromX:vehicle.x,fromY:vehicle.y,toX:incident.x,toY:incident.y};dispatch.pathPoints=buildMovementPath({fromX:vehicle.x,fromY:vehicle.y,routeDistrictIds:routeToIncident,toX:incident.x,toY:incident.y});this.activeDispatches.set(id,dispatch);simulator.activeRoutes.push({id:`${id}-to-incident`,type:"dispatch",pathPoints:dispatch.pathPoints});return this.result(true,`[DISPATCH] ${vehicle.id} aangestuurd; vertrek over circa 2 seconden (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`,{vehicle,district:getDistrictById(incident.district),events:capacityEvents});
  }
  update(now=performance.now()){
   // Failure freezes the exact operational snapshot, including movement and timers.
@@ -200,12 +206,12 @@ export class Engine {
   if(d.phase===STATUS.ON_SCENE){
    if((now-d.phaseStartTime)/1000<d.busySeconds)return[];
    const incident=simulator.incidents.find(i=>i.id===d.incidentId);
-   this.phase(d,STATUS.RETURNING,now,d.returnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;delete v.onSceneArrivedAt;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.returnRoute,type:"return"});
+   this.phase(d,STATUS.RETURNING,now,d.returnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;delete v.onSceneArrivedAt;simulator.activeRoutes.push({id:`${d.id}-return`,type:"return",pathPoints:d.pathPoints});
    const related=[...this.activeDispatches.values()].filter(item=>item.incidentId===d.incidentId);
    if(incident&&incident.status!=="HANDLED"&&related.every(item=>item.phase===STATUS.RETURNING)){this.handleIncident(incident.id,now);simulator.incidentsHandled++;}
    return[{type:"onSceneComplete",vehicle:v,incident,district:getDistrictById(d.returnTargetDistrictId)}];
   }
-  if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}if(sessionConfig.operationMode==="repositionTraining"){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.prisonDistrictId;this.place(v);this.activeDispatches.delete(d.id);return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"vehicleAvailableAway",vehicle:v,district:getDistrictById(v.district)},...this.ensureCoverage()];}this.phase(d,STATUS.RETURNING,now,d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,route:d.prisonReturnRoute,type:"return"});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
+  if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}if(sessionConfig.operationMode==="repositionTraining"){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.prisonDistrictId;this.place(v);this.activeDispatches.delete(d.id);return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"vehicleAvailableAway",vehicle:v,district:getDistrictById(v.district)},...this.ensureCoverage()];}this.phase(d,STATUS.RETURNING,now,d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,type:"return",pathPoints:d.pathPoints});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
   if(d.phase==="WAITING_AT_INCIDENT")return[];
   if(d.phase===STATUS.TO_INCIDENT&&now<d.departureAt)return[];
   const route=d.phase===STATUS.TO_INCIDENT?d.routeToIncident:d.phase===STATUS.TO_PRISON?d.routeToPrison:d.returnRoute,progress=Math.min(1,(now-d.phaseStartTime)/Math.max(900,getRouteDistance(route)*this.getDriveMsPerEdge()));this.move(v,route,progress,d);if(progress<1)return[];
@@ -223,9 +229,9 @@ export class Engine {
    const events=[arrival,{type:"incidentCleared",vehicle:v,incidentId:d.incidentId}];
    for(const related of [...this.activeDispatches.values()].filter(item=>item.incidentId===incident.id)){
     const unit=vehicles.find(item=>item.id===related.vehicleId);if(!unit)continue;
-    if(unit.id===incident.transportVehicleId){unit.status=STATUS.TO_PRISON;const prisonTarget={x:related.prisonX,y:related.prisonY};this.phase(related,STATUS.TO_PRISON,now,related.routeToPrison,prisonTarget);simulator.activeRoutes.push({id:`${related.id}-to-prison`,route:related.routeToPrison,type:"to-prison",destination:prisonTarget});events.push({type:"transport",vehicle:unit,district:getDistrictById(related.prisonDistrictId)});
+    if(unit.id===incident.transportVehicleId){unit.status=STATUS.TO_PRISON;const prisonTarget={x:related.prisonX,y:related.prisonY};this.phase(related,STATUS.TO_PRISON,now,related.routeToPrison,prisonTarget);simulator.activeRoutes.push({id:`${related.id}-to-prison`,type:"to-prison",pathPoints:related.pathPoints});events.push({type:"transport",vehicle:unit,district:getDistrictById(related.prisonDistrictId)});
     }else if(sessionConfig.operationMode==="repositionTraining"){unit.status=STATUS.AVAILABLE;unit.incident=null;unit.prison=null;unit.district=incident.district;this.place(unit);this.activeDispatches.delete(related.id);events.push({type:"vehicleAvailableAway",vehicle:unit,district:getDistrictById(unit.district)});
-    }else{unit.status=STATUS.RETURNING;this.phase(related,STATUS.RETURNING,now,related.returnRoute,getDistrictById(related.returnTargetDistrictId));simulator.activeRoutes.push({id:`${related.id}-return`,route:related.returnRoute,type:"return"});events.push({type:"returning",vehicle:unit});}
+    }else{unit.status=STATUS.RETURNING;this.phase(related,STATUS.RETURNING,now,related.returnRoute,getDistrictById(related.returnTargetDistrictId));simulator.activeRoutes.push({id:`${related.id}-return`,type:"return",pathPoints:related.pathPoints});events.push({type:"returning",vehicle:unit});}
    }return events;
   }
   if(d.phase===STATUS.TO_PRISON){v.status=STATUS.BUSY;this.removeRoute(`${d.id}-to-prison`);d.phase=STATUS.BUSY;d.phaseStartTime=now;if(!d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=(simulator.detentionOccupancy[d.prisonDistrictId]||0)+1;d.occupancyClaimed=true;}return[{type:"prisonReached",vehicle:v,prison:getDistrictById(d.prisonDistrictId),occupancy:simulator.detentionOccupancy[d.prisonDistrictId],capacity:sessionConfig.detentionCapacity[d.prisonDistrictId],seconds:d.busySeconds}];}
@@ -321,7 +327,7 @@ export class Engine {
   if(this.activeRepositions.size||!this.repositionQueue.length)return[];
   const reposition=this.repositionQueue.shift(),vehicle=vehicles.find(v=>v.id===reposition.vehicleId),target=getDistrictById(reposition.targetDistrictId),origin=getDistrictById(reposition.originDistrictId);
   if(!vehicle||vehicle.status!==STATUS.REPOSITION_QUEUED)return this.startNextQueuedReposition(now);
-  vehicle.status=STATUS.REPOSITIONING;reposition.phaseStartTime=now;reposition.fromX=vehicle.x;reposition.fromY=vehicle.y;this.activeRepositions.set(reposition.id,reposition);simulator.activeRoutes.push({id:reposition.id,route:reposition.route,type:"reposition"});
+  vehicle.status=STATUS.REPOSITIONING;reposition.phaseStartTime=now;reposition.fromX=vehicle.x;reposition.fromY=vehicle.y;reposition.pathPoints=buildMovementPath({fromX:vehicle.x,fromY:vehicle.y,routeDistrictIds:reposition.route,toX:reposition.toX,toY:reposition.toY});this.activeRepositions.set(reposition.id,reposition);simulator.activeRoutes.push({id:reposition.id,type:"reposition",pathPoints:reposition.pathPoints});
   return[{type:"repositionStarted",cascade:reposition.cascade,vehicle,district:target,origin},{type:"log",message:`[DOORSCHUIVEN] ${vehicle.id}: ${origin.name} → ${target.name}.`}];
  }
  startAutomaticReposition(donor,target){const plan=this.buildRepositionPlan(target.id);if(!plan)return null;const events=this.startRepositionPlan(plan),first=events.find(event=>event.type==="repositionStarted")||null;if(first)first.planEvents=events;return first;}
@@ -335,7 +341,7 @@ export class Engine {
   const origin=getDistrictById(vehicle.district),target=getDistrictById(vehicle.homeDistrict),route=getShortestRoute(origin.id,target.id);
   if(!origin||!target||!route.length)return[];
   const id=`REP-${++this.repositionSequence}`,reposition={id,type:"restore",originDistrictId:origin.id,sourceDistrictId:origin.id,vehicleId:vehicle.id,targetDistrictId:target.id,route,phaseStartTime:performance.now(),fromX:vehicle.x,fromY:vehicle.y,toX:target.x,toY:target.y};
-  vehicle.status=STATUS.REPOSITIONING;this.activeRepositions.set(id,reposition);simulator.activeRoutes.push({id,route,type:"reposition"});
+  vehicle.status=STATUS.REPOSITIONING;reposition.pathPoints=buildMovementPath({fromX:vehicle.x,fromY:vehicle.y,routeDistrictIds:route,toX:target.x,toY:target.y});this.activeRepositions.set(id,reposition);simulator.activeRoutes.push({id,type:"reposition",pathPoints:reposition.pathPoints});
   return[{type:"restoreStarted",vehicle,district:target,origin},{type:"log",message:`[HERSTEL] ${vehicle.id} keert terug naar eigen district ${target.name}.`}];
  }
  ensureCoverage(){
@@ -404,15 +410,12 @@ export class Engine {
  }
  // Queue policy only: interactive Automatic and Manual Vehicle flows use inputCycleState.incidentId.
  oldestOpen(){return simulator.incidents.filter(i=>["OPEN","PARTIALLY_ASSIGNED"].includes(i.status)).sort((a,b)=>a.createdAt-b.createdAt)[0]||null;} availableCount(id){return vehicles.filter(v=>v.district===id&&v.status===STATUS.AVAILABLE).length;} incoming(id){return[...this.activeRepositions.values()].some(r=>r.targetDistrictId===id);} calculateCoveragePercentage(){return Math.round(districts.filter(d=>this.availableCount(d.id)||this.incoming(d.id)).length/districts.length*100);} projectedCoverage(v){return Math.round(districts.filter(d=>d.id===v.district?this.availableCount(d.id)>1:this.availableCount(d.id)>0).length/districts.length*100);}
- phase(d,s,now,route,target){d.phase=s;d.phaseStartTime=now;d.fromX=vehicles.find(v=>v.id===d.vehicleId).x;d.fromY=vehicles.find(v=>v.id===d.vehicleId).y;d.toX=target.x;d.toY=target.y;}
+ phase(d,s,now,route,target){const vehicle=vehicles.find(v=>v.id===d.vehicleId);d.phase=s;d.phaseStartTime=now;d.fromX=vehicle.x;d.fromY=vehicle.y;d.toX=target.x;d.toY=target.y;d.pathPoints=buildMovementPath({fromX:vehicle.x,fromY:vehicle.y,routeDistrictIds:route,toX:target.x,toY:target.y});}
  move(v,route,p,c){
   if(!v)return;
   if(!c||![c.fromX,c.fromY,c.toX,c.toY].every(Number.isFinite)){console.error("Invalid movement context",c);return;}
-  const safeRoute=Array.isArray(route)?route:[];
-  const routePoints=safeRoute.map(getDistrictById).filter(Boolean).map(node=>({x:node.x,y:node.y}));
-  const start={x:c.fromX,y:c.fromY},destination={x:c.toX,y:c.toY};
-  const points=dedupePathPoints([start,...routePoints.slice(1,-1),destination]);
-  if(points.length<2){v.x=destination.x;v.y=destination.y;return;}
+  const points=c.pathPoints||buildMovementPath({fromX:c.fromX,fromY:c.fromY,routeDistrictIds:Array.isArray(route)?route:[],toX:c.toX,toY:c.toY});
+  if(points.length<2){v.x=c.toX;v.y=c.toY;return;}
   const progress=Math.max(0,Math.min(1,Number.isFinite(p)?p:0)),q=progress*(points.length-1),i=Math.min(Math.floor(q),points.length-2),f=q-i,oldX=v.x,oldY=v.y;
   v.x=points[i].x+(points[i+1].x-points[i].x)*f;v.y=points[i].y+(points[i+1].y-points[i].y)*f;
   if(v.x!==oldX||v.y!==oldY)v.angle=Math.atan2(v.y-oldY,v.x-oldX)*180/Math.PI;
