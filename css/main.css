@@ -1716,3 +1716,9 @@ body.map-focus-mode{overflow:hidden}
   .control-bar{position:relative;bottom:auto;flex-wrap:nowrap;overflow-x:auto;gap:8px}
   .control-bar button{flex:0 0 auto}.utility-controls{flex:0 0 auto;flex-wrap:nowrap}.process-controls{flex-wrap:nowrap}
 }
+
+/* Contextuele uitleg bij configuratieopties */
+.config-info{position:relative;display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;margin-left:4px;border:1px solid var(--blue-light);border-radius:50%;color:var(--blue-light);font:800 10px/1 system-ui;text-transform:none;letter-spacing:0;cursor:help;vertical-align:middle}
+.config-info::after{content:attr(data-tooltip);position:absolute;z-index:30;right:-8px;bottom:calc(100% + 9px);width:210px;padding:9px 10px;border:1px solid rgba(132,212,255,.38);border-radius:7px;background:#061522;color:var(--text-primary);box-shadow:var(--shadow-small);font:500 11px/1.4 system-ui;letter-spacing:0;text-align:left;text-transform:none;opacity:0;pointer-events:none;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease}
+.config-info:hover::after,.config-info:focus-visible::after{opacity:1;transform:translateY(0)}
+.config-info:focus-visible{outline:2px solid var(--blue-light);outline-offset:2px}
