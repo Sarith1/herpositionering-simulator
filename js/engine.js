@@ -281,11 +281,26 @@ export class Engine {
   const selected=requiredVehicleId&&vehicles.find(v=>v.id===requiredVehicleId),path=this.findDonorPath(targetDistrictId,{requiredOriginDistrictId:selected?.district});if(path.length<2)return null;
   const reserved=new Set(),moves=[];
   for(let index=path.length-2;index>=0;index--){const fromDistrictId=path[index],toDistrictId=path[index+1],candidates=this.rankVehiclesForReposition(vehicles.filter(v=>v.district===fromDistrictId&&v.status===STATUS.AVAILABLE&&!v.incident&&!reserved.has(v.id)),fromDistrictId);let vehicle=candidates[0];if(index===0&&selected)vehicle=selected;if(!vehicle)return null;reserved.add(vehicle.id);moves.push({fromDistrictId,toDistrictId,vehicleId:vehicle.id});}
-  const targets=this.getCoverageTargets(),affected=new Set(path);for(const districtId of affected){const minimum=(sessionConfig.hotzoneDistrictIds||[]).includes(districtId)?targets.hotzoneMinimum:1;if(districtId!==targetDistrictId&&this.getProjectedCoverage(districtId,moves)<minimum)return null;}
-  return{id:`RP-${++this.repositionPlanSequence}`,targetDistrictId,moves,type:moves.length>1?"cascade":type,repositionType:type};
+  const plan={id:`RP-${++this.repositionPlanSequence}`,targetDistrictId,moves,type:moves.length>1?"cascade":type,repositionType:type};
+  return this.validateRepositionPlan(plan)?plan:null;
+ }
+ validateRepositionPlan(plan){
+  if(!plan?.id||!getDistrictById(plan.targetDistrictId)||!Array.isArray(plan.moves)||plan.moves.length===0)return false;
+  const vehicleIds=new Set(),affected=new Set();
+  for(const move of plan.moves){
+   const vehicle=vehicles.find(item=>item.id===move.vehicleId);
+   if(!vehicle||vehicleIds.has(vehicle.id)||vehicle.status!==STATUS.AVAILABLE||vehicle.incident||vehicle.district!==move.fromDistrictId)return false;
+   if(!getAdjacentDistrictIds(move.fromDistrictId).includes(move.toDistrictId))return false;
+   vehicleIds.add(vehicle.id);affected.add(move.fromDistrictId);affected.add(move.toDistrictId);
+  }
+  if(!plan.moves.some(move=>move.toDistrictId===plan.targetDistrictId))return false;
+  const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
+  return [...affected].every(districtId=>districtId===plan.targetDistrictId||this.getProjectedCoverage(districtId,plan.moves)>=(hotzones.has(districtId)?targets.hotzoneMinimum:1));
  }
  startRepositionPlan(plan){
-  if(!plan||plan.moves.some(move=>{const v=vehicles.find(x=>x.id===move.vehicleId);return !v||v.status!==STATUS.AVAILABLE||v.incident;}))return[];
+  // Validate the complete reservation immediately before mutating any vehicle.
+  // This makes a cascade atomic even when state changed since it was planned.
+  if(!this.validateRepositionPlan(plan))return[];
   const now=performance.now(),events=[];for(const move of plan.moves){const vehicle=vehicles.find(v=>v.id===move.vehicleId),origin=getDistrictById(move.fromDistrictId),target=getDistrictById(move.toDistrictId),id=`REP-${++this.repositionSequence}`,route=[move.fromDistrictId,move.toDistrictId];Object.assign(move,{id});const reposition={id,planId:plan.id,type:plan.repositionType,originDistrictId:origin.id,sourceDistrictId:origin.id,vehicleId:vehicle.id,targetDistrictId:target.id,route,phaseStartTime:now,fromX:vehicle.x,fromY:vehicle.y,toX:target.x,toY:target.y};vehicle.status=STATUS.REPOSITIONING;this.activeRepositions.set(id,reposition);simulator.activeRoutes.push({id,route,type:"reposition"});events.push({type:"repositionStarted",cascade:plan.moves.length>1,vehicle,district:target,origin});events.push({type:"log",message:`[DOORSCHUIVEN] ${vehicle.id}: ${origin.name} → ${target.name}.`});}this.activeRepositionPlans.set(plan.id,plan);return events;
  }
  startAutomaticReposition(donor,target){const plan=this.buildRepositionPlan(target.id);if(!plan)return null;const events=this.startRepositionPlan(plan),first=events.find(event=>event.type==="repositionStarted")||null;if(first)first.planEvents=events;return first;}
