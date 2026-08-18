@@ -562,8 +562,10 @@ main{
 .vehicle-symbol { pointer-events:none; transition:filter .18s ease, transform .18s ease, opacity .18s ease; transform-box:fill-box; transform-origin:center; }
 .vehicle-callsign{pointer-events:none;fill:#d9f2ff;font-size:9px;font-weight:800;letter-spacing:.25px;paint-order:stroke;stroke:#071421;stroke-width:2px;stroke-linejoin:round}
 .vehicle-status-badge{pointer-events:none;font-family:inherit;font-size:8px;font-weight:700;letter-spacing:.05em;paint-order:stroke;stroke:#071421;stroke-width:2px;text-transform:uppercase}
-.vehicle-status-badge--cel{fill:#67e8f9}
-.vehicle-status-badge--terug{fill:#5eead4}
+.vehicle-status-badge.status-incident{fill:#fb923c}
+.vehicle-status-badge.status-prison{fill:#22d3ee}
+.vehicle-status-badge.status-reposition{fill:#c084fc}
+.vehicle-status-badge.status-return{fill:#5eead4}
 .detention-label{pointer-events:none;fill:#e6f6ff;font-family:inherit;font-size:8.5px;font-weight:700;letter-spacing:.15px;paint-order:stroke fill;stroke:rgba(0,0,0,.68);stroke-width:2px;stroke-linejoin:round}
 .simulator.failure-inspection .session-config input,.simulator.failure-inspection .session-config button,.simulator.failure-inspection .process-controls button,.simulator.failure-inspection .autoplay-toggle-button{pointer-events:none;opacity:.42}
 .vehicle-callsign--special{fill:#4ade80;filter:drop-shadow(0 0 4px rgba(74,222,128,.6))}
@@ -636,6 +638,16 @@ footer button:disabled {
     stroke-dasharray:14 12;
     opacity:.9;
 }
+
+.route-line.route--incident{stroke:#fb6a3d;stroke-width:3px;stroke-dasharray:none;opacity:.88}
+.route-line.route--prison{stroke:#22d3ee;stroke-width:3px;stroke-dasharray:none;opacity:.88}
+.route-line.route--reposition{stroke:#a855f7;stroke-width:4px;stroke-dasharray:none;opacity:.9}
+.route-line.route--return{stroke:#2dd4bf;stroke-width:3px;stroke-dasharray:10 7;opacity:.85}
+.legend-route{display:inline-block;width:28px;height:0;border-top:3px solid;margin-right:7px;vertical-align:middle}
+.legend-route.route--incident{border-color:#fb6a3d}
+.legend-route.route--prison{border-color:#22d3ee}
+.legend-route.route--reposition{border-color:#a855f7;border-width:4px}
+.legend-route.route--return{border-color:#2dd4bf;border-top-style:dashed}
 
 .district-code {
     fill:#fff;
@@ -992,9 +1004,10 @@ footer button.reset-button:focus-visible {
     stroke:#7dd3ff;
     opacity:.75;
 }
-.route-line.route--to-prison{stroke:#22d3ee;stroke-width:6;stroke-dasharray:none;opacity:.9}
-.route-line.route--returning{stroke:#5eead4;stroke-width:5;stroke-dasharray:10 9;opacity:.72}
-.route-line.route--repositioning{stroke:#22c55e}
+.vehicle.status-incident .vehicle-symbol{filter:drop-shadow(0 0 5px #fb6a3d)}
+.vehicle.status-prison .vehicle-symbol{filter:drop-shadow(0 0 6px #22d3ee)}
+.vehicle.status-return .vehicle-symbol{filter:drop-shadow(0 0 5px #2dd4bf)}
+.vehicle.status-reposition .vehicle-symbol{filter:drop-shadow(0 0 8px #a855f7)}
 
 /* Keep active movements legible without overpowering the district map. */
 .reposition-training-mode .route-line {

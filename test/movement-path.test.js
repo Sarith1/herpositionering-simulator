@@ -52,3 +52,26 @@ test("a corrupt dispatch is cancelled without stopping other dispatch updates", 
   assert.equal(engine.activeDispatches.has("good"), true);
   assert.equal(badVehicle.status, "AVAILABLE");
 });
+
+test("buildMovementPath uses exact physical endpoints and removes graph endpoint duplicates", async () => {
+  const { buildMovementPath } = await import("../js/engine.js");
+  const middle = districts.find(district => district.id === "RS");
+  const points = buildMovementPath({ fromX: 11, fromY: 12, routeDistrictIds: ["RN", "RS", "RZ"], toX: 901, toY: 902 });
+  assert.deepEqual(points, [{ x: 11, y: 12 }, { x: middle.x, y: middle.y }, { x: 901, y: 902 }]);
+});
+
+test("movement and active route share one pathPoints array across a phase change", () => {
+  const engine = new Engine();
+  const vehicle = { id: "TEST", x: 321, y: 234 };
+  vehicles.push(vehicle);
+  try {
+    const movement = { vehicleId: vehicle.id };
+    engine.phase(movement, "TO_PRISON", 100, ["RZ", "RS", "CELL_RS"], { x: 700, y: 500 });
+    simulator.activeRoutes.push({ id: "test-route", pathPoints: movement.pathPoints });
+    assert.equal(simulator.activeRoutes.at(-1).pathPoints, movement.pathPoints);
+    assert.deepEqual(movement.pathPoints[0], { x: 321, y: 234 });
+    assert.deepEqual(movement.pathPoints.at(-1), { x: 700, y: 500 });
+  } finally {
+    vehicles.pop(); simulator.activeRoutes = simulator.activeRoutes.filter(route => route.id !== "test-route");
+  }
+});
