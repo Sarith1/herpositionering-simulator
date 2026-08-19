@@ -16,12 +16,30 @@ export function formatSimulationTime(realisticElapsedMs = 0) {
 }
 
 export class SimulationClock {
-    constructor(now = performance.now()) { this.reset(now); }
-    reset(now = performance.now()) { this.lastTimestamp = now; this.simulationElapsedMs = 0; }
-    update(now = performance.now()) {
-        this.simulationElapsedMs += Math.max(0, now - this.lastTimestamp);
-        this.lastTimestamp = now;
+    constructor() { this.reset(); }
+    reset() {
+        this.started = false;
+        this.running = false;
+        this.elapsedRealMs = 0;
+        this.lastStartedAt = null;
     }
-    get realisticElapsedMs() { return this.simulationElapsedMs * REAL_TIME_MULTIPLIER; }
+    start(now = performance.now()) {
+        if (!this.started) this.started = true;
+        if (this.running) return;
+        this.running = true;
+        this.lastStartedAt = now;
+    }
+    pause(now = performance.now()) {
+        if (!this.running) return;
+        this.elapsedRealMs += Math.max(0, now - this.lastStartedAt);
+        this.running = false;
+        this.lastStartedAt = null;
+    }
+    update(now = performance.now()) {
+        if (!this.running) return;
+        this.elapsedRealMs += Math.max(0, now - this.lastStartedAt);
+        this.lastStartedAt = now;
+    }
+    get realisticElapsedMs() { return this.elapsedRealMs * REAL_TIME_MULTIPLIER; }
     get displayTime() { return formatSimulationTime(this.realisticElapsedMs); }
 }
