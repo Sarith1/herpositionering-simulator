@@ -100,8 +100,8 @@
                 <div class="config-section"><h3>Hotzones <span data-config-help="hotzone"></span></h3>
                 <label class="multi-unit-config" for="hotzoneIncidentPercentage">
                     <strong class="config-label">Percentage meldingen in Hotzones <span data-config-help="hotzoneIncidents"></span></strong>
-                    <input id="hotzoneIncidentPercentage" type="range" min="0" max="100" step="5" value="70">
-                    <span id="hotzoneIncidentPercentageLabel">70% van de meldingen wordt bij voorkeur in Hotzones geplaatst.</span>
+                    <input id="hotzoneIncidentPercentage" type="range" min="0" max="100" step="5">
+                    <span id="hotzoneIncidentPercentageLabel"></span>
                     <small id="hotzoneIncidentPercentageHelp" class="config-help">Selecteer minimaal één Hotzone om deze instelling toe te passen.</small>
                 </label></div>
                 <div class="config-section"><h3>Cellencomplexen <span data-config-help="detentionAvailability"></span></h3>
@@ -109,10 +109,10 @@
                 <div id="prisonConfig" class="prison-config"></div></div>
                 <p id="detentionCapacityWarning" class="capacity-warning" role="status" hidden>Let op: totale beschikbare cellencapaciteit is 0. Alle celritten duren dubbel zo lang.</p>
                 <div class="config-section travel-time-config"><h3>Reistijd <span data-config-help="travelTime"></span></h3>
-                    <label for="travelTimeMin"><span class="config-label">Minimale reistijd</span><output id="travelTimeMinLabel">100 sec</output></label>
-                    <input id="travelTimeMin" type="range" min="30" max="180" step="5" value="100">
-                    <label for="travelTimeMax"><span class="config-label">Maximale reistijd</span><output id="travelTimeMaxLabel">180 sec</output></label>
-                    <input id="travelTimeMax" type="range" min="30" max="180" step="5" value="180">
+                    <label for="travelTimeMin"><span class="config-label">Minimale reistijd</span><output id="travelTimeMinLabel"></output></label>
+                    <input id="travelTimeMin" type="range" min="30" max="180" step="5">
+                    <label for="travelTimeMax"><span class="config-label">Maximale reistijd</span><output id="travelTimeMaxLabel"></output></label>
+                    <input id="travelTimeMax" type="range" min="30" max="180" step="5">
                 </div>
                 <div class="config-section"><h3>Werkwijze <span data-config-help="operationMode"></span></h3>
                 <div id="operationModeConfig" class="mode-config">
@@ -130,12 +130,12 @@
                 </div>
                 <div class="config-section"><h3>Meldingen</h3><label class="multi-unit-config" for="multiUnitIncidentPercentage">
                     <strong class="config-label">Percentage grotere incidenten <span data-config-help="multiUnit"></span></strong>
-                    <input id="multiUnitIncidentPercentage" type="range" min="0" max="100" step="5" value="15">
-                    <span id="multiUnitIncidentPercentageLabel">15% van de meldingen vraagt meerdere eenheden</span>
+                    <input id="multiUnitIncidentPercentage" type="range" min="0" max="100" step="5">
+                    <span id="multiUnitIncidentPercentageLabel"></span>
                 </label><label class="multi-unit-config" for="onSceneIncidentPercentage">
                     <strong class="config-label">Percentage meldingen zonder arrestantentransport <span data-config-help="onScene"></span></strong>
-                    <input id="onSceneIncidentPercentage" type="range" min="0" max="100" step="5" value="15">
-                    <span id="onSceneIncidentPercentageLabel">15% van de meldingen wordt ter plaatse afgehandeld</span>
+                    <input id="onSceneIncidentPercentage" type="range" min="0" max="100" step="5">
+                    <span id="onSceneIncidentPercentageLabel"></span>
                 </label></div>
                 <div class="session-config__footer">
                     <button id="applyConfigBtn" class="secondary-button">Configuratie toepassen</button>
