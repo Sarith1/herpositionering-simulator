@@ -213,6 +213,8 @@ export const sessionConfig = {
     operationMode: "automatic",
     multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE,
     onSceneIncidentPercentage: 30,
+    travelTimeMinSeconds: 90,
+    travelTimeMaxSeconds: 120,
     autoplayMinDelaySeconds: DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS,
     autoplayMaxDelaySeconds: DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS
 
@@ -261,6 +263,8 @@ export function resetSessionConfigDefaults() {
     sessionConfig.operationMode = "automatic";
     sessionConfig.multiUnitIncidentPercentage = DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE;
     sessionConfig.onSceneIncidentPercentage = 30;
+    sessionConfig.travelTimeMinSeconds = 90;
+    sessionConfig.travelTimeMaxSeconds = 120;
     sessionConfig.autoplayMinDelaySeconds = DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS;
     sessionConfig.autoplayMaxDelaySeconds = DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS;
 

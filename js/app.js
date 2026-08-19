@@ -77,6 +77,7 @@ export class App {
             this.ui.setMultiUnitIncidentPercentage(20);
             this.ui.setOnSceneIncidentPercentage(30);
             this.ui.setAutoplayDelayValues(1, 20);
+            this.ui.setTravelTimeValues(90, 120);
             return this.engine.reset({ restoreDefaults: true });
         });
         document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
@@ -212,6 +213,8 @@ export class App {
             ,onSceneIncidentPercentage: this.ui.getOnSceneIncidentPercentage()
             ,autoplayMinDelaySeconds: this.ui.getAutoplayDelayValues().min
             ,autoplayMaxDelaySeconds: this.ui.getAutoplayDelayValues().max
+            ,travelTimeMinSeconds: this.ui.getTravelTimeValues().min
+            ,travelTimeMaxSeconds: this.ui.getTravelTimeValues().max
         });
         if (result.success && mode === "repositionTraining") {
             this.setWorkspacePanel?.("config", true);
@@ -236,6 +239,7 @@ export class App {
         this.ui.setMultiUnitIncidentPercentage(20);
         this.ui.setOnSceneIncidentPercentage(30);
         this.ui.setAutoplayDelayValues(1, 20);
+        this.ui.setTravelTimeValues(90, 120);
         return this.engine.reset({ restoreDefaults: true });
     }
 
