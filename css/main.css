@@ -1694,6 +1694,11 @@ kbd{display:inline-flex;min-width:2rem;min-height:2rem;align-items:center;justif
 .side-panel-heading h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary)}
 .panel-toggle,.map-focus-toggle{display:inline-grid;place-items:center;width:34px;height:34px;min-width:34px;padding:0;border:1px solid rgba(132,212,255,.35);border-radius:7px;background:rgba(39,77,106,.55);color:#fff;font-size:22px;line-height:1}
 .map-focus-toggle{position:absolute;z-index:20;top:12px;right:12px;box-shadow:0 5px 18px rgba(0,0,0,.4)}
+.simulation-clock{position:absolute;z-index:10;left:16px;bottom:16px;min-width:142px;padding:9px 12px;border:1px solid rgba(132,212,255,.38);border-radius:8px;background:rgba(7,24,39,.88);box-shadow:0 7px 20px rgba(0,0,0,.38);pointer-events:none;backdrop-filter:blur(5px)}
+.simulation-clock__label{display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
+.simulation-clock__info{color:var(--blue-light);font-size:12px;line-height:1;pointer-events:auto;cursor:help}
+.simulation-clock__info:focus-visible{outline:2px solid var(--blue-light);outline-offset:2px;border-radius:50%}
+.simulation-clock__time{display:block;margin-top:3px;color:var(--text-primary);font:700 22px/1.1 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:.035em;text-shadow:0 0 10px rgba(132,212,255,.25)}
 .activity-compact-preview{display:none;color:var(--text-muted);font-size:11px;line-height:1.35}
 
 .simulator.activity-collapsed .main-content{grid-template-columns:48px minmax(0,1fr) minmax(235px,285px)}
@@ -1736,3 +1741,4 @@ body.map-focus-mode{overflow:hidden}
   .control-bar{position:relative;bottom:auto;flex-wrap:nowrap;overflow-x:auto;gap:8px}
   .control-bar button{flex:0 0 auto}.utility-controls{flex:0 0 auto;flex-wrap:nowrap}.process-controls{flex-wrap:nowrap}
 }
+@media(max-width:520px){.simulation-clock{left:8px;bottom:8px;min-width:126px;padding:7px 9px}.simulation-clock__label{font-size:8px}.simulation-clock__time{font-size:18px}}
