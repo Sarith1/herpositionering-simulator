@@ -153,8 +153,8 @@ export const SPECIAL_VEHICLE_CALLSIGNS = new Set([
 export function isSpecialVehicle(vehicle) {
     return Boolean(vehicle && SPECIAL_VEHICLE_CALLSIGNS.has(vehicle.id));
 }
-export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 20;
-export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 50;
+export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 15;
+export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 70;
 export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
 export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 20;
 export const DEFAULT_DETENTION_CAPACITY = 10;
@@ -202,23 +202,29 @@ export function createEmptyDetentionOccupancy() {
     return Object.fromEntries(detentionComplexes.map(complex => [complex.id, 0]));
 }
 
-export const sessionConfig = {
-
-    vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
-    hotzoneDistrictIds: [],
+export const DEFAULT_SESSION_CONFIG = Object.freeze({
+    hotzoneDistrictIds: Object.freeze(["RS", "RO", "RZ"]),
     hotzoneIncidentPercentage: DEFAULT_HOTZONE_INCIDENT_PERCENTAGE,
-
-    availablePrisons: getDefaultPrisonDistrictIds(),
-    detentionCapacity: createDefaultDetentionCapacity(),
     operationMode: "automatic",
     multiUnitIncidentPercentage: DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE,
-    onSceneIncidentPercentage: 30,
-    travelTimeMinSeconds: 90,
-    travelTimeMaxSeconds: 120,
+    onSceneIncidentPercentage: 15,
+    travelTimeMinSeconds: 100,
+    travelTimeMaxSeconds: 180,
     autoplayMinDelaySeconds: DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS,
     autoplayMaxDelaySeconds: DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS
+});
 
-};
+export function createDefaultSessionConfig() {
+    return {
+        ...DEFAULT_SESSION_CONFIG,
+        vehiclesPerDistrict: createDefaultVehiclesPerDistrict(),
+        hotzoneDistrictIds: [...DEFAULT_SESSION_CONFIG.hotzoneDistrictIds],
+        availablePrisons: getDefaultPrisonDistrictIds(),
+        detentionCapacity: createDefaultDetentionCapacity()
+    };
+}
+
+export const sessionConfig = createDefaultSessionConfig();
 
 export const repositioningFailureConfig = {
     title: "Herpositioneren is niet meer mogelijk",
@@ -254,19 +260,7 @@ export function setAvailablePrisons(prisonIds) {
 }
 
 export function resetSessionConfigDefaults() {
-
-    sessionConfig.vehiclesPerDistrict = createDefaultVehiclesPerDistrict();
-    sessionConfig.hotzoneDistrictIds = [];
-    sessionConfig.hotzoneIncidentPercentage = DEFAULT_HOTZONE_INCIDENT_PERCENTAGE;
-    sessionConfig.availablePrisons = getDefaultPrisonDistrictIds();
-    sessionConfig.detentionCapacity = createDefaultDetentionCapacity();
-    sessionConfig.operationMode = "automatic";
-    sessionConfig.multiUnitIncidentPercentage = DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE;
-    sessionConfig.onSceneIncidentPercentage = 30;
-    sessionConfig.travelTimeMinSeconds = 90;
-    sessionConfig.travelTimeMaxSeconds = 120;
-    sessionConfig.autoplayMinDelaySeconds = DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS;
-    sessionConfig.autoplayMaxDelaySeconds = DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS;
+    Object.assign(sessionConfig, createDefaultSessionConfig());
 
     initializeVehicles();
 
