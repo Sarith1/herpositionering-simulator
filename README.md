@@ -24,7 +24,7 @@ Een melding doorloopt de volgende zichtbare voertuigflow:
 1. `AVAILABLE` — voertuig staat op een vaste slotpositie rond het district.
 2. `TO_INCIDENT` — dichtstbijzijnde beschikbare voertuig rijdt via het routenetwerk naar de melding.
 3. `TO_PRISON` — na aankomst verdwijnt de melding en rijdt het voertuig door naar de geselecteerde cel.
-4. `BUSY` — voertuig is 90–120 seconden tijdelijk niet beschikbaar bij de cel.
+4. `BUSY` — voertuig is standaard 100–180 seconden tijdelijk niet beschikbaar bij de cel.
 5. `RETURNING` — voertuig rijdt zichtbaar terug naar zijn actuele toegewezen standplaats.
 6. `AVAILABLE` — voertuig telt weer mee voor districtdekking.
 

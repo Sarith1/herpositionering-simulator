@@ -8,7 +8,7 @@ Hoofdcontroller van de applicatie.
 ==========================================================
 */
 
-import { createDefaultDetentionCapacity, createDefaultVehiclesPerDistrict, getDefaultPrisonDistrictIds, sessionConfig, simulator } from "./data.js";
+import { sessionConfig, simulator } from "./data.js";
 import { Engine } from "./engine.js";
 import { MapView } from "./map.js";
 import { UI } from "./ui.js";
@@ -66,20 +66,7 @@ export class App {
             return { success: true, message: "[EINDE SESSIE] Eindscherm opnieuw geopend." };
         });
         this.bindButton("applyConfigBtn", () => this.applyConfiguredSession());
-        this.bindButton("restoreDefaultsBtn", () => {
-            const defaults = createDefaultVehiclesPerDistrict();
-            this.ui.setConfigValues(defaults);
-            this.ui.setHotzoneConfigValues([]);
-            this.ui.setHotzoneIncidentPercentage(50);
-            this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
-            this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
-            this.ui.setOperationConfig("automatic", 5);
-            this.ui.setMultiUnitIncidentPercentage(20);
-            this.ui.setOnSceneIncidentPercentage(30);
-            this.ui.setAutoplayDelayValues(1, 20);
-            this.ui.setTravelTimeValues(90, 120);
-            return this.engine.reset({ restoreDefaults: true });
-        });
+        this.bindButton("restoreDefaultsBtn", () => this.restoreDefaultSession());
         document.querySelectorAll('input[name="operationMode"]').forEach(input => input.addEventListener("input", () => this.ui.updateModeConfigVisibility()));
         document.getElementById("map")?.addEventListener("vehicle-select", event => {
             const result=simulator.manualRepositionState.phase!=="idle"?this.engine.selectRepositionVehicle(event.detail.vehicleId):this.engine.selectVehicle(event.detail.vehicleId); this.ui.log(result.message); (result.events||[]).forEach(engineEvent=>this.handleEngineEvent(engineEvent)); if(result.selection&&simulator.vehicleSelection.active)this.ui.showVehicleSelection(result.selection);else if(!simulator.vehicleSelection.active)this.ui.hideVehicleSelection();this.sync();
@@ -156,11 +143,6 @@ export class App {
 
                 if (id === "resetBtn" || id === "failureResetBtn") this.ui.hideRepositioningFailure();
 
-                if (id === "restoreDefaultsBtn" || id === "failureNewSessionBtn") {
-                    this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
-                    this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
-                }
-
                 (result.events || []).forEach(event => this.handleEngineEvent(event));
 
                 if (result.success && result.vehicle && result.district) {
@@ -230,17 +212,22 @@ export class App {
 
     newSessionSetup() {
         this.ui.hideRepositioningFailure();
-        this.ui.setConfigValues(createDefaultVehiclesPerDistrict());
-        this.ui.setHotzoneConfigValues([]);
-        this.ui.setHotzoneIncidentPercentage(50);
-        this.ui.setPrisonConfigValues(getDefaultPrisonDistrictIds());
-        this.ui.setDetentionCapacityValues(createDefaultDetentionCapacity());
-        this.ui.setOperationConfig("automatic", 5);
-        this.ui.setMultiUnitIncidentPercentage(20);
-        this.ui.setOnSceneIncidentPercentage(30);
-        this.ui.setAutoplayDelayValues(1, 20);
-        this.ui.setTravelTimeValues(90, 120);
-        return this.engine.reset({ restoreDefaults: true });
+        return this.restoreDefaultSession();
+    }
+
+    restoreDefaultSession() {
+        const result = this.engine.reset({ restoreDefaults: true });
+        this.ui.setConfigValues(sessionConfig.vehiclesPerDistrict);
+        this.ui.setHotzoneConfigValues(sessionConfig.hotzoneDistrictIds);
+        this.ui.setHotzoneIncidentPercentage(sessionConfig.hotzoneIncidentPercentage);
+        this.ui.setPrisonConfigValues(sessionConfig.availablePrisons);
+        this.ui.setDetentionCapacityValues(sessionConfig.detentionCapacity);
+        this.ui.setOperationConfig(sessionConfig.operationMode, 5);
+        this.ui.setMultiUnitIncidentPercentage(sessionConfig.multiUnitIncidentPercentage);
+        this.ui.setOnSceneIncidentPercentage(sessionConfig.onSceneIncidentPercentage);
+        this.ui.setAutoplayDelayValues(sessionConfig.autoplayMinDelaySeconds, sessionConfig.autoplayMaxDelaySeconds);
+        this.ui.setTravelTimeValues(sessionConfig.travelTimeMinSeconds, sessionConfig.travelTimeMaxSeconds);
+        return result;
     }
 
     sync() {
