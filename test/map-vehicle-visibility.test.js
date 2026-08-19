@@ -3,7 +3,17 @@ import assert from "node:assert/strict";
 
 import { Engine } from "../js/engine.js";
 import { simulator, vehicles } from "../js/data.js";
-import { isVehicleVisible, MapView, ON_SCENE_VISIBLE_MS } from "../js/map.js";
+import {
+    DISTRICT_VISUAL_RADIUS,
+    getVehicleSlotOffset,
+    isVehicleVisible,
+    MapView,
+    ON_SCENE_VISIBLE_MS,
+    VEHICLE_GAP,
+    VEHICLE_HIT_RADIUS,
+    VEHICLE_SLOT_DISTANCE,
+    VEHICLE_VISUAL_RING_RADIUS
+} from "../js/map.js";
 
 class FakeVehicleElement {
     constructor() {
@@ -29,6 +39,21 @@ class FakeVehicleElement {
         return null;
     }
 }
+
+test("vehicle clusters use a compact visual ring without shrinking their hit area", () => {
+    assert.equal(VEHICLE_VISUAL_RING_RADIUS, 15.5);
+    assert.equal(VEHICLE_SLOT_DISTANCE, DISTRICT_VISUAL_RADIUS + VEHICLE_VISUAL_RING_RADIUS + VEHICLE_GAP);
+    assert.equal(VEHICLE_SLOT_DISTANCE, 45.5);
+    assert.equal(VEHICLE_HIT_RADIUS, 25);
+    assert.ok(VEHICLE_HIT_RADIUS > VEHICLE_VISUAL_RING_RADIUS);
+});
+
+test("maximum district vehicle counts fit on two compact slot rings", () => {
+    const distances = Array.from({ length: 11 }, (_, index) => getVehicleSlotOffset(index).radius);
+    assert.deepEqual([...new Set(distances)], [45.5, 78.5]);
+    assert.equal(distances.filter(distance => distance === 45.5).length, 6);
+    assert.equal(distances.filter(distance => distance === 78.5).length, 5);
+});
 
 test("only RT1101 and RT5103 receive the special callsign style", () => {
     const engine = new Engine();
