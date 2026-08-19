@@ -79,6 +79,13 @@
 
         <section id="map" class="map-panel map-container" aria-label="Interactieve kaart">
             <button id="mapFocusToggle" class="map-focus-toggle" title="Kaart vergroten" aria-label="Kaart vergroten" aria-pressed="false">⛶</button>
+            <aside class="simulation-clock" aria-label="Realistische simulatietijd">
+                <div class="simulation-clock__label">
+                    Realistische tijd
+                    <span class="simulation-clock__info" tabindex="0" role="img" aria-label="De simulator speelt gebeurtenissen ongeveer 60 keer sneller af. Eén seconde in de simulator staat gelijk aan ongeveer één minuut in de realistische situatie." title="De simulator speelt gebeurtenissen ongeveer 60× sneller af. Eén seconde in de simulator staat gelijk aan ongeveer één minuut in de realistische situatie.">ⓘ</span>
+                </div>
+                <time id="simulationClock" class="simulation-clock__time" datetime="12:00:00">12:00:00</time>
+            </aside>
         </section>
 
         <aside class="dashboard-panel" aria-label="Configuratie en status">

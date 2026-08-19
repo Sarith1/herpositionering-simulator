@@ -487,6 +487,12 @@ export class UI {
 
     updateControlState(buttonState) {
 
+        const simulationClock = document.getElementById("simulationClock");
+        if (simulationClock) {
+            simulationClock.textContent = buttonState.realisticTime;
+            simulationClock.dateTime = buttonState.realisticTime;
+        }
+
         const controls = [
             { id: "incidentBtn", enabled: buttonState.incident, step: "INCIDENT" },
             { id: "prisonBtn", enabled: buttonState.prison, step: "PRISON" },
