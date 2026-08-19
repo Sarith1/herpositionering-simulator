@@ -9,8 +9,8 @@ import {
     isVehicleVisible,
     MapView,
     ON_SCENE_VISIBLE_MS,
-    VEHICLE_GAP,
     VEHICLE_HIT_RADIUS,
+    ORIGINAL_VEHICLE_SLOT_DISTANCE,
     VEHICLE_SLOT_DISTANCE,
     VEHICLE_VISUAL_RING_RADIUS
 } from "../js/map.js";
@@ -42,17 +42,35 @@ class FakeVehicleElement {
 
 test("vehicle clusters use a compact visual ring without shrinking their hit area", () => {
     assert.equal(VEHICLE_VISUAL_RING_RADIUS, 15.5);
-    assert.equal(VEHICLE_SLOT_DISTANCE, DISTRICT_VISUAL_RADIUS + VEHICLE_VISUAL_RING_RADIUS + VEHICLE_GAP);
-    assert.equal(VEHICLE_SLOT_DISTANCE, 45.5);
+    assert.equal(VEHICLE_SLOT_DISTANCE, ORIGINAL_VEHICLE_SLOT_DISTANCE * 0.9);
+    assert.equal(VEHICLE_SLOT_DISTANCE, 48.6);
     assert.equal(VEHICLE_HIT_RADIUS, 25);
     assert.ok(VEHICLE_HIT_RADIUS > VEHICLE_VISUAL_RING_RADIUS);
 });
 
 test("maximum district vehicle counts fit on two compact slot rings", () => {
-    const distances = Array.from({ length: 11 }, (_, index) => getVehicleSlotOffset(index).radius);
-    assert.deepEqual([...new Set(distances)], [45.5, 78.5]);
-    assert.equal(distances.filter(distance => distance === 45.5).length, 6);
-    assert.equal(distances.filter(distance => distance === 78.5).length, 5);
+    const distances = Array.from({ length: 11 }, (_, index) => getVehicleSlotOffset(index, 11).radius);
+    assert.deepEqual([...new Set(distances)], [48.6, 81.6]);
+    assert.equal(distances.filter(distance => distance === 48.6).length, 5);
+    assert.equal(distances.filter(distance => distance === 81.6).length, 6);
+});
+
+test("vehicle slots evenly cover 360 degrees for every supported cluster size", () => {
+    for (const count of [1, 2, 3, 4, 5, 6, 7, 8, 11]) {
+        const offsets = Array.from({ length: count }, (_, index) => getVehicleSlotOffset(index, count));
+        const ringSizes = count <= 6 ? [count] : [Math.floor(count / 2), Math.ceil(count / 2)];
+        let start = 0;
+        for (const ringSize of ringSizes) {
+            const ring = offsets.slice(start, start + ringSize);
+            const angles = ring.map(({ x, y }) => Math.atan2(y, x));
+            const gaps = angles.map((angle, index) => {
+                const next = angles[(index + 1) % angles.length];
+                return (next - angle + Math.PI * 2) % (Math.PI * 2);
+            });
+            if (ringSize > 1) gaps.forEach(gap => assert.ok(Math.abs(gap - Math.PI * 2 / ringSize) < 1e-10));
+            start += ringSize;
+        }
+    }
 });
 
 test("only RT1101 and RT5103 receive the special callsign style", () => {

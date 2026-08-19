@@ -16,11 +16,10 @@ import { getCoverageTargets } from "./engine.js";
 const VEHICLE_SCALE = 1.15;
 export const DISTRICT_VISUAL_RADIUS = 26;
 export const VEHICLE_VISUAL_RING_RADIUS = 15.5;
-export const VEHICLE_GAP = 4;
-export const VEHICLE_SLOT_DISTANCE = DISTRICT_VISUAL_RADIUS + VEHICLE_VISUAL_RING_RADIUS + VEHICLE_GAP;
+export const ORIGINAL_VEHICLE_SLOT_DISTANCE = 54;
+export const VEHICLE_SLOT_DISTANCE = ORIGINAL_VEHICLE_SLOT_DISTANCE * 0.90;
 export const VEHICLE_HIT_RADIUS = 25;
 const BASE_VEHICLE_FONT_SIZE = 24;
-const VEHICLES_PER_SLOT_RING = 6;
 const VEHICLE_SLOT_STEP = (VEHICLE_VISUAL_RING_RADIUS * 2) + 2;
 const DETENTION_COMPLEX_SCALE = 1.20;
 // The building body runs from -10 to 20 in the scaled icon. Keep every
@@ -37,12 +36,15 @@ export const VEHICLE_VISUAL_STATUS = Object.freeze({
     RETURNING: { label: "TERUG", className: "status-return", routeClass: "route--return" }
 });
 
-export function getVehicleSlotOffset(index) {
-    const ringIndex = Math.floor(index / VEHICLES_PER_SLOT_RING);
-    const slotIndex = index % VEHICLES_PER_SLOT_RING;
-    const angle = (Math.PI * 2 / VEHICLES_PER_SLOT_RING) * slotIndex
-        - (Math.PI / 2)
-        + (ringIndex * Math.PI / VEHICLES_PER_SLOT_RING);
+export function getVehicleSlotOffset(index, vehicleCount = 1) {
+    const safeCount = Math.max(1, vehicleCount);
+    const innerCount = safeCount <= 6 ? safeCount : Math.floor(safeCount / 2);
+    const ringIndex = index < innerCount ? 0 : 1;
+    const slotIndex = ringIndex === 0 ? index : index - innerCount;
+    const ringCount = ringIndex === 0 ? innerCount : safeCount - innerCount;
+    const angle = -Math.PI / 2
+        + ((slotIndex / ringCount) * Math.PI * 2)
+        + (ringIndex * Math.PI / ringCount);
     const radius = VEHICLE_SLOT_DISTANCE + (ringIndex * VEHICLE_SLOT_STEP);
     return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, radius };
 }
@@ -592,9 +594,16 @@ export class MapView {
     syncVehicles() {
         const visibleVehicleIds = new Set();
         const districtIndexes = new Map();
+        const districtVehicleCounts = new Map();
 
         vehicles.forEach(vehicle => {
-            const position = this.getVehicleRenderPosition(vehicle, districtIndexes);
+            if (vehicle.status === "AVAILABLE") {
+                districtVehicleCounts.set(vehicle.district, (districtVehicleCounts.get(vehicle.district) || 0) + 1);
+            }
+        });
+
+        vehicles.forEach(vehicle => {
+            const position = this.getVehicleRenderPosition(vehicle, districtIndexes, districtVehicleCounts);
             if (!position) return;
 
             visibleVehicleIds.add(vehicle.id);
@@ -611,7 +620,7 @@ export class MapView {
             });
     }
 
-    getVehicleRenderPosition(vehicle, districtIndexes) {
+    getVehicleRenderPosition(vehicle, districtIndexes, districtVehicleCounts = new Map()) {
         if (vehicle.status !== "AVAILABLE") {
             return { x: vehicle.x, y: vehicle.y };
         }
@@ -620,7 +629,7 @@ export class MapView {
         if (!district) return null;
 
         const index = districtIndexes.get(vehicle.district) || 0;
-        const offset = getVehicleSlotOffset(index);
+        const offset = getVehicleSlotOffset(index, districtVehicleCounts.get(vehicle.district) || 1);
         const x = this.clamp(district.x + offset.x, 28, this.width - 28);
         const y = this.clamp(district.y + offset.y, 28, this.height - 28);
 
@@ -642,6 +651,12 @@ export class MapView {
         const background = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         background.setAttribute("class", "vehicle-background");
         background.setAttribute("r", String(VEHICLE_VISUAL_RING_RADIUS));
+        const statusHalo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        statusHalo.setAttribute("class", "vehicle-status-halo");
+        statusHalo.setAttribute("r", String(VEHICLE_HIT_RADIUS));
+        const selectionOutline = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        selectionOutline.setAttribute("class", "vehicle-selection-outline");
+        selectionOutline.setAttribute("r", String(VEHICLE_HIT_RADIUS));
         const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         hitbox.setAttribute("class", "vehicle-hitbox"); hitbox.setAttribute("r", String(VEHICLE_HIT_RADIUS));
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -659,7 +674,7 @@ export class MapView {
         statusBadge.setAttribute("y", "34");
         group.addEventListener("click", () => { if (group.classList.contains("vehicle--selectable")) this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: group.dataset.vehicleId } })); });
         group.addEventListener("keydown", event => { if (group.classList.contains("vehicle--selectable") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); group.dispatchEvent(new MouseEvent("click")); } });
-        group.append(background, hitbox, text, callsign, statusBadge); this.vehicleLayer.appendChild(group);
+        group.append(background, statusHalo, selectionOutline, hitbox, text, callsign, statusBadge); this.vehicleLayer.appendChild(group);
 
         return group;
     }
