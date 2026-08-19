@@ -9,8 +9,8 @@ import {
     isVehicleVisible,
     MapView,
     ON_SCENE_VISIBLE_MS,
+    VEHICLE_GAP,
     VEHICLE_HIT_RADIUS,
-    ORIGINAL_VEHICLE_SLOT_DISTANCE,
     VEHICLE_SLOT_DISTANCE,
     VEHICLE_VISUAL_RING_RADIUS
 } from "../js/map.js";
@@ -42,17 +42,18 @@ class FakeVehicleElement {
 
 test("vehicle clusters use a compact visual ring without shrinking their hit area", () => {
     assert.equal(VEHICLE_VISUAL_RING_RADIUS, 15.5);
-    assert.equal(VEHICLE_SLOT_DISTANCE, ORIGINAL_VEHICLE_SLOT_DISTANCE * 0.9);
-    assert.equal(VEHICLE_SLOT_DISTANCE, 48.6);
+    assert.equal(VEHICLE_GAP, 3);
+    assert.equal(VEHICLE_SLOT_DISTANCE, DISTRICT_VISUAL_RADIUS + VEHICLE_VISUAL_RING_RADIUS + VEHICLE_GAP);
+    assert.equal(VEHICLE_SLOT_DISTANCE, 44.5);
     assert.equal(VEHICLE_HIT_RADIUS, 25);
     assert.ok(VEHICLE_HIT_RADIUS > VEHICLE_VISUAL_RING_RADIUS);
 });
 
 test("maximum district vehicle counts fit on two compact slot rings", () => {
     const distances = Array.from({ length: 11 }, (_, index) => getVehicleSlotOffset(index, 11).radius);
-    assert.deepEqual([...new Set(distances)], [48.6, 81.6]);
-    assert.equal(distances.filter(distance => distance === 48.6).length, 5);
-    assert.equal(distances.filter(distance => distance === 81.6).length, 6);
+    assert.deepEqual([...new Set(distances)], [44.5, 77.5]);
+    assert.equal(distances.filter(distance => distance === 44.5).length, 5);
+    assert.equal(distances.filter(distance => distance === 77.5).length, 6);
 });
 
 test("vehicle slots evenly cover 360 degrees for every supported cluster size", () => {
