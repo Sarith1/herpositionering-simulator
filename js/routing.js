@@ -67,14 +67,21 @@ export function getRouteDistance(route) {
     return route.length - 1;
 }
 
-export function calculateTravelTime(route) {
-    const distance = getRouteDistance(route);
-    const baseTime = 90;
-    const maximumExtraTime = 30;
-    const districtPenalty = Math.min(maximumExtraTime, distance * 10);
-    const variation = Math.floor(Math.random() * 11);
+export function calculateTravelTime(route, random = Math.random) {
+    const min = sessionConfig.travelTimeMinSeconds;
+    const max = sessionConfig.travelTimeMaxSeconds;
+    return calculateTravelTimeForRange(route, min, max, random);
+}
 
-    return Math.min(120, baseTime + districtPenalty + variation);
+export function calculateTravelTimeForRange(route, min, max, random = Math.random) {
+    const distance = getRouteDistance(route);
+    const span = max - min;
+    // Four route edges represent the long end of this compact network. A
+    // small bounded variation prevents identical routes always taking exactly
+    // the same time while preserving distance as the dominant influence.
+    const distancePosition = Math.min(1, distance / 4);
+    const variation = (random() - 0.5) * span * 0.2;
+    return Math.round(Math.max(min, Math.min(max, min + span * distancePosition + variation)));
 }
 
 export function findNearestAvailableVehicle(vehicles, targetDistrictId) {

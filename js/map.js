@@ -14,6 +14,8 @@ import { getDistrictById, getShortestRoute } from "./routing.js";
 import { getCoverageTargets } from "./engine.js";
 
 const VEHICLE_SCALE = 1.15;
+export const DISTRICT_VISUAL_RADIUS = 26;
+export const VEHICLE_VISUAL_RADIUS = 20.5;
 const BASE_VEHICLE_FONT_SIZE = 24;
 const VEHICLE_SLOT_RADIUS = 54;
 const VEHICLE_SLOT_STEP = 18;
@@ -257,7 +259,7 @@ export class MapView {
             const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             circle.setAttribute("cx", district.x);
             circle.setAttribute("cy", district.y);
-            circle.setAttribute("r", 32);
+            circle.setAttribute("r", DISTRICT_VISUAL_RADIUS);
             circle.setAttribute("fill", colors[district.id]);
             circle.setAttribute("stroke", simulator.selectedPrison === district.id ? "#facc15" : "#ffffff");
             circle.setAttribute("stroke-width", simulator.selectedPrison === district.id ? "7" : "3");
@@ -627,6 +629,9 @@ export class MapView {
 
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
         group.dataset.vehicleId = vehicle.id;
+        const background = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        background.setAttribute("class", "vehicle-background");
+        background.setAttribute("r", String(VEHICLE_VISUAL_RADIUS));
         const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         hitbox.setAttribute("class", "vehicle-hitbox"); hitbox.setAttribute("r", "25");
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -644,7 +649,7 @@ export class MapView {
         statusBadge.setAttribute("y", "34");
         group.addEventListener("click", () => { if (group.classList.contains("vehicle--selectable")) this.container.dispatchEvent(new CustomEvent("vehicle-select", { detail: { vehicleId: group.dataset.vehicleId } })); });
         group.addEventListener("keydown", event => { if (group.classList.contains("vehicle--selectable") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); group.dispatchEvent(new MouseEvent("click")); } });
-        group.append(hitbox, text, callsign, statusBadge); this.vehicleLayer.appendChild(group);
+        group.append(background, hitbox, text, callsign, statusBadge); this.vehicleLayer.appendChild(group);
 
         return group;
     }

@@ -33,6 +33,7 @@ export const CONFIG_HELP = Object.freeze({
     hotzoneIncidents:{title:"Meldingen in Hotzones",text:"Bepaalt welk percentage van nieuwe meldingen bij voorkeur in een Hotzone ontstaat."},
     multiUnit:{title:"Grotere incidenten",text:"Bepaalt welk percentage van de meldingen 2 of 3 eenheden nodig heeft."},
     onScene:{title:"Ter-plaatse meldingen",text:"Deze meldingen worden op locatie afgehandeld en leiden niet tot een cellencomplex."},
+    travelTime:{title:"Reistijd",text:"Bepaalt de minimale en maximale reistijd die in de simulatie kan worden berekend. Langere routes krijgen een tijd dichter bij het maximum."},
     autoplayMin:{title:"Minimuminterval",text:"Bepaalt de minimale willekeurige tijd tussen automatisch gegenereerde meldingen."},
     autoplayMax:{title:"Maximuminterval",text:"Bepaalt de maximale willekeurige tijd tussen automatisch gegenereerde meldingen."},
     detentionAvailability:{title:"Cellencomplex beschikbaarheid",text:"Bepaalt welke cellencomplexen beschikbaar zijn voor arrestantentransport."},
@@ -131,6 +132,8 @@ export class UI {
         this.setHotzoneIncidentPercentage(sessionConfig.hotzoneIncidentPercentage);
         this.setAutoplayDelayValues(sessionConfig.autoplayMinDelaySeconds, sessionConfig.autoplayMaxDelaySeconds);
         ["autoplayMinDelay", "autoplayMaxDelay"].forEach(id => document.getElementById(id)?.addEventListener("input", event => this.handleAutoplayDelayInput(event.target)));
+        this.setTravelTimeValues(sessionConfig.travelTimeMinSeconds, sessionConfig.travelTimeMaxSeconds);
+        ["travelTimeMin", "travelTimeMax"].forEach(id => document.getElementById(id)?.addEventListener("input", event => this.handleTravelTimeInput(event.target)));
         this.updateModeConfigVisibility();
 
     }
@@ -738,6 +741,19 @@ export class UI {
         this.updateAutoplayDelayLabels();
     }
     updateAutoplayDelayLabels(){const {min,max}=this.getAutoplayDelayValues();const a=document.getElementById("autoplayMinDelayLabel"),b=document.getElementById("autoplayMaxDelayLabel");if(a)a.textContent=`${min} sec`;if(b)b.textContent=`${max} sec`;}
+    getTravelTimeValues(){return{min:Number(document.getElementById("travelTimeMin")?.value||90),max:Number(document.getElementById("travelTimeMax")?.value||120)};}
+    setTravelTimeValues(min=90,max=120){
+        const minInput=document.getElementById("travelTimeMin"),maxInput=document.getElementById("travelTimeMax");
+        const safeMin=Math.max(30,Math.min(180,Number(min)||90)),safeMax=Math.max(safeMin,Math.min(180,Number(max)||120));
+        if(minInput)minInput.value=String(safeMin);if(maxInput)maxInput.value=String(safeMax);this.updateTravelTimeLabels();
+    }
+    handleTravelTimeInput(input){
+        const min=document.getElementById("travelTimeMin"),max=document.getElementById("travelTimeMax");if(!min||!max)return;
+        if(input===min&&Number(min.value)>Number(max.value))max.value=min.value;
+        if(input===max&&Number(max.value)<Number(min.value))min.value=max.value;
+        this.updateTravelTimeLabels();
+    }
+    updateTravelTimeLabels(){const {min,max}=this.getTravelTimeValues();const a=document.getElementById("travelTimeMinLabel"),b=document.getElementById("travelTimeMaxLabel");if(a)a.textContent=`${min} sec`;if(b)b.textContent=`${max} sec`;}
     showVehicleSelection(selection) {
         const panel=document.getElementById("manualDispatchPanel"), details=document.getElementById("vehicleSelectionDetails");if(!panel||!details)return;
         const incident=simulator.incidents.find(item=>item.id===simulator.vehicleSelection.incidentId);

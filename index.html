@@ -101,6 +101,12 @@
                 <p class="config-help">Selecteer minimaal één complex voor celritten.</p>
                 <div id="prisonConfig" class="prison-config"></div></div>
                 <p id="detentionCapacityWarning" class="capacity-warning" role="status" hidden>Let op: totale beschikbare cellencapaciteit is 0. Alle celritten duren dubbel zo lang.</p>
+                <div class="config-section travel-time-config"><h3>Reistijd <span data-config-help="travelTime"></span></h3>
+                    <label for="travelTimeMin"><span class="config-label">Minimale reistijd</span><output id="travelTimeMinLabel">90 sec</output></label>
+                    <input id="travelTimeMin" type="range" min="30" max="180" step="5" value="90">
+                    <label for="travelTimeMax"><span class="config-label">Maximale reistijd</span><output id="travelTimeMaxLabel">120 sec</output></label>
+                    <input id="travelTimeMax" type="range" min="30" max="180" step="5" value="120">
+                </div>
                 <div class="config-section"><h3>Werkwijze <span data-config-help="operationMode"></span></h3>
                 <div id="operationModeConfig" class="mode-config">
                     <label><input type="radio" name="operationMode" value="automatic" checked> Automatisch</label>
