@@ -28,17 +28,23 @@ export function getRandomOnSceneBusySeconds(random=Math.random){return Math.floo
 export const INCIDENT_MARGIN = 38;
 export const INCIDENT_MIN_DISTANCE = 45;
 export function getCoverageTargets(activeRepositions=[]){
- const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),availableByDistrict=Object.fromEntries(districts.map(d=>[d.id,vehicles.filter(v=>v.district===d.id&&[STATUS.AVAILABLE,STATUS.REPOSITION_QUEUED,STATUS.REPOSITIONING].includes(v.status)).length]));
+ const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),physicalAvailableByDistrict=Object.fromEntries(districts.map(d=>[d.id,vehicles.filter(v=>v.district===d.id&&v.status===STATUS.AVAILABLE).length])),availableByDistrict=Object.fromEntries(districts.map(d=>[d.id,vehicles.filter(v=>v.district===d.id&&[STATUS.AVAILABLE,STATUS.REPOSITION_QUEUED,STATUS.REPOSITIONING].includes(v.status)).length]));
  const incomingByDistrict=Object.fromEntries(districts.map(d=>[d.id,activeRepositions.filter(r=>r.targetDistrictId===d.id).length]));
  const outgoingByDistrict=Object.fromEntries(districts.map(d=>[d.id,activeRepositions.filter(r=>(r.originDistrictId||r.fromDistrictId)===d.id).length]));
  const effectiveByDistrict=Object.fromEntries(districts.map(d=>[d.id,availableByDistrict[d.id]+incomingByDistrict[d.id]-outgoingByDistrict[d.id]]));
- const totalAvailable=Object.values(effectiveByDistrict).reduce((sum,value)=>sum+value,0),averageAvailable=districts.length?totalAvailable/districts.length:0;
+ const totalAvailable=Object.values(physicalAvailableByDistrict).reduce((sum,value)=>sum+value,0),averageAvailable=districts.length?totalAvailable/districts.length:0;
  const base=districts.length?Math.floor(totalAvailable/districts.length):0,remainder=districts.length?totalAvailable%districts.length:0;
  const ordered=[...districts].sort((a,b)=>Number(!hotzoneIds.has(a.id))-Number(!hotzoneIds.has(b.id))||effectiveByDistrict[a.id]-effectiveByDistrict[b.id]||a.id.localeCompare(b.id));
  const targetByDistrict=Object.fromEntries(ordered.map((district,index)=>[district.id,base+(index<remainder?1:0)]));
  const hotzoneMinimum=Math.ceil(averageAvailable);
  const hotzoneValues=districts.filter(d=>hotzoneIds.has(d.id)).map(d=>effectiveByDistrict[d.id]),nonHotzoneValues=districts.filter(d=>!hotzoneIds.has(d.id)).map(d=>effectiveByDistrict[d.id]);
- return{totalAvailable,averageAvailable,base,remainder,targetByDistrict,hotzoneMinimum,minHotzoneAvailable:hotzoneValues.length?Math.min(...hotzoneValues):null,maxNonHotzoneAvailable:nonHotzoneValues.length?Math.max(...nonHotzoneValues):null,availableByDistrict,incomingByDistrict,outgoingByDistrict,effectiveByDistrict};
+ return{totalAvailable,averageAvailable,base,remainder,targetByDistrict,hotzoneMinimum,minHotzoneAvailable:hotzoneValues.length?Math.min(...hotzoneValues):null,maxNonHotzoneAvailable:nonHotzoneValues.length?Math.max(...nonHotzoneValues):null,availableByDistrict:physicalAvailableByDistrict,reservedAvailableByDistrict:availableByDistrict,incomingByDistrict,outgoingByDistrict,effectiveByDistrict};
+}
+export function getHotzoneCoverageState(activeRepositions=[]){
+ const targets=getCoverageTargets(activeRepositions),ids=new Set(sessionConfig.hotzoneDistrictIds||[]),entry=district=>({district,effectiveCoverage:targets.effectiveByDistrict[district.id],available:targets.availableByDistrict[district.id]});
+ const hotzones=districts.filter(d=>ids.has(d.id)).map(entry),nonHotzones=districts.filter(d=>!ids.has(d.id)).map(entry);
+ const minHotzoneCoverage=hotzones.length?Math.min(...hotzones.map(item=>item.effectiveCoverage)):null,maxNonHotzoneCoverage=nonHotzones.length?Math.max(...nonHotzones.map(item=>item.effectiveCoverage)):null;
+ return{...targets,hotzones,nonHotzones,minHotzoneCoverage,maxNonHotzoneCoverage,underMinimumHotzones:hotzones.filter(item=>item.effectiveCoverage<targets.hotzoneMinimum),hotzonesBelowNonHotzoneMax:hotzones.filter(item=>maxNonHotzoneCoverage!==null&&item.effectiveCoverage<maxNonHotzoneCoverage)};
 }
 export function getRandomIncidentDelaySeconds(){
  const min=Math.max(1,Math.min(60,Number(sessionConfig.autoplayMinDelaySeconds)||1));
@@ -172,7 +178,7 @@ export class Engine {
   const incident=this.requireInputIncident("DISPATCH"),result=this.assignIncident(incident);this.resetInputCycle();return result;
  }
  assertSuccessfulDispatch(){}
- rankVehiclesForDispatch(candidates,incident){return candidates.map(vehicle=>({vehicle,distance:getRouteDistance(getShortestRoute(vehicle.district,incident.district))})).sort((a,b)=>Number(isSpecialVehicle(a.vehicle))-Number(isSpecialVehicle(b.vehicle))||a.distance-b.distance).map(item=>item.vehicle);}
+ rankVehiclesForDispatch(candidates,incident){const state=this.getHotzoneCoverageState(),hotzones=new Set(state.hotzones.map(item=>item.district.id));return candidates.map(vehicle=>({vehicle,distance:getRouteDistance(getShortestRoute(vehicle.district,incident.district)),hotzoneRisk:hotzones.has(vehicle.district)&&state.effectiveByDistrict[vehicle.district]-1<state.hotzoneMinimum})).sort((a,b)=>Number(isSpecialVehicle(a.vehicle))-Number(isSpecialVehicle(b.vehicle))||a.distance-b.distance||Number(a.hotzoneRisk)-Number(b.hotzoneRisk)).map(item=>item.vehicle);}
  availableVehiclesByDistance(incident){return this.rankVehiclesForDispatch(vehicles.filter(v=>v.status===STATUS.AVAILABLE&&!v.incident&&!incident.assignedVehicleIds.includes(v.id)),incident);}
  assignIncident(incident,vehicleId=null){
   if(incident?.type!=="onscene"&&!incident?.prisonId)this.prepareIncident(incident);const needed=incident.requiredUnits-incident.assignedVehicleIds.length,candidates=vehicleId?[vehicles.find(v=>v.id===vehicleId)].filter(Boolean):this.availableVehiclesByDistance(incident).slice(0,needed);const events=[];let assigned=0,firstVehicle=null;
@@ -281,18 +287,19 @@ export class Engine {
  getIncomingRepositions(districtId){return[...this.activeRepositions.values(),...this.repositionQueue].filter(r=>r.targetDistrictId===districtId).length;}
  getEffectiveCoverage(districtId){return this.getCoverageTargets().effectiveByDistrict[districtId]||0;}
  getCoverageTargets(){return getCoverageTargets([...this.activeRepositions.values(),...this.repositionQueue]);}
+ getHotzoneCoverageState(){return getHotzoneCoverageState([...this.activeRepositions.values(),...this.repositionQueue]);}
  getMostUndercoveredHotzone(targets=this.getCoverageTargets()){
   const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]);
   return districts.filter(d=>hotzoneIds.has(d.id)).sort((a,b)=>targets.effectiveByDistrict[a.id]-targets.effectiveByDistrict[b.id]||(targets.hotzoneMinimum-targets.effectiveByDistrict[b.id])-(targets.hotzoneMinimum-targets.effectiveByDistrict[a.id]))[0]||null;
  }
- findCoverageDonor(target,targets,hotzonePriority=false){
+ findCoverageDonor(target,targets,hotzonePriority=false,coverageRule="normal"){
   const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),targetCoverage=targets.effectiveByDistrict[target.id],now=this.simulationNow();
   return districts.filter(d=>d.id!==target.id&&this.availableCount(d.id)>0&&getShortestRoute(d.id,target.id).length).filter(d=>{
-   const donorCoverage=targets.effectiveByDistrict[d.id],safe=donorCoverage-1>=targetCoverage+1;
+   const donorCoverage=targets.effectiveByDistrict[d.id],donorMinimum=hotzoneIds.has(d.id)?targets.hotzoneMinimum:1,safe=donorCoverage-1>=donorMinimum&&(coverageRule==="minimum"||donorCoverage-1>=targetCoverage+1);
    if(!safe)return false;
    const reverse=this.lastRepositions.some(item=>item.type==="automatic"&&item.fromDistrictId===target.id&&item.toDistrictId===d.id&&now-item.completedAt<REPOSITION_REVERSAL_COOLDOWN_MS);
    return !reverse;
-  }).sort((a,b)=>Number(!getAdjacentDistrictIds(a.id).includes(target.id))-Number(!getAdjacentDistrictIds(b.id).includes(target.id))||Number(hotzoneIds.has(a.id))-Number(hotzoneIds.has(b.id))||targets.effectiveByDistrict[b.id]-targets.effectiveByDistrict[a.id]||getRouteDistance(getShortestRoute(a.id,target.id))-getRouteDistance(getShortestRoute(b.id,target.id)))[0]||null;
+  }).sort((a,b)=>Number(hotzoneIds.has(a.id))-Number(hotzoneIds.has(b.id))||targets.effectiveByDistrict[b.id]-targets.effectiveByDistrict[a.id]||Number(!getAdjacentDistrictIds(a.id).includes(target.id))-Number(!getAdjacentDistrictIds(b.id).includes(target.id))||getRouteDistance(getShortestRoute(a.id,target.id))-getRouteDistance(getShortestRoute(b.id,target.id)))[0]||null;
  }
  getCriticalCoverageDistricts(){return districts.filter(d=>this.availableCount(d.id)===0);}
  hasCriticalCoverageFailure(){return this.getCriticalCoverageDistricts().length>0;}
@@ -339,11 +346,11 @@ export class Engine {
   while(queue.length){const pathFromTarget=queue.shift(),current=pathFromTarget.at(-1);if(current!==targetDistrictId&&(!requiredOrigin||current===requiredOrigin)&&this.canDistrictDonateVehicle(current,{targets})){return [...pathFromTarget].reverse();}if(requiredOrigin&&current===requiredOrigin)continue;for(const adjacent of getAdjacentDistrictIds(current)){if(!visited.has(adjacent)&&districts.some(d=>d.id===adjacent)){visited.add(adjacent);queue.push([...pathFromTarget,adjacent]);}}}
   return [];
  }
- buildRepositionPlan(targetDistrictId,{type="automatic",requiredVehicleId=null}={}){
+ buildRepositionPlan(targetDistrictId,{type="automatic",requiredVehicleId=null,coverageRule="normal"}={}){
   const selected=requiredVehicleId&&vehicles.find(v=>v.id===requiredVehicleId),path=this.findDonorPath(targetDistrictId,{requiredOriginDistrictId:selected?.district});if(path.length<2)return null;
   const reserved=new Set(),moves=[];
   for(let index=path.length-2;index>=0;index--){const fromDistrictId=path[index],toDistrictId=path[index+1],candidates=this.rankVehiclesForReposition(vehicles.filter(v=>v.district===fromDistrictId&&v.status===STATUS.AVAILABLE&&!v.incident&&!reserved.has(v.id)),fromDistrictId);let vehicle=candidates[0];if(index===0&&selected)vehicle=selected;if(!vehicle)return null;reserved.add(vehicle.id);moves.push({fromDistrictId,toDistrictId,vehicleId:vehicle.id});}
-  const plan={id:`RP-${++this.repositionPlanSequence}`,targetDistrictId,moves,type:moves.length>1?"cascade":type,repositionType:type};
+  const plan={id:`RP-${++this.repositionPlanSequence}`,targetDistrictId,moves,type:moves.length>1?"cascade":type,repositionType:type,coverageRule};
   return this.validateRepositionPlan(plan)?plan:null;
  }
  validateRepositionPlan(plan){
@@ -359,8 +366,10 @@ export class Engine {
   const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
   if(plan.repositionType==="manual")return [...affected].every(districtId=>districtId===plan.targetDistrictId||this.getProjectedCoverage(districtId,plan.moves)>=(hotzones.has(districtId)?targets.hotzoneMinimum:1));
   const projected=Object.fromEntries(districts.map(d=>[d.id,targets.effectiveByDistrict[d.id]+plan.moves.filter(move=>move.toDistrictId===d.id).length-plan.moves.filter(move=>move.fromDistrictId===d.id).length]));
-  // Judge every cascade link on its atomic end state, not on temporary gaps.
-  if(!plan.moves.every(move=>projected[move.fromDistrictId]>=projected[move.toDistrictId]))return false;
+  // A hard-minimum cascade is judged on its complete end state; intermediate
+  // districts may pass their unit onward without creating a new zero gap.
+  if(plan.coverageRule!=="minimum"&&!plan.moves.every(move=>projected[move.fromDistrictId]>=projected[move.toDistrictId]))return false;
+  if(plan.coverageRule==="minimum"&&(!hotzones.has(plan.targetDistrictId)||projected[plan.targetDistrictId]<=targets.effectiveByDistrict[plan.targetDistrictId]||districts.some(d=>projected[d.id]<(hotzones.has(d.id)&&d.id!==plan.targetDistrictId?targets.effectiveByDistrict[d.id]:1))))return false;
   const beforeZero=districts.filter(d=>targets.effectiveByDistrict[d.id]===0).length,afterZero=districts.filter(d=>projected[d.id]===0).length;
   const beforeSpread=Math.max(...Object.values(targets.effectiveByDistrict))-Math.min(...Object.values(targets.effectiveByDistrict));
   const afterSpread=Math.max(...Object.values(projected))-Math.min(...Object.values(projected));
@@ -380,7 +389,7 @@ export class Engine {
   vehicle.status=STATUS.REPOSITIONING;reposition.phaseStartTime=this.scheduleMovementStart(reposition.id,now);reposition.fromX=vehicle.x;reposition.fromY=vehicle.y;reposition.pathPoints=buildMovementPath({fromX:vehicle.x,fromY:vehicle.y,routeDistrictIds:reposition.route,toX:reposition.toX,toY:reposition.toY});this.activeRepositions.set(reposition.id,reposition);simulator.activeRoutes.push({id:reposition.id,type:"reposition",pathPoints:reposition.pathPoints});
   return[{type:"repositionStarted",cascade:reposition.cascade,vehicle,district:target,origin},{type:"log",message:`[DOORSCHUIVEN] ${vehicle.id}: ${origin.name} → ${target.name}.`}];
  }
- startAutomaticReposition(donor,target){const candidate=donor&&this.rankVehiclesForReposition(vehicles.filter(v=>v.district===donor.id&&v.status===STATUS.AVAILABLE&&!v.incident),donor.id)[0],plan=this.buildRepositionPlan(target.id,{requiredVehicleId:candidate?.id||null});if(!plan)return null;const events=this.startRepositionPlan(plan),first=events.find(event=>event.type==="repositionStarted")||null;if(first)first.planEvents=events;return first;}
+ startAutomaticReposition(donor,target,coverageRule="normal"){const candidate=donor&&this.rankVehiclesForReposition(vehicles.filter(v=>v.district===donor.id&&v.status===STATUS.AVAILABLE&&!v.incident),donor.id)[0],plan=this.buildRepositionPlan(target.id,{requiredVehicleId:candidate?.id||null,coverageRule});if(!plan)return null;const events=this.startRepositionPlan(plan),first=events.find(event=>event.type==="repositionStarted")||null;if(first)first.planEvents=events;return first;}
  evaluateHomeReturns(now=performance.now()){
   if(simulator.gameOver)return[];
   const movements=[...this.activeRepositions.values()];
@@ -401,8 +410,13 @@ export class Engine {
    events.push(...this.evaluateCoverageFailure());return events;
   }
   if(this.activeRepositions.size||this.repositionQueue.length)return this.evaluateCoverageFailure();
-  const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
-  // Targets remain useful UI information, but never trigger a move themselves.
+  const state=this.getHotzoneCoverageState(),targets=state,hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
+  // Hard rule A: repair the least-covered Hotzone before ordinary balancing.
+  const deficient=[...state.underMinimumHotzones].sort((a,b)=>a.effectiveCoverage-b.effectiveCoverage||(state.hotzoneMinimum-b.effectiveCoverage)-(state.hotzoneMinimum-a.effectiveCoverage));
+  for(const item of deficient){const donor=this.findCoverageDonor(item.district,targets,true,"minimum");if(!donor)continue;const event=this.startAutomaticReposition(donor,item.district,"minimum");if(event)return event.planEvents||[event];}
+  // Hard rule B: only level 4/2-style gaps; never turn a stable 3/2 into 2/3.
+  if(!deficient.length&&state.minHotzoneCoverage!==null&&state.maxNonHotzoneCoverage>state.minHotzoneCoverage){const target=[...state.hotzones].sort((a,b)=>a.effectiveCoverage-b.effectiveCoverage)[0]?.district;for(const donorEntry of [...state.nonHotzones].sort((a,b)=>b.effectiveCoverage-a.effectiveCoverage)){if(donorEntry.effectiveCoverage-1<state.minHotzoneCoverage+1)continue;const event=this.startAutomaticReposition(donorEntry.district,target,"parity");if(event)return event.planEvents||[event];}}
+  // Targets remain useful UI information, but never trigger an unsafe move.
   const candidates=[...districts].sort((a,b)=>targets.effectiveByDistrict[a.id]-targets.effectiveByDistrict[b.id]||Number(hotzones.has(b.id))-Number(hotzones.has(a.id))||a.id.localeCompare(b.id));
   for(const target of candidates){const donor=this.findCoverageDonor(target,targets,hotzones.has(target.id));if(!donor)continue;const event=this.startAutomaticReposition(donor,target);if(event)return event.planEvents||[event];}
   events.push(...this.evaluateHomeReturns(),...this.evaluateCoverageFailure());return events;
