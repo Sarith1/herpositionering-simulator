@@ -11,10 +11,10 @@ test("automatic reposition uses one vehicle per adjacent link in a cascade", () 
   engine.reset({ restoreDefaults: true, operationMode: "automatic", vehiclesPerDistrict: fleet([3, 1, 1, 1, 1, 1, 0]) });
   const events = engine.ensureCoverage();
   const moves = events.filter(event => event.type === "repositionStarted");
-  assert.equal(moves.length, 3);
+  assert.equal(moves.length, 1);
   assert.equal(moves.at(0).district.id, "ZHZ");
   for (const move of moves) assert.ok(getAdjacentDistrictIds(move.origin.id).includes(move.district.id));
-  assert.equal(new Set(moves.map(move => move.vehicle.id)).size, 3);
+  assert.equal(new Set(moves.map(move => move.vehicle.id)).size, 1);
   assert.equal(engine.activeRepositionPlans.size, 1);
 });
 
@@ -49,8 +49,9 @@ test("every link in a three-step cascade is adjacent and starts atomically", () 
   for (const move of plan.moves) assert.ok(getAdjacentDistrictIds(move.fromDistrictId).includes(move.toDistrictId));
 
   const events = engine.startRepositionPlan(plan);
-  assert.equal(events.filter(event => event.type === "repositionStarted").length, 3);
-  assert.ok(plan.moves.every(move => vehicles.find(vehicle => vehicle.id === move.vehicleId).status === "REPOSITIONING"));
+  assert.equal(events.filter(event => event.type === "repositionStarted").length, 1);
+  assert.equal(vehicles.find(vehicle => vehicle.id === plan.moves[0].vehicleId).status, "REPOSITIONING");
+  assert.ok(plan.moves.slice(1).every(move => vehicles.find(vehicle => vehicle.id === move.vehicleId).status === "REPOSITION_QUEUED"));
 });
 
 test("a stale or non-adjacent plan cannot start partially", () => {
