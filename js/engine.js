@@ -1,5 +1,5 @@
 import { createEmptyDetentionOccupancy, detentionComplexes, districts, getDetentionComplexPositionById, getDetentionParkingSlot, getTotalDetentionCapacity, getTotalDetentionOccupancy, initializeVehicles, isSpecialVehicle, resetSessionConfigDefaults, repositioningFailureConfig, sessionConfig, setAvailablePrisons, setDetentionCapacity, setHotzoneDistrictIds, setVehiclesPerDistrict, simulator, vehicles } from "./data.js";
-import { calculateTravelTime, findNearestAvailableVehicle, getAdjacentDistrictIds, getDistrictById, getPrisonDistricts, getRouteDistance, getShortestRoute } from "./routing.js";
+import { calculateTravelTime, getAdjacentDistrictIds, getDistrictById, getPrisonDistricts, getRouteDistance, getShortestRoute } from "./routing.js";
 import { SimulationClock } from "./simulation-clock.js";
 
 const STATUS = { AVAILABLE:"AVAILABLE", TO_INCIDENT:"TO_INCIDENT", ON_SCENE:"ON_SCENE", SUPPORT_ON_SCENE:"SUPPORT_ON_SCENE", TO_PRISON:"TO_PRISON", BUSY:"BUSY", RETURNING:"RETURNING", REPOSITION_QUEUED:"REPOSITION_QUEUED", REPOSITIONING:"REPOSITIONING" };
@@ -14,6 +14,8 @@ export const REPOSITION_COOLDOWN_MS = 2000;
 export const REPOSITION_REVERSAL_COOLDOWN_MS = 10000;
 export const COVERAGE_GRACE_PERIOD_MS = 2000;
 export const DISPATCH_DEPARTURE_DELAY_MS = 2000;
+// Preferences may only affect dispatch when travel distances are effectively equal.
+export const DISPATCH_DISTANCE_TIE_MARGIN = 0.10;
 export function getRepositionEvaluationDelayMs(random=Math.random){return 2000+random()*1000;}
 export const MULTI_UNIT_TWO_UNIT_CHANCE = 0.80;
 export const SUPPORT_ON_SCENE_TRAVEL_TIME_FACTOR = 0.5;
@@ -178,8 +180,21 @@ export class Engine {
   const incident=this.requireInputIncident("DISPATCH"),result=this.assignIncident(incident);this.resetInputCycle();return result;
  }
  assertSuccessfulDispatch(){}
- rankVehiclesForDispatch(candidates,incident){const state=this.getHotzoneCoverageState(),hotzones=new Set(state.hotzones.map(item=>item.district.id));return candidates.map(vehicle=>({vehicle,distance:getRouteDistance(getShortestRoute(vehicle.district,incident.district)),hotzoneRisk:hotzones.has(vehicle.district)&&(state.effectiveByDistrict[vehicle.district]-1<state.hotzoneMinimum||state.effectiveByDistrict[vehicle.district]-1<state.maxNonHotzoneCoverage)})).sort((a,b)=>Number(isSpecialVehicle(a.vehicle))-Number(isSpecialVehicle(b.vehicle))||Number(a.hotzoneRisk)-Number(b.hotzoneRisk)||a.distance-b.distance).map(item=>item.vehicle);}
- availableVehiclesByDistance(incident){return this.rankVehiclesForDispatch(vehicles.filter(v=>v.status===STATUS.AVAILABLE&&!v.incident&&!incident.assignedVehicleIds.includes(v.id)),incident);}
+ rankAvailableVehiclesForIncident(incident){
+  if(!incident||!Number.isFinite(incident.x)||!Number.isFinite(incident.y))return[];
+  const hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
+  const ranked=vehicles.filter(vehicle=>vehicle.status===STATUS.AVAILABLE&&!vehicle.incident&&!incident.assignedVehicleIds.includes(vehicle.id)).map(vehicle=>{
+   const position=Number.isFinite(vehicle.x)&&Number.isFinite(vehicle.y)?vehicle:getDistrictById(vehicle.district);
+   const distance=position?Math.hypot(position.x-incident.x,position.y-incident.y):Infinity;
+   return{vehicle,distance,routeCost:distance,isSpecial:isSpecialVehicle(vehicle),isHotzoneVehicle:hotzones.has(vehicle.district),coverageRemaining:this.availableCount(vehicle.district)-1};
+  }).filter(candidate=>Number.isFinite(candidate.distance));
+  return ranked.sort((a,b)=>{
+   const scale=Math.max(a.distance,b.distance,Number.EPSILON);
+   if(Math.abs(a.distance-b.distance)/scale>DISPATCH_DISTANCE_TIE_MARGIN)return a.distance-b.distance;
+   return Number(a.isSpecial)-Number(b.isSpecial)||Number(a.isHotzoneVehicle)-Number(b.isHotzoneVehicle)||b.coverageRemaining-a.coverageRemaining||a.distance-b.distance||a.vehicle.id.localeCompare(b.vehicle.id);
+  });
+ }
+ availableVehiclesByDistance(incident){return this.rankAvailableVehiclesForIncident(incident).map(candidate=>candidate.vehicle);}
  assignIncident(incident,vehicleId=null){
   if(incident?.type!=="onscene"&&!incident?.prisonId)this.prepareIncident(incident);const needed=incident.requiredUnits-incident.assignedVehicleIds.length,candidates=vehicleId?[vehicles.find(v=>v.id===vehicleId)].filter(Boolean):this.availableVehiclesByDistance(incident).slice(0,needed);const events=[];let assigned=0,firstVehicle=null;
   for(const vehicle of candidates){const result=this.startDispatch({incidentId:incident.id,vehicleId:vehicle.id,prisonId:incident.prisonId});if(result.success){assigned++;firstVehicle??=vehicle;events.push(...(result.events||[]),{type:"log",message:`[DISPATCH] ${vehicle.id} ingezet voor ${getDistrictById(incident.district)?.name} (${incident.assignedVehicleIds.length}/${incident.requiredUnits}).`});}}
