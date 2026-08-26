@@ -430,7 +430,8 @@ export class UI {
 
             row.className = "district-status";
             const isHotzone = sessionConfig.hotzoneDistrictIds.includes(district.id);
-            const undercovered = isHotzone && available < coverageTargets.hotzoneMinimum;
+            const maxNonHotzone = Math.max(0, ...districts.filter(item => !sessionConfig.hotzoneDistrictIds.includes(item.id)).map(item => coverageTargets.availableByDistrict[item.id]));
+            const undercovered = isHotzone && available < Math.max(coverageTargets.hotzoneMinimum, maxNonHotzone);
             if (undercovered) row.classList.add("district-status--hotzone-warning");
 
             let icon = "🟢";
@@ -446,7 +447,7 @@ export class UI {
 
             row.innerHTML = `
                 <span>${icon}</span>
-                <span>${isHotzone ? "🔥 " : ""}${district.name}${undercovered ? ` <small>Gewenst: ≥ ${coverageTargets.hotzoneMinimum}</small>` : ""}</span>
+                <span>${isHotzone ? "🔥 " : ""}${district.name}${undercovered ? ` <small>Hotzone onder gewenste dekking (≥ ${Math.max(coverageTargets.hotzoneMinimum, maxNonHotzone)})</small>` : ""}</span>
                 <strong>${available}${undercovered ? " ⚠" : ""}</strong>
             `;
 

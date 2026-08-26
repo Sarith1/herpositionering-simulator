@@ -15,7 +15,7 @@ test("automatic coverage sends the richest non-hotzone donor to the lowest hotzo
 test("incoming reposition coverage prevents duplicate hotzone reservations",()=>{
  const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:[districts[5].id],vehiclesPerDistrict:fleet([2,2,2,2,2,1,1])});
  engine.ensureCoverage();const count=engine.activeRepositions.size;engine.ensureCoverage();
- assert.equal(count,0);assert.equal(engine.activeRepositions.size,0);
+ assert.equal(count,1);assert.equal(engine.activeRepositions.size,1);
 });
 
 test("multiple hotzones favor the lowest covered one and training never moves vehicles",()=>{
@@ -32,7 +32,7 @@ test("central hotzone state rounds the physical AVAILABLE average upward",()=>{
  assert.equal(state.underMinimumHotzones[0].district.id,districts[1].id);
 });
 
-test("hotzone parity corrects 4 / 2 but does not invert 3 / 2",()=>{
+test("hotzone superiority explicitly permits a projected non-hotzone 3 to hotzone 2 move",()=>{
  const engine=new Engine(),hotzone=districts[1];
  engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:[hotzone.id],vehiclesPerDistrict:fleet([4,2,2,2,1,1,1])});
  let move=engine.ensureCoverage().find(event=>event.type==="repositionStarted");
@@ -40,5 +40,21 @@ test("hotzone parity corrects 4 / 2 but does not invert 3 / 2",()=>{
  assert.deepEqual([engine.getEffectiveCoverage(districts[0].id),engine.getEffectiveCoverage(hotzone.id)],[3,3]);
  engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:[hotzone.id],vehiclesPerDistrict:fleet([3,2,2,2,2,1,1])});
  move=engine.ensureCoverage().find(event=>event.type==="repositionStarted");
- assert.notEqual(move?.origin.id,districts[0].id);
+ assert.equal(move?.origin.id,districts[0].id);
+ assert.deepEqual([engine.getEffectiveCoverage(districts[0].id),engine.getEffectiveCoverage(hotzone.id)],[2,3]);
+});
+
+test("RZ 2 versus RN 3 creates the required geographic correction",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:["RZ"],vehiclesPerDistrict:fleet([3,1,1,1,1,2,1])});
+ const events=engine.ensureCoverage(),move=events.find(event=>event.type==="repositionStarted");
+ assert.ok(move);assert.equal(move.district.id,"RZ");
+ assert.deepEqual([engine.getEffectiveCoverage("RN"),engine.getEffectiveCoverage("RZ")],[2,3]);
+});
+
+test("equal and superior hotzone coverage never starts a reverse move",()=>{
+ const engine=new Engine();
+ engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:["RZ"],vehiclesPerDistrict:fleet([2,2,2,2,2,2,2])});
+ assert.equal(engine.ensureCoverage().some(event=>event.type==="repositionStarted"),false);
+ engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:["RZ"],vehiclesPerDistrict:fleet([2,2,2,2,2,3,2])});
+ assert.equal(engine.ensureCoverage().some(event=>event.type==="repositionStarted"),false);
 });

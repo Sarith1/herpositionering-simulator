@@ -299,11 +299,13 @@ export class MapView {
 
         districts.filter(district => hotzoneIds.has(district.id)).forEach(district => {
             const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            const undercovered = coverageTargets.availableByDistrict[district.id] < coverageTargets.hotzoneMinimum;
+            const maxNonHotzone = Math.max(0, ...districts.filter(item => !hotzoneIds.has(item.id)).map(item => coverageTargets.availableByDistrict[item.id]));
+            const desiredCoverage = Math.max(coverageTargets.hotzoneMinimum, maxNonHotzone);
+            const undercovered = coverageTargets.availableByDistrict[district.id] < desiredCoverage;
             group.setAttribute("class", `hotzone-marker${undercovered ? " hotzone-marker--undercovered" : ""}`);
             group.dataset.hotzoneDistrictId = district.id;
             group.setAttribute("aria-hidden", "true");
-            group.setAttribute("aria-label", undercovered ? `Hotzone onder gewenste dekking, gewenst minimaal ${coverageTargets.hotzoneMinimum}` : "Hotzone goed gedekt");
+            group.setAttribute("aria-label", undercovered ? `Hotzone onder gewenste dekking, gewenst minimaal ${desiredCoverage}` : "Hotzone goed gedekt");
 
             const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             halo.setAttribute("class", "hotzone-halo");
