@@ -2,7 +2,7 @@ import { createEmptyDetentionOccupancy, detentionComplexes, districts, getDetent
 import { calculateTravelTime, findNearestAvailableVehicle, getAdjacentDistrictIds, getDistrictById, getPrisonDistricts, getRouteDistance, getShortestRoute } from "./routing.js";
 import { SimulationClock } from "./simulation-clock.js";
 
-const STATUS = { AVAILABLE:"AVAILABLE", TO_INCIDENT:"TO_INCIDENT", ON_SCENE:"ON_SCENE", TO_PRISON:"TO_PRISON", BUSY:"BUSY", RETURNING:"RETURNING", REPOSITION_QUEUED:"REPOSITION_QUEUED", REPOSITIONING:"REPOSITIONING" };
+const STATUS = { AVAILABLE:"AVAILABLE", TO_INCIDENT:"TO_INCIDENT", ON_SCENE:"ON_SCENE", SUPPORT_ON_SCENE:"SUPPORT_ON_SCENE", TO_PRISON:"TO_PRISON", BUSY:"BUSY", RETURNING:"RETURNING", REPOSITION_QUEUED:"REPOSITION_QUEUED", REPOSITIONING:"REPOSITIONING" };
 const STEPS = { INCIDENT:"INCIDENT", PRISON:"PRISON", TRAVEL_TIME:"TRAVEL_TIME", DISPATCH:"DISPATCH" };
 // Visual pacing only. Operational travel times are calculated separately.
 // One visual movement pace for every drive type. This does not affect the
@@ -16,6 +16,10 @@ export const COVERAGE_GRACE_PERIOD_MS = 2000;
 export const DISPATCH_DEPARTURE_DELAY_MS = 2000;
 export function getRepositionEvaluationDelayMs(random=Math.random){return 2000+random()*1000;}
 export const MULTI_UNIT_TWO_UNIT_CHANCE = 0.80;
+export const SUPPORT_ON_SCENE_TRAVEL_TIME_FACTOR = 0.5;
+export function getSupportOnSceneDurationSeconds(incident){
+ return incident?.type==="detention"&&incident.requiredUnits>1&&Number.isFinite(incident.travelTime)?incident.travelTime*SUPPORT_ON_SCENE_TRAVEL_TIME_FACTOR:0;
+}
 export function determineRequiredUnits(random=Math.random){
  if(random()*100>=sessionConfig.multiUnitIncidentPercentage)return 1;
  return random()<MULTI_UNIT_TWO_UNIT_CHANCE?2:3;
@@ -228,6 +232,12 @@ export class Engine {
    if(incident&&incident.status!=="HANDLED"&&related.every(item=>item.phase===STATUS.RETURNING)){this.handleIncident(incident.id,now);simulator.incidentsHandled++;}
    return[{type:"onSceneComplete",vehicle:v,incident,district:getDistrictById(d.returnTargetDistrictId)}];
   }
+  if(d.phase===STATUS.SUPPORT_ON_SCENE){
+   if(now<d.supportOnSceneUntil)return[];
+   const target=getDistrictById(d.returnTargetDistrictId);
+   this.phase(d,STATUS.RETURNING,this.scheduleMovementStart(`${d.id}-return`,now),d.returnRoute,target);v.status=STATUS.RETURNING;delete v.supportOnSceneStartedAt;delete v.supportOnSceneUntil;simulator.activeRoutes.push({id:`${d.id}-return`,type:"return",pathPoints:d.pathPoints});
+   return[{type:"supportReturning",vehicle:v,district:target}];
+  }
   if(d.phase===STATUS.BUSY){if((now-d.phaseStartTime)/1000<d.busySeconds)return[];if(d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=Math.max(0,(simulator.detentionOccupancy[d.prisonDistrictId]||0)-1);d.occupancyClaimed=false;}if(sessionConfig.operationMode==="repositionTraining"){v.status=STATUS.AVAILABLE;v.incident=null;v.prison=null;v.district=d.prisonDistrictId;this.place(v);this.activeDispatches.delete(d.id);return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"vehicleAvailableAway",vehicle:v,district:getDistrictById(v.district)},...this.ensureCoverage()];}this.phase(d,STATUS.RETURNING,this.scheduleMovementStart(`${d.id}-return`,now),d.prisonReturnRoute,getDistrictById(d.returnTargetDistrictId));v.status=STATUS.RETURNING;simulator.activeRoutes.push({id:`${d.id}-return`,type:"return",pathPoints:d.pathPoints});return[{type:"prisonReleased",vehicle:v,prison:getDistrictById(d.prisonDistrictId)},{type:"returning",vehicle:v}];}
   if(d.phase==="WAITING_AT_INCIDENT")return[];
   if(d.phase===STATUS.TO_INCIDENT&&now<d.departureAt)return[];
@@ -247,8 +257,9 @@ export class Engine {
    for(const related of [...this.activeDispatches.values()].filter(item=>item.incidentId===incident.id)){
     const unit=vehicles.find(item=>item.id===related.vehicleId);if(!unit)continue;
     if(unit.id===incident.transportVehicleId){unit.status=STATUS.TO_PRISON;const prisonTarget={x:related.prisonX,y:related.prisonY};this.phase(related,STATUS.TO_PRISON,this.scheduleMovementStart(`${related.id}-to-prison`,now),related.routeToPrison,prisonTarget);simulator.activeRoutes.push({id:`${related.id}-to-prison`,type:"to-prison",pathPoints:related.pathPoints});events.push({type:"transport",vehicle:unit,district:getDistrictById(related.prisonDistrictId)});
-    }else if(sessionConfig.operationMode==="repositionTraining"){unit.status=STATUS.AVAILABLE;unit.incident=null;unit.prison=null;unit.district=incident.district;this.place(unit);this.activeDispatches.delete(related.id);events.push({type:"vehicleAvailableAway",vehicle:unit,district:getDistrictById(unit.district)});
-    }else{unit.status=STATUS.RETURNING;this.phase(related,STATUS.RETURNING,this.scheduleMovementStart(`${related.id}-return`,now),related.returnRoute,getDistrictById(related.returnTargetDistrictId));simulator.activeRoutes.push({id:`${related.id}-return`,type:"return",pathPoints:related.pathPoints});events.push({type:"returning",vehicle:unit});}
+    }else{
+     const seconds=getSupportOnSceneDurationSeconds(incident);unit.status=STATUS.SUPPORT_ON_SCENE;unit.x=incident.x;unit.y=incident.y;unit.supportOnSceneStartedAt=now;unit.supportOnSceneUntil=now+seconds*1000;related.phase=STATUS.SUPPORT_ON_SCENE;related.phaseStartTime=now;related.supportOnSceneUntil=unit.supportOnSceneUntil;related.busySeconds=seconds;events.push({type:"supportOnSceneStarted",vehicle:unit,incident,seconds});
+    }
    }return events;
   }
   if(d.phase===STATUS.TO_PRISON){v.status=STATUS.BUSY;this.removeRoute(`${d.id}-to-prison`);d.phase=STATUS.BUSY;d.phaseStartTime=now;if(!d.occupancyClaimed){simulator.detentionOccupancy[d.prisonDistrictId]=(simulator.detentionOccupancy[d.prisonDistrictId]||0)+1;d.occupancyClaimed=true;}return[{type:"prisonReached",vehicle:v,prison:getDistrictById(d.prisonDistrictId),occupancy:simulator.detentionOccupancy[d.prisonDistrictId],capacity:sessionConfig.detentionCapacity[d.prisonDistrictId],seconds:d.busySeconds}];}
@@ -295,7 +306,7 @@ export class Engine {
  hasTemporaryCoverageRecovery(){
   // Dispatched units return to their origin and repositioning units become available
   // at their destination. Neither lifecycle is a definitive fleet loss.
-  return this.activeDispatches.size>0||this.activeRepositions.size>0||vehicles.some(v=>[STATUS.BUSY,STATUS.ON_SCENE,STATUS.RETURNING,STATUS.TO_INCIDENT,STATUS.TO_PRISON].includes(v.status));
+  return this.activeDispatches.size>0||this.activeRepositions.size>0||vehicles.some(v=>[STATUS.BUSY,STATUS.ON_SCENE,STATUS.SUPPORT_ON_SCENE,STATUS.RETURNING,STATUS.TO_INCIDENT,STATUS.TO_PRISON].includes(v.status));
  }
  evaluateCoverageFailure(now=performance.now()){
   if(simulator.gameOver)return[];
