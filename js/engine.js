@@ -11,6 +11,7 @@ export const DRIVE_MS_PER_EDGE = 2200;
 export const MOVEMENT_START_GAP_MS = 900;
 export const REPOSITION_TRAINING_DRIVE_MS_PER_EDGE = DRIVE_MS_PER_EDGE;
 export const REPOSITION_COOLDOWN_MS = 2000;
+export const REPOSITION_REVERSAL_COOLDOWN_MS = 10000;
 export const COVERAGE_GRACE_PERIOD_MS = 2000;
 export const DISPATCH_DEPARTURE_DELAY_MS = 2000;
 export function getRepositionEvaluationDelayMs(random=Math.random){return 2000+random()*1000;}
@@ -23,16 +24,17 @@ export function getRandomOnSceneBusySeconds(random=Math.random){return Math.floo
 export const INCIDENT_MARGIN = 38;
 export const INCIDENT_MIN_DISTANCE = 45;
 export function getCoverageTargets(activeRepositions=[]){
- const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),availableByDistrict=Object.fromEntries(districts.map(d=>[d.id,vehicles.filter(v=>v.district===d.id&&v.status===STATUS.AVAILABLE).length]));
+ const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),availableByDistrict=Object.fromEntries(districts.map(d=>[d.id,vehicles.filter(v=>v.district===d.id&&[STATUS.AVAILABLE,STATUS.REPOSITION_QUEUED,STATUS.REPOSITIONING].includes(v.status)).length]));
  const incomingByDistrict=Object.fromEntries(districts.map(d=>[d.id,activeRepositions.filter(r=>r.targetDistrictId===d.id).length]));
- const effectiveByDistrict=Object.fromEntries(districts.map(d=>[d.id,availableByDistrict[d.id]+incomingByDistrict[d.id]]));
+ const outgoingByDistrict=Object.fromEntries(districts.map(d=>[d.id,activeRepositions.filter(r=>(r.originDistrictId||r.fromDistrictId)===d.id).length]));
+ const effectiveByDistrict=Object.fromEntries(districts.map(d=>[d.id,availableByDistrict[d.id]+incomingByDistrict[d.id]-outgoingByDistrict[d.id]]));
  const totalAvailable=Object.values(effectiveByDistrict).reduce((sum,value)=>sum+value,0),averageAvailable=districts.length?totalAvailable/districts.length:0;
  const base=districts.length?Math.floor(totalAvailable/districts.length):0,remainder=districts.length?totalAvailable%districts.length:0;
  const ordered=[...districts].sort((a,b)=>Number(!hotzoneIds.has(a.id))-Number(!hotzoneIds.has(b.id))||effectiveByDistrict[a.id]-effectiveByDistrict[b.id]||a.id.localeCompare(b.id));
  const targetByDistrict=Object.fromEntries(ordered.map((district,index)=>[district.id,base+(index<remainder?1:0)]));
  const hotzoneMinimum=Math.ceil(averageAvailable);
  const hotzoneValues=districts.filter(d=>hotzoneIds.has(d.id)).map(d=>effectiveByDistrict[d.id]),nonHotzoneValues=districts.filter(d=>!hotzoneIds.has(d.id)).map(d=>effectiveByDistrict[d.id]);
- return{totalAvailable,averageAvailable,base,remainder,targetByDistrict,hotzoneMinimum,minHotzoneAvailable:hotzoneValues.length?Math.min(...hotzoneValues):null,maxNonHotzoneAvailable:nonHotzoneValues.length?Math.max(...nonHotzoneValues):null,availableByDistrict,incomingByDistrict,effectiveByDistrict};
+ return{totalAvailable,averageAvailable,base,remainder,targetByDistrict,hotzoneMinimum,minHotzoneAvailable:hotzoneValues.length?Math.min(...hotzoneValues):null,maxNonHotzoneAvailable:nonHotzoneValues.length?Math.max(...nonHotzoneValues):null,availableByDistrict,incomingByDistrict,outgoingByDistrict,effectiveByDistrict};
 }
 export function getRandomIncidentDelaySeconds(){
  const min=Math.max(1,Math.min(60,Number(sessionConfig.autoplayMinDelaySeconds)||1));
@@ -66,7 +68,7 @@ export function pointInPolygon(point, polygon=INCIDENT_SPAWN_POLYGON) {
 function distanceToPolygonEdge(point,polygon=INCIDENT_SPAWN_POLYGON){return Math.min(...polygon.map((start,index)=>{const end=polygon[(index+1)%polygon.length],dx=end.x-start.x,dy=end.y-start.y,t=Math.max(0,Math.min(1,((point.x-start.x)*dx+(point.y-start.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(point.x-(start.x+t*dx),point.y-(start.y+t*dy));}));}
 
 export class Engine {
- constructor(){ this.simulationClock=new SimulationClock(); this.totalPausedMs=0;this.pauseStartedAt=null;this.activeDispatches=new Map(); this.activeRepositions=new Map(); this.repositionQueue=[]; this.movementStartQueue=[]; this.lastMovementStartedAt=-Infinity; this.activeRepositionPlans=new Map(); this.coverageLossStartedAt=new Map(); this.sequence=0; this.repositionSequence=0; this.repositionPlanSequence=0; this.manualRepositionStarting=false; }
+ constructor(){ this.simulationClock=new SimulationClock(); this.totalPausedMs=0;this.pauseStartedAt=null;this.activeDispatches=new Map(); this.activeRepositions=new Map(); this.repositionQueue=[]; this.movementStartQueue=[]; this.lastMovementStartedAt=-Infinity; this.activeRepositionPlans=new Map(); this.coverageLossStartedAt=new Map(); this.lastRepositions=[]; this.sequence=0; this.repositionSequence=0; this.repositionPlanSequence=0; this.manualRepositionStarting=false; }
  simulationNow(wallNow=performance.now()){return wallNow-this.totalPausedMs-(simulator.paused&&this.pauseStartedAt!==null?Math.max(0,wallNow-this.pauseStartedAt):0);}
  scheduleMovementStart(movementId,earliestAt=this.simulationNow()){const startAt=Math.max(earliestAt,this.lastMovementStartedAt+MOVEMENT_START_GAP_MS);this.lastMovementStartedAt=startAt;this.movementStartQueue.push({movementId,startAt});return startAt;}
  releaseMovementStarts(now){this.movementStartQueue=this.movementStartQueue.filter(item=>item.startAt>now);}
@@ -259,25 +261,27 @@ export class Engine {
   const events=[];for(const incident of due){incident.coverageEvaluatedAt=now;incident.coverageEvaluationAt=null;this.coverageLossStartedAt.clear();events.push({type:"log",message:"[DEKKING] Reactietijd verstreken; gebiedsdekking wordt beoordeeld."},...this.ensureCoverage(now));}return events;
  }
  updateReposition(r,now){const v=vehicles.find(x=>x.id===r.vehicleId);if(!v)return[];const p=Math.min(1,(now-r.phaseStartTime)/Math.max(900,getRouteDistance(r.route)*this.getDriveMsPerEdge()));this.move(v,r.route,p,r);if(p<1)return[];v.district=r.targetDistrictId;v.status=STATUS.AVAILABLE;v.lastRepositionedAt=now;this.place(v);this.activeRepositions.delete(r.id);this.removeRoute(r.id);
+  this.lastRepositions.push({vehicleId:v.id,fromDistrictId:r.originDistrictId,toDistrictId:r.targetDistrictId,completedAt:now,type:r.type});this.lastRepositions=this.lastRepositions.filter(item=>now-item.completedAt<=REPOSITION_REVERSAL_COOLDOWN_MS);
   // Never execute an automatic cascade blindly: release its reservations and
   // calculate a fresh balanced plan after every arrival.
   if(r.planId&&r.type==="automatic"){const stale=this.repositionQueue.filter(move=>move.planId===r.planId);for(const move of stale){const reserved=vehicles.find(item=>item.id===move.vehicleId);if(reserved?.status===STATUS.REPOSITION_QUEUED)reserved.status=STATUS.AVAILABLE;}this.repositionQueue=this.repositionQueue.filter(move=>move.planId!==r.planId);this.activeRepositionPlans.delete(r.planId);}
   else if(r.planId){const plan=this.activeRepositionPlans.get(r.planId);if(plan&&!plan.moves.some(move=>this.activeRepositions.has(move.id))&&!this.repositionQueue.some(move=>move.planId===r.planId))this.activeRepositionPlans.delete(r.planId);}
   return[{type:"repositionComplete",repositionType:r.type,vehicle:v,district:getDistrictById(v.district),origin:getDistrictById(r.originDistrictId)},...this.ensureCoverage()];}
  getIncomingRepositions(districtId){return[...this.activeRepositions.values(),...this.repositionQueue].filter(r=>r.targetDistrictId===districtId).length;}
- getEffectiveCoverage(districtId){return this.availableCount(districtId)+this.getIncomingRepositions(districtId);}
+ getEffectiveCoverage(districtId){return this.getCoverageTargets().effectiveByDistrict[districtId]||0;}
  getCoverageTargets(){return getCoverageTargets([...this.activeRepositions.values(),...this.repositionQueue]);}
  getMostUndercoveredHotzone(targets=this.getCoverageTargets()){
   const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]);
   return districts.filter(d=>hotzoneIds.has(d.id)).sort((a,b)=>targets.effectiveByDistrict[a.id]-targets.effectiveByDistrict[b.id]||(targets.hotzoneMinimum-targets.effectiveByDistrict[b.id])-(targets.hotzoneMinimum-targets.effectiveByDistrict[a.id]))[0]||null;
  }
  findCoverageDonor(target,targets,hotzonePriority=false){
-  const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),targetCoverage=targets.effectiveByDistrict[target.id];
+  const hotzoneIds=new Set(sessionConfig.hotzoneDistrictIds||[]),targetCoverage=targets.effectiveByDistrict[target.id],now=this.simulationNow();
   return districts.filter(d=>d.id!==target.id&&this.availableCount(d.id)>0&&getShortestRoute(d.id,target.id).length).filter(d=>{
-   const after=this.availableCount(d.id)-1;
-   if(hotzoneIds.has(d.id))return after>=targets.hotzoneMinimum&&after>=targets.maxNonHotzoneAvailable;
-   return hotzonePriority?after>=targetCoverage:after>=1;
-  }).sort((a,b)=>Number(hotzoneIds.has(a.id))-Number(hotzoneIds.has(b.id))||this.availableCount(b.id)-this.availableCount(a.id)||getRouteDistance(getShortestRoute(a.id,target.id))-getRouteDistance(getShortestRoute(b.id,target.id)))[0]||null;
+   const donorCoverage=targets.effectiveByDistrict[d.id],safe=donorCoverage-1>=targetCoverage+1;
+   if(!safe)return false;
+   const reverse=this.lastRepositions.some(item=>item.type==="automatic"&&item.fromDistrictId===target.id&&item.toDistrictId===d.id&&now-item.completedAt<REPOSITION_REVERSAL_COOLDOWN_MS);
+   return !reverse;
+  }).sort((a,b)=>Number(!getAdjacentDistrictIds(a.id).includes(target.id))-Number(!getAdjacentDistrictIds(b.id).includes(target.id))||Number(hotzoneIds.has(a.id))-Number(hotzoneIds.has(b.id))||targets.effectiveByDistrict[b.id]-targets.effectiveByDistrict[a.id]||getRouteDistance(getShortestRoute(a.id,target.id))-getRouteDistance(getShortestRoute(b.id,target.id)))[0]||null;
  }
  getCriticalCoverageDistricts(){return districts.filter(d=>this.availableCount(d.id)===0);}
  hasCriticalCoverageFailure(){return this.getCriticalCoverageDistricts().length>0;}
@@ -342,7 +346,15 @@ export class Engine {
   }
   if(!plan.moves.some(move=>move.toDistrictId===plan.targetDistrictId))return false;
   const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
-  return [...affected].every(districtId=>districtId===plan.targetDistrictId||this.getProjectedCoverage(districtId,plan.moves)>=(hotzones.has(districtId)?targets.hotzoneMinimum:1));
+  if(plan.repositionType==="manual")return [...affected].every(districtId=>districtId===plan.targetDistrictId||this.getProjectedCoverage(districtId,plan.moves)>=(hotzones.has(districtId)?targets.hotzoneMinimum:1));
+  const projected=Object.fromEntries(districts.map(d=>[d.id,targets.effectiveByDistrict[d.id]+plan.moves.filter(move=>move.toDistrictId===d.id).length-plan.moves.filter(move=>move.fromDistrictId===d.id).length]));
+  // Judge every cascade link on its atomic end state, not on temporary gaps.
+  if(!plan.moves.every(move=>projected[move.fromDistrictId]>=projected[move.toDistrictId]))return false;
+  const beforeZero=districts.filter(d=>targets.effectiveByDistrict[d.id]===0).length,afterZero=districts.filter(d=>projected[d.id]===0).length;
+  const beforeSpread=Math.max(...Object.values(targets.effectiveByDistrict))-Math.min(...Object.values(targets.effectiveByDistrict));
+  const afterSpread=Math.max(...Object.values(projected))-Math.min(...Object.values(projected));
+  const beforeImbalance=Object.values(targets.effectiveByDistrict).reduce((sum,value)=>sum+value*value,0),afterImbalance=Object.values(projected).reduce((sum,value)=>sum+value*value,0);
+  return afterZero<beforeZero||afterSpread<beforeSpread||afterImbalance<beforeImbalance;
  }
  startRepositionPlan(plan){
   // Validate the complete reservation immediately before mutating any vehicle.
@@ -363,7 +375,7 @@ export class Engine {
   const movements=[...this.activeRepositions.values()];
   const blockedDistricts=new Set(movements.flatMap(item=>[item.originDistrictId,item.targetDistrictId]));
   const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
-  const vehicle=vehicles.filter(item=>item.status===STATUS.AVAILABLE&&!item.incident&&item.district!==item.homeDistrict&&now-(item.lastRepositionedAt??-Infinity)>=REPOSITION_COOLDOWN_MS&&!blockedDistricts.has(item.district)&&!blockedDistricts.has(item.homeDistrict)&&this.getEffectiveCoverage(item.district)>targets.targetByDistrict[item.district]&&this.getEffectiveCoverage(item.homeDistrict)<targets.targetByDistrict[item.homeDistrict]).sort((a,b)=>Number(isSpecialVehicle(b))-Number(isSpecialVehicle(a)))[0];
+  const vehicle=vehicles.filter(item=>item.status===STATUS.AVAILABLE&&!item.incident&&item.district!==item.homeDistrict&&now-(item.lastRepositionedAt??-Infinity)>=REPOSITION_COOLDOWN_MS&&!blockedDistricts.has(item.district)&&!blockedDistricts.has(item.homeDistrict)&&this.getEffectiveCoverage(item.district)-1>=this.getEffectiveCoverage(item.homeDistrict)+1).sort((a,b)=>Number(isSpecialVehicle(b))-Number(isSpecialVehicle(a)))[0];
   if(!vehicle)return[];
   const origin=getDistrictById(vehicle.district),target=getDistrictById(vehicle.homeDistrict),route=getShortestRoute(origin.id,target.id);
   if(!origin||!target||!route.length)return[];
@@ -378,12 +390,10 @@ export class Engine {
    events.push(...this.evaluateCoverageFailure());return events;
   }
   if(this.activeRepositions.size||this.repositionQueue.length)return this.evaluateCoverageFailure();
-  const balanced=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
-  const target=districts.filter(d=>balanced.effectiveByDistrict[d.id]<balanced.targetByDistrict[d.id]).sort((a,b)=>Number(balanced.effectiveByDistrict[a.id]!==0)-Number(balanced.effectiveByDistrict[b.id]!==0)||Number(hotzones.has(b.id))-Number(hotzones.has(a.id))||(balanced.targetByDistrict[b.id]-balanced.effectiveByDistrict[b.id])-(balanced.targetByDistrict[a.id]-balanced.effectiveByDistrict[a.id]))[0];
-  if(target){const donor=districts.filter(d=>d.id!==target.id&&balanced.effectiveByDistrict[d.id]>balanced.targetByDistrict[d.id]&&this.canDistrictDonateVehicle(d.id,{targets:balanced})).sort((a,b)=>balanced.effectiveByDistrict[b.id]-balanced.effectiveByDistrict[a.id]||getRouteDistance(getShortestRoute(a.id,target.id))-getRouteDistance(getShortestRoute(b.id,target.id)))[0];const event=donor&&this.startAutomaticReposition(donor,target);if(event)return event.planEvents||[event];}
-  const hotzoneAutomation=["automatic","autoplay"].includes(mode)&&(sessionConfig.hotzoneDistrictIds||[]).length>0;
-  if(hotzoneAutomation){for(let attempts=0;attempts<vehicles.length;attempts++){const targets=this.getCoverageTargets(),target=this.getMostUndercoveredHotzone(targets);if(!target)break;const current=targets.effectiveByDistrict[target.id],needsMinimum=current<targets.hotzoneMinimum,needsParity=targets.maxNonHotzoneAvailable!==null&&current<targets.maxNonHotzoneAvailable;if(!needsMinimum&&!needsParity)break;const donor=this.findCoverageDonor(target,targets,true);if(!donor)break;const event=this.startAutomaticReposition(donor,target);if(!event)break;events.push(...(event.planEvents||[event]));}}
-  for(const target of districts){if(this.getEffectiveCoverage(target.id)>0)continue;const targets=this.getCoverageTargets(),donor=this.findCoverageDonor(target,targets,false);if(!donor)break;const event=this.startAutomaticReposition(donor,target);if(event)events.push(...(event.planEvents||[event]));}
+  const targets=this.getCoverageTargets(),hotzones=new Set(sessionConfig.hotzoneDistrictIds||[]);
+  // Targets remain useful UI information, but never trigger a move themselves.
+  const candidates=[...districts].sort((a,b)=>targets.effectiveByDistrict[a.id]-targets.effectiveByDistrict[b.id]||Number(hotzones.has(b.id))-Number(hotzones.has(a.id))||a.id.localeCompare(b.id));
+  for(const target of candidates){const donor=this.findCoverageDonor(target,targets,hotzones.has(target.id));if(!donor)continue;const event=this.startAutomaticReposition(donor,target);if(event)return event.planEvents||[event];}
   events.push(...this.evaluateHomeReturns(),...this.evaluateCoverageFailure());return events;
  }
  startManualReposition(){
@@ -436,7 +446,7 @@ export class Engine {
   return this.result(true,training?`[MODUS] Herpositioneringsmodus ${state.running?"gestart":"gepauzeerd"}. ${state.running?"Beheer de dekking met H.":"De volledige simulatie staat stil."}`:`[MODUS] Autoplay ${state.running?"gestart":"gepauzeerd"}. ${state.running?"De simulatie loopt.":"De volledige simulatie staat stil."}`);
  }
  getControlState(){const blocked=simulator.gameOver,mode=sessionConfig.operationMode,autoplay=["autoplay","repositionTraining"].includes(mode),manual=mode==="manualVehicle",selecting=simulator.vehicleSelection.active,repositionState=simulator.manualRepositionState,repositioning=repositionState.phase!=="idle";return{realisticTime:this.simulationClock.displayTime,incident:!blocked&&!autoplay&&this.step===STEPS.INCIDENT,prison:!blocked&&!autoplay&&this.step===STEPS.PRISON,travelTime:!blocked&&!autoplay&&this.step===STEPS.TRAVEL_TIME,dispatch:!blocked&&mode==="automatic"&&this.step===STEPS.DISPATCH,confirmVehicle:!blocked&&manual&&selecting&&(simulator.vehicleSelection.selectedVehicleIds||[]).length>0&&!simulator.vehicleSelection.confirming,autoplayToggle:!blocked&&autoplay,reset:true,currentStep:this.step,gameOver:simulator.gameOver,mode,autoplayRunning:simulator.autoplayState.running,vehicleSelectionActive:selecting,manualRepositionActive:repositioning,manualRepositionPhase:repositionState.phase,manualRepositionStart:!blocked&&repositionState.phase==="idle"&&(autoplay||this.step===STEPS.INCIDENT)&&(mode==="repositionTraining"||!selecting),manualRepositionConfirm:false};}
- reset(o={}){this.simulationClock.reset();this.totalPausedMs=0;this.pauseStartedAt=null;Object.assign(simulator,{paused:false,activeIncident:null,selectedPrison:null,travelTime:null,detentionOccupancy:createEmptyDetentionOccupancy(),incidentsHandled:0,gameOver:false,failureInspectionMode:false,activeRoute:[],activeRoutes:[],incidentHistory:[],repositioningFailure:null,incidents:[],selectedVehicleId:null,selectedVehicleIds:[],vehicleSelection:{active:false,incidentId:null,selectedVehicleId:null,selectedVehicleIds:[],confirming:false},inputCycleState:{step:STEPS.INCIDENT,incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null,selectedVehicleIds:[]},manualRepositionState:{phase:"idle",selectedVehicleId:null,targetDistrictId:null},autoplayState:{running:false,nextIncidentAt:null,nextDelaySeconds:null}});if(o.restoreDefaults)resetSessionConfigDefaults();if(o.availablePrisons)setAvailablePrisons(o.availablePrisons);if(o.detentionCapacity)setDetentionCapacity(o.detentionCapacity);if(o.vehiclesPerDistrict)setVehiclesPerDistrict(o.vehiclesPerDistrict);if(o.hotzoneDistrictIds!==undefined)setHotzoneDistrictIds(o.hotzoneDistrictIds);if(o.hotzoneIncidentPercentage!==undefined)sessionConfig.hotzoneIncidentPercentage=Math.max(0,Math.min(100,Number(o.hotzoneIncidentPercentage)));if(o.operationMode)sessionConfig.operationMode=o.operationMode;if(o.onSceneIncidentPercentage!==undefined)sessionConfig.onSceneIncidentPercentage=Math.max(0,Math.min(100,Number(o.onSceneIncidentPercentage)));if(o.multiUnitIncidentPercentage!==undefined)sessionConfig.multiUnitIncidentPercentage=Math.max(0,Math.min(100,Number(o.multiUnitIncidentPercentage)));if(o.autoplayMinDelaySeconds!==undefined)sessionConfig.autoplayMinDelaySeconds=Math.max(1,Math.min(60,Number(o.autoplayMinDelaySeconds)));if(o.autoplayMaxDelaySeconds!==undefined)sessionConfig.autoplayMaxDelaySeconds=Math.max(sessionConfig.autoplayMinDelaySeconds,Math.min(60,Number(o.autoplayMaxDelaySeconds)));if(o.travelTimeMinSeconds!==undefined)sessionConfig.travelTimeMinSeconds=Math.max(30,Math.min(180,Number(o.travelTimeMinSeconds)));if(o.travelTimeMaxSeconds!==undefined)sessionConfig.travelTimeMaxSeconds=Math.max(30,Math.min(180,Number(o.travelTimeMaxSeconds)));if(sessionConfig.travelTimeMinSeconds>sessionConfig.travelTimeMaxSeconds){if(o.travelTimeMinSeconds!==undefined)sessionConfig.travelTimeMaxSeconds=sessionConfig.travelTimeMinSeconds;else sessionConfig.travelTimeMinSeconds=sessionConfig.travelTimeMaxSeconds;}initializeVehicles();this.activeDispatches.clear();this.activeRepositions.clear();this.repositionQueue.length=0;this.movementStartQueue.length=0;this.lastMovementStartedAt=-Infinity;this.activeRepositionPlans.clear();this.coverageLossStartedAt.clear();return this.result(true,sessionConfig.operationMode==="autoplay"?"[MODUS] Autoplay klaar — druk op Play.":sessionConfig.operationMode==="repositionTraining"?"[MODUS] Herpositioneringsmodus klaar — start de oefening en beheer de dekking met H.":"[RESET] Nieuwe oefening gestart.");}
+ reset(o={}){this.simulationClock.reset();this.totalPausedMs=0;this.pauseStartedAt=null;Object.assign(simulator,{paused:false,activeIncident:null,selectedPrison:null,travelTime:null,detentionOccupancy:createEmptyDetentionOccupancy(),incidentsHandled:0,gameOver:false,failureInspectionMode:false,activeRoute:[],activeRoutes:[],incidentHistory:[],repositioningFailure:null,incidents:[],selectedVehicleId:null,selectedVehicleIds:[],vehicleSelection:{active:false,incidentId:null,selectedVehicleId:null,selectedVehicleIds:[],confirming:false},inputCycleState:{step:STEPS.INCIDENT,incidentId:null,prisonId:null,travelTime:null,selectedVehicleId:null,selectedVehicleIds:[]},manualRepositionState:{phase:"idle",selectedVehicleId:null,targetDistrictId:null},autoplayState:{running:false,nextIncidentAt:null,nextDelaySeconds:null}});if(o.restoreDefaults)resetSessionConfigDefaults();if(o.availablePrisons)setAvailablePrisons(o.availablePrisons);if(o.detentionCapacity)setDetentionCapacity(o.detentionCapacity);if(o.vehiclesPerDistrict)setVehiclesPerDistrict(o.vehiclesPerDistrict);if(o.hotzoneDistrictIds!==undefined)setHotzoneDistrictIds(o.hotzoneDistrictIds);if(o.hotzoneIncidentPercentage!==undefined)sessionConfig.hotzoneIncidentPercentage=Math.max(0,Math.min(100,Number(o.hotzoneIncidentPercentage)));if(o.operationMode)sessionConfig.operationMode=o.operationMode;if(o.onSceneIncidentPercentage!==undefined)sessionConfig.onSceneIncidentPercentage=Math.max(0,Math.min(100,Number(o.onSceneIncidentPercentage)));if(o.multiUnitIncidentPercentage!==undefined)sessionConfig.multiUnitIncidentPercentage=Math.max(0,Math.min(100,Number(o.multiUnitIncidentPercentage)));if(o.autoplayMinDelaySeconds!==undefined)sessionConfig.autoplayMinDelaySeconds=Math.max(1,Math.min(60,Number(o.autoplayMinDelaySeconds)));if(o.autoplayMaxDelaySeconds!==undefined)sessionConfig.autoplayMaxDelaySeconds=Math.max(sessionConfig.autoplayMinDelaySeconds,Math.min(60,Number(o.autoplayMaxDelaySeconds)));if(o.travelTimeMinSeconds!==undefined)sessionConfig.travelTimeMinSeconds=Math.max(30,Math.min(180,Number(o.travelTimeMinSeconds)));if(o.travelTimeMaxSeconds!==undefined)sessionConfig.travelTimeMaxSeconds=Math.max(30,Math.min(180,Number(o.travelTimeMaxSeconds)));if(sessionConfig.travelTimeMinSeconds>sessionConfig.travelTimeMaxSeconds){if(o.travelTimeMinSeconds!==undefined)sessionConfig.travelTimeMaxSeconds=sessionConfig.travelTimeMinSeconds;else sessionConfig.travelTimeMinSeconds=sessionConfig.travelTimeMaxSeconds;}initializeVehicles();this.activeDispatches.clear();this.activeRepositions.clear();this.repositionQueue.length=0;this.movementStartQueue.length=0;this.lastMovementStartedAt=-Infinity;this.activeRepositionPlans.clear();this.coverageLossStartedAt.clear();this.lastRepositions.length=0;return this.result(true,sessionConfig.operationMode==="autoplay"?"[MODUS] Autoplay klaar — druk op Play.":sessionConfig.operationMode==="repositionTraining"?"[MODUS] Herpositioneringsmodus klaar — start de oefening en beheer de dekking met H.":"[RESET] Nieuwe oefening gestart.");}
  triggerRepositioningFailure(d,now=performance.now()){this.simulationClock.pause(now);this.clearVehicleSelection();this.clearManualReposition();simulator.gameOver=true;simulator.failureInspectionMode=false;Object.assign(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});simulator.repositioningFailure={districtName:d.name,coveragePercentage:this.calculateCoveragePercentage(),availableVehicles:vehicles.filter(v=>v.status===STATUS.AVAILABLE).length,title:repositioningFailureConfig.title,explanation:`${d.name} had langer dan 2 seconden geen beschikbare eenheid.`};return{type:"repositioningFailure",failure:simulator.repositioningFailure};}
  cancelCorruptDispatch(d){
   const v=vehicles.find(vehicle=>vehicle.id===d?.vehicleId),incident=simulator.incidents.find(item=>item.id===d?.incidentId);
