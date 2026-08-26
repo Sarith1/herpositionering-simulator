@@ -561,7 +561,7 @@ main{
 .vehicle { cursor:default; outline:none; }
 .vehicle-symbol { pointer-events:none; transition:filter .18s ease, transform .18s ease, opacity .18s ease; transform-box:fill-box; transform-origin:center; }
 .vehicle-callsign{pointer-events:none;fill:#d9f2ff;font-size:9px;font-weight:800;letter-spacing:.25px;paint-order:stroke;stroke:#071421;stroke-width:2px;stroke-linejoin:round}
-.vehicle-status-badge{pointer-events:none;font-family:inherit;font-size:8px;font-weight:700;letter-spacing:.05em;paint-order:stroke;stroke:#071421;stroke-width:2px;text-transform:uppercase}
+.vehicle-status-badge{pointer-events:none;font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.07em;paint-order:stroke;stroke:#071421;stroke-width:2.5px;text-transform:uppercase}
 .vehicle-status-badge.status-incident{fill:#fb923c}
 .vehicle-status-badge.status-prison{fill:#22d3ee}
 .vehicle-status-badge.status-reposition{fill:#c084fc}
@@ -575,6 +575,9 @@ main{
 .vehicle-selection-outline,.vehicle-status-halo{fill:none;opacity:0;pointer-events:none}
 .vehicle--selected .vehicle-selection-outline{opacity:1;stroke:#7dd3ff;stroke-width:3;filter:drop-shadow(0 0 5px #2da8ff)}
 .vehicle.repositioning .vehicle-status-halo{opacity:1;stroke:#a855f7;stroke-width:2.5;animation:vehicleRepositionHalo 1.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.vehicle.status-incident .vehicle-status-halo{opacity:.8;stroke:#fb6a3d;stroke-width:2}
+.vehicle.status-prison .vehicle-status-halo{opacity:.85;stroke:#22d3ee;stroke-width:2}
+.vehicle.status-return .vehicle-status-halo{opacity:.75;stroke:#2dd4bf;stroke-width:2}
 .vehicle.busy .vehicle-symbol { opacity:.58; filter:grayscale(.35); }
 .vehicle--selectable { cursor:pointer; }
 .vehicle--selectable .vehicle-symbol { filter:drop-shadow(0 0 7px #7dd3ff) drop-shadow(0 0 12px #2da8ff); }
@@ -645,13 +648,14 @@ footer button:disabled {
 
 .route-line.route--incident{stroke:#fb6a3d;stroke-width:3px;stroke-dasharray:none;opacity:.88}
 .route-line.route--prison{stroke:#22d3ee;stroke-width:3px;stroke-dasharray:none;opacity:.88}
-.route-line.route--reposition{stroke:#a855f7;stroke-width:4px;stroke-dasharray:none;opacity:.9}
+.route-line.route--reposition{stroke:#a855f7;stroke-width:5px;stroke-dasharray:14 6;opacity:.95;animation:repositionRouteFlow 1s linear infinite}
 .route-line.route--return{stroke:#2dd4bf;stroke-width:3px;stroke-dasharray:10 7;opacity:.85}
 .legend-route{display:inline-block;width:28px;height:0;border-top:3px solid;margin-right:7px;vertical-align:middle}
 .legend-route.route--incident{border-color:#fb6a3d}
 .legend-route.route--prison{border-color:#22d3ee}
 .legend-route.route--reposition{border-color:#a855f7;border-width:4px}
 .legend-route.route--return{border-color:#2dd4bf;border-top-style:dashed}
+@keyframes repositionRouteFlow{to{stroke-dashoffset:-20}}
 
 .district-code {
     fill:#fff;

@@ -36,7 +36,7 @@ test("a late returning vehicle does not count as available coverage",()=>{
  assert.equal(simulator.gameOver,true);
 });
 
-test("an incoming reposition only prevents failure once it has arrived",()=>{
+test("a relevant queued or incoming reposition prevents premature failure",()=>{
  const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:fleet([0,2,1,1,1,1,1])});
  const move=engine.startAutomaticReposition(districts[1],districts[0]);
  engine.evaluateCoverageFailure(1000);
@@ -45,7 +45,17 @@ test("an incoming reposition only prevents failure once it has arrived",()=>{
  assert.equal(simulator.gameOver,false);
  engine.evaluateCoverageFailure(3000);
  assert.equal(move.type,"repositionStarted");
- assert.equal(simulator.gameOver,true);
+ assert.equal(simulator.gameOver,false);
+});
+
+test("a district needs at least two available vehicles before it can donate",()=>{
+ const engine=new Engine();engine.reset({restoreDefaults:true,vehiclesPerDistrict:fleet([0,1,1,1,1,1,1])});
+ assert.equal(engine.canAnyDistrictDonateVehicle(),false);
+ vehicles.find(vehicle=>vehicle.district===districts[1].id).status="AVAILABLE";
+ // Add one independent available unit to RS to exercise the exact threshold.
+ const donor={...vehicles.find(vehicle=>vehicle.district===districts[1].id),id:"DONOR-TEST",callsign:"DONOR-TEST"};vehicles.push(donor);
+ assert.equal(engine.canDistrictDonateVehicle(districts[1].id),true);
+ vehicles.pop();
 });
 
 test("restored coverage gets a fresh grace period after a later loss",()=>{
