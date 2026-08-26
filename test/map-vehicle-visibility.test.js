@@ -217,3 +217,13 @@ test("ON_SCENE vehicles disappear two seconds after their own arrival and reappe
     assert.equal(element.style.pointerEvents, "");
     assert.equal(element.attributes["aria-hidden"], undefined);
 });
+
+test("SUPPORT_ON_SCENE vehicles disappear after two seconds and reappear when returning", () => {
+    const engine = new Engine();engine.reset();const vehicle = vehicles[0];const element = new FakeVehicleElement();
+    vehicle.status = "SUPPORT_ON_SCENE";vehicle.supportOnSceneStartedAt = 1000;
+    assert.equal(isVehicleVisible(vehicle, 1000 + ON_SCENE_VISIBLE_MS - 1), true);
+    MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y, 1000 + ON_SCENE_VISIBLE_MS);
+    assert.equal(element.style.display, "none");assert.equal(element.style.pointerEvents, "none");assert.equal(element.attributes["aria-hidden"], "true");assert.equal(element.attributes.tabindex, "-1");
+    vehicle.status = "RETURNING";delete vehicle.supportOnSceneStartedAt;MapView.prototype.updateVehicleElement(element, vehicle, vehicle.x, vehicle.y, 5000);
+    assert.equal(element.style.display, "");assert.equal(element.style.pointerEvents, "");assert.equal(element.attributes["aria-hidden"], undefined);
+});

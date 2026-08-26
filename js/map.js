@@ -51,8 +51,9 @@ export function getVehicleSlotOffset(index, vehicleCount = 1) {
 
 export function isVehicleVisible(vehicle, now = performance.now()) {
     if (vehicle.status === "BUSY") return false;
-    if (vehicle.status !== "ON_SCENE") return true;
-    return Number.isFinite(vehicle.onSceneArrivedAt) && now - vehicle.onSceneArrivedAt < ON_SCENE_VISIBLE_MS;
+    if (vehicle.status === "ON_SCENE") return Number.isFinite(vehicle.onSceneArrivedAt) && now - vehicle.onSceneArrivedAt < ON_SCENE_VISIBLE_MS;
+    if (vehicle.status === "SUPPORT_ON_SCENE") return Number.isFinite(vehicle.supportOnSceneStartedAt) && now - vehicle.supportOnSceneStartedAt < ON_SCENE_VISIBLE_MS;
+    return true;
 }
 
 export const repositionRules = [

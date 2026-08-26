@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, determineRequiredUnits } from "../js/engine.js";
+import { Engine, determineRequiredUnits, getSupportOnSceneDurationSeconds } from "../js/engine.js";
 import { sessionConfig, simulator, vehicles } from "../js/data.js";
 
 function setup(mode="automatic", percentage=0) {
@@ -62,10 +62,31 @@ test("interactive OPEN incident is not consumed by background assignment",()=>{
  engine.update(performance.now());assert.equal(incident.status,"OPEN");assert.deepEqual(incident.assignedVehicleIds,[]);assert.equal(simulator.inputCycleState.incidentId,incident.id);assert.equal(simulator.inputCycleState.step,"PRISON");
 });
 
-test("incident clears only after all arrivals and only one unit transports",()=>{
+test("incident clears only after all arrivals and support units remain on scene",()=>{
   const engine=setup();const incident=prepareCycle(engine,3);engine.dispatchVehicle();const dispatches=[...engine.activeDispatches.values()].filter(d=>d.incidentId===incident.id);
   engine.updateDispatch(dispatches[0],Infinity);engine.updateDispatch(dispatches[1],Infinity);assert.notEqual(incident.status,"HANDLED");
   engine.updateDispatch(dispatches[2],Infinity);assert.equal(incident.status,"HANDLED");
-  assert.equal(dispatches.filter(d=>d.phase==="TO_PRISON").length,1);assert.equal(dispatches.filter(d=>d.phase==="RETURNING").length,2);
+  assert.equal(dispatches.filter(d=>d.phase==="TO_PRISON").length,1);assert.equal(dispatches.filter(d=>d.phase==="SUPPORT_ON_SCENE").length,2);
+  assert.equal(dispatches.filter(d=>d.phase==="SUPPORT_ON_SCENE").every(d=>d.busySeconds===incident.travelTime/2),true);
   assert.equal(simulator.incidentsHandled,1);
+});
+
+test("support duration uses half of effective detention travel time only",()=>{
+ assert.equal(getSupportOnSceneDurationSeconds({type:"detention",requiredUnits:1,travelTime:120}),0);
+ assert.equal(getSupportOnSceneDurationSeconds({type:"detention",requiredUnits:2,travelTime:120}),60);
+ assert.equal(getSupportOnSceneDurationSeconds({type:"detention",requiredUnits:3,travelTime:180}),90);
+ assert.equal(getSupportOnSceneDurationSeconds({type:"detention",requiredUnits:2,travelTime:240,baseTravelTime:120,capacityExceeded:true}),120);
+ assert.equal(getSupportOnSceneDurationSeconds({type:"onscene",requiredUnits:2,travelTime:120}),0);
+});
+
+test("support timers start together, pause with simulation time, then queue home returns",()=>{
+ const engine=setup();const incident=prepareCycle(engine,3);incident.travelTime=120;engine.dispatchVehicle();
+ const dispatches=[...engine.activeDispatches.values()].filter(d=>d.incidentId===incident.id);
+ dispatches.forEach(d=>{d.departureAt=0;d.phaseStartTime=0;d.routeToIncident=[];d.fromX=incident.x;d.fromY=incident.y;d.toX=incident.x;d.toY=incident.y;});
+ engine.updateDispatch(dispatches[0],1000000);engine.updateDispatch(dispatches[1],1000000);engine.updateDispatch(dispatches[2],1000000);
+ const supports=dispatches.filter(d=>d.phase==="SUPPORT_ON_SCENE");assert.equal(supports.length,2);
+ assert.deepEqual(supports.map(d=>d.supportOnSceneUntil),[1060000,1060000]);
+ simulator.paused=true;assert.deepEqual(engine.update(90000),[]);assert.equal(supports.every(d=>d.phase==="SUPPORT_ON_SCENE"),true);simulator.paused=false;
+ supports.flatMap(d=>engine.updateDispatch(d,1060000));assert.equal(supports.every(d=>d.phase==="RETURNING"),true);
+ assert.equal(new Set(supports.map(d=>d.phaseStartTime)).size,2);assert.equal(supports.every(d=>d.returnTargetDistrictId===vehicles.find(v=>v.id===d.vehicleId).homeDistrict),true);
 });
