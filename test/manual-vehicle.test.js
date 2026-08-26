@@ -71,10 +71,10 @@ test("autoplay uses a new inclusive random delay after every incident and resume
   try {
     const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});
     assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
-    engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,true);assert.equal(simulator.autoplayState.nextDelaySeconds,1);
+    engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,true);assert.equal(simulator.autoplayState.nextDelaySeconds,4);
     let due=simulator.autoplayState.nextIncidentAt;engine.update(due);assert.equal(engine.sequence,1);
     assert.equal(simulator.autoplayState.nextDelaySeconds>=1&&simulator.autoplayState.nextDelaySeconds<=20,true);
-    engine.toggleAutoplay();assert.deepEqual(simulator.autoplayState,{running:false,nextIncidentAt:null,nextDelaySeconds:null});
+    engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,false);assert.equal(simulator.autoplayState.nextIncidentAt,due+simulator.autoplayState.nextDelaySeconds*1000);
     const count=engine.sequence;engine.update(due+50000);assert.equal(engine.sequence,count);
     engine.toggleAutoplay();assert.equal(simulator.autoplayState.running,true);assert.ok(simulator.autoplayState.nextIncidentAt>due);
   } finally {Math.random=originalRandom;}
@@ -83,7 +83,7 @@ test("autoplay uses a new inclusive random delay after every incident and resume
 test("twenty autoplay schedules are in range and are recalculated",()=>{
   const engine=new Engine();engine.reset({operationMode:"autoplay",multiUnitIncidentPercentage:0});
   const delays=Array.from({length:20},(_,i)=>{const original=Math.random;Math.random=()=>i/20;const delay=engine.scheduleNextIncident(1000*i);Math.random=original;return delay;});
-  assert.equal(delays.every(delay=>delay>=1&&delay<=20),true);assert.ok(new Set(delays).size>1);
+  assert.equal(delays.every(delay=>delay>=4&&delay<=12),true);assert.ok(new Set(delays).size>1);
 });
 
 test("configured autoplay range is inclusive and survives current-session reset",()=>{
@@ -93,7 +93,7 @@ test("configured autoplay range is inclusive and survives current-session reset"
     Math.random=()=>0;assert.equal(engine.scheduleNextIncident(0),4);
     Math.random=()=>.9999;assert.equal(engine.scheduleNextIncident(0),12);
     engine.reset();assert.equal(sessionConfig.autoplayMinDelaySeconds,4);assert.equal(sessionConfig.autoplayMaxDelaySeconds,12);
-    engine.reset({restoreDefaults:true});assert.equal(sessionConfig.autoplayMinDelaySeconds,1);assert.equal(sessionConfig.autoplayMaxDelaySeconds,20);
+    engine.reset({restoreDefaults:true});assert.equal(sessionConfig.autoplayMinDelaySeconds,4);assert.equal(sessionConfig.autoplayMaxDelaySeconds,12);
   }finally{Math.random=original;}
 });
 

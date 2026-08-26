@@ -61,7 +61,7 @@ test("operational actions centrally start the engine clock", () => {
     assert.equal(engine.toggleAutoplay().success, true);
     assert.equal(engine.simulationClock.started, true);
     engine.toggleAutoplay();
-    assert.equal(engine.simulationClock.running, true, "autoplay pause only stops new incidents, not active simulation work");
+    assert.equal(engine.simulationClock.running, false, "autoplay pause freezes the realistic simulation clock");
 });
 
 test("non-operational reposition selection does not start the clock", () => {

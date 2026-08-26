@@ -155,8 +155,8 @@ export function isSpecialVehicle(vehicle) {
 }
 export const DEFAULT_MULTI_UNIT_INCIDENT_PERCENTAGE = 15;
 export const DEFAULT_HOTZONE_INCIDENT_PERCENTAGE = 70;
-export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 1;
-export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 20;
+export const DEFAULT_AUTOPLAY_MIN_DELAY_SECONDS = 4;
+export const DEFAULT_AUTOPLAY_MAX_DELAY_SECONDS = 12;
 export const DEFAULT_DETENTION_CAPACITY = 10;
 export const MAX_DETENTION_CAPACITY = 50;
 export const DETENTION_COMPLEX_MAP_WIDTH = 1100;
@@ -361,6 +361,8 @@ Status
 */
 
 export const simulator = {
+
+    paused: false,
 
     activeIncident: null,
 
