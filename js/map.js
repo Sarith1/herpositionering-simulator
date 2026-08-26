@@ -134,10 +134,10 @@ export class MapView {
             <span><span class="legend-icon vehicle-icon">🚔</span> normaal voertuig</span>
             <span><span class="legend-special-callsign">RT</span> Groen roepnummer = bij voorkeur in eigen district houden</span>
             <span><span class="legend-icon vehicle-icon vehicle-repositioning-sample">🚔</span> herpositionering</span>
-            <span><span class="legend-route route--incident"></span> Melding</span>
-            <span><span class="legend-route route--prison"></span> Naar cel</span>
-            <span><span class="legend-route route--return"></span> Terug</span>
-            <span><span class="legend-route route--reposition"></span> Herpositionering</span>
+            <span><span class="legend-route route--incident"></span> <strong>MELDING</strong> · warm, solide</span>
+            <span><span class="legend-route route--prison"></span> <strong>CEL</strong> · cyaan, solide</span>
+            <span><span class="legend-route route--reposition"></span> <strong>HERPOS</strong> · paars, pulserend</span>
+            <span><span class="legend-route route--return"></span> <strong>TERUG</strong> · groen, gestreept</span>
             <span><span class="legend-icon incident-icon">●</span> melding</span>
             <span><span class="legend-icon hotzone-legend-icon" aria-hidden="true"></span> Hotzone</span>
             <span><span class="legend-icon detention-legend-icon" aria-hidden="true">${this.getDetentionComplexLegendSvg(false)}</span> Beschikbaar cellencomplex</span>
