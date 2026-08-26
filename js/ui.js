@@ -661,13 +661,11 @@ export class UI {
 
         if(!this.gameOverLogged){
             this.gameOverLogged = true;
-            this.log(`[DEKKING] ${failure.districtName} heeft geen beschikbaar voertuig meer.`);
-            this.log(`[HERPOSITIONERING] Er is geen veilig donor-district beschikbaar voor ${failure.districtName}.`);
-            this.log(`[EINDE SESSIE] ${repositioningFailureConfig.title}.`);
+            this.log(`[EINDE SESSIE] ${failure.title || repositioningFailureConfig.title}.`);
         }
 
-        this.failureOverlay.querySelector("[data-failure-title]").textContent = repositioningFailureConfig.title;
-        this.failureOverlay.querySelector("[data-failure-explanation]").textContent = repositioningFailureConfig.explanation;
+        this.failureOverlay.querySelector("[data-failure-title]").textContent = failure.title || repositioningFailureConfig.title;
+        this.failureOverlay.querySelector("[data-failure-explanation]").textContent = failure.explanation || repositioningFailureConfig.explanation;
         this.failureOverlay.querySelector("[data-failure-district]").textContent = failure.districtName;
         this.failureOverlay.querySelector("[data-failure-coverage]").textContent = `${failure.coveragePercentage}%`;
         this.failureOverlay.querySelector("[data-failure-available]").textContent = failure.availableVehicles;
