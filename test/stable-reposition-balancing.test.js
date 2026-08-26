@@ -8,7 +8,7 @@ const fleet = (donor, receiver) => Object.fromEntries(districts.map(district => 
 for (const [before, moves] of [[[3,1],1],[[2,1],0],[[3,2],0],[[4,2],1],[[4,1],1]]) {
   test(`automatic balancing applies the stable donor rule to ${before.join(" / ")}`, () => {
     const engine = new Engine();
-    engine.reset({ restoreDefaults:true, operationMode:"automatic", vehiclesPerDistrict:fleet(...before) });
+    engine.reset({ restoreDefaults:true, operationMode:"automatic", hotzoneDistrictIds:[], vehiclesPerDistrict:fleet(...before) });
     const events = engine.ensureCoverage();
     assert.equal(events.filter(event => event.type === "repositionStarted").length, moves);
     if (moves) {
@@ -21,7 +21,7 @@ for (const [before, moves] of [[[3,1],1],[[2,1],0],[[3,2],0],[[4,2],1],[[4,1],1]
 
 test("effective coverage includes an incoming move and prevents duplicate planning", () => {
   const engine = new Engine();
-  engine.reset({ restoreDefaults:true, operationMode:"automatic", vehiclesPerDistrict:fleet(3,1) });
+  engine.reset({ restoreDefaults:true, operationMode:"automatic", hotzoneDistrictIds:[], vehiclesPerDistrict:fleet(3,1) });
   engine.ensureCoverage();
   assert.deepEqual([engine.getEffectiveCoverage("RN"),engine.getEffectiveCoverage("RS")],[2,2]);
   assert.equal(engine.ensureCoverage().filter(event => event.type === "repositionStarted").length,0);
@@ -29,7 +29,7 @@ test("effective coverage includes an incoming move and prevents duplicate planni
 
 test("a completed automatic move is not reversed during the cooldown", () => {
   const engine = new Engine();
-  engine.reset({ restoreDefaults:true, operationMode:"automatic", vehiclesPerDistrict:fleet(3,1) });
+  engine.reset({ restoreDefaults:true, operationMode:"automatic", hotzoneDistrictIds:[], vehiclesPerDistrict:fleet(3,1) });
   engine.ensureCoverage();
   const move=[...engine.activeRepositions.values()][0],finishedAt=move.phaseStartTime+100000;
   const events=engine.updateReposition(move,finishedAt);
@@ -37,10 +37,10 @@ test("a completed automatic move is not reversed during the cooldown", () => {
   assert.equal(REPOSITION_REVERSAL_COOLDOWN_MS,10000);
 });
 
-test("hotzones are tie-breakers but cannot bypass the two-unit gap", () => {
+test("hotzones override the ordinary two-unit-gap rule", () => {
   const hotzone="RS",engine=new Engine();
   engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:[hotzone],vehiclesPerDistrict:fleet(2,1)});
-  assert.equal(engine.ensureCoverage().some(event=>event.type==="repositionStarted"),false);
+  assert.equal(engine.ensureCoverage().find(event=>event.type==="repositionStarted")?.district.id,hotzone);
   engine.reset({restoreDefaults:true,operationMode:"automatic",hotzoneDistrictIds:[hotzone],vehiclesPerDistrict:fleet(3,1)});
   assert.equal(engine.ensureCoverage().find(event=>event.type==="repositionStarted")?.district.id,hotzone);
 });
